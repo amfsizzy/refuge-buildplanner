@@ -1,0 +1,3071 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Content Security Policy: the page may only talk to the item database (data + sprites) and
+     Google Fonts. Images from anywhere else (e.g. a sprite URL inside a shared loadout code) are
+     blocked, so a crafted code can't be used as a tracking pixel. Inline script/style are the
+     page itself (single-file app). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://rtm-database.pages.dev data:; connect-src https://rtm-database.pages.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="data:,">
+<title>Refuge Build Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amarante&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: left rail of saved Loadouts (characters/moments), main panel is an
+   in-game style equipment window with slot grid + nested card sub-slots, tabs for
+   Equipment / Shadow / Farm / Notes, and a right column for Status / Compare. */
+:root{
+  /* Palette matched to the public item database's own look
+     (--pur-*/--sil-*/--ink-* and their semantic layer) so both feel consistent. */
+  --bg: #06040a;
+  --surface: #0f0b17;
+  --surface-2: #171122;
+  --surface-3: #241b33;
+  --border: rgba(255,255,255,0.09);
+  --border-soft: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.17);
+  --fg: #efedf5;
+  --fg-dim: #a8a2b6;
+  --fg-faint: #7d7689;
+  --accent: #a95cff;
+  --accent-strong: #9127f0;
+  --accent-ink: #06040a;
+  --danger: #ff6b7d;
+  --early: #45d99a;
+  --mid: #f0b429;
+  --late: #ff7a59;
+  --glow: rgba(169, 92, 255, 0.55);
+  --shadow-glow: 0 0 0 1px rgba(169,92,255,.4), 0 0 28px -4px var(--glow), 0 14px 50px -12px var(--glow);
+  --aurora-op: .55;
+  --header-bg: rgba(10, 7, 16, .72);
+  --font-display: 'Amarante', Georgia, 'Times New Roman', serif;
+  --font-body: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --radius-sm: 9px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg: #f5f2fa;
+    --surface: #ffffff;
+    --surface-2: #faf8fd;
+    --surface-3: #f0e9fa;
+    --border: #e1d7ee;
+    --border-soft: #ece4f6;
+    --border-strong: #cdbbe6;
+    --fg: #1d0533;
+    --fg-dim: #504a5d;
+    --fg-faint: #837d93;
+    --accent: #6b13b9;
+    --accent-strong: #4d0d86;
+    --accent-ink: #f3e6ff;
+    --glow: rgba(145, 39, 240, 0.18);
+    --shadow-glow: 0 0 0 1px rgba(145,39,240,.22), 0 14px 40px -14px var(--glow);
+    --aurora-op: .22;
+  --header-bg: rgba(255, 255, 255, .78);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"]{
+  --bg: #f5f2fa;
+  --surface: #ffffff;
+  --surface-2: #faf8fd;
+  --surface-3: #f0e9fa;
+  --border: #e1d7ee;
+  --border-soft: #ece4f6;
+  --border-strong: #cdbbe6;
+  --fg: #1d0533;
+  --fg-dim: #504a5d;
+  --fg-faint: #837d93;
+  --accent: #6b13b9;
+  --accent-strong: #4d0d86;
+  --accent-ink: #f3e6ff;
+  --glow: rgba(145, 39, 240, 0.18);
+  --shadow-glow: 0 0 0 1px rgba(145,39,240,.22), 0 14px 40px -14px var(--glow);
+  --aurora-op: .22;
+  --header-bg: rgba(255, 255, 255, .78);
+  color-scheme: light;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-size:14px; line-height:1.5;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right,0px));
+  position:relative;
+}
+/* Aurora: three blurred, screen-blended glow blobs over a faint skyline image,
+   the same technique the public item database uses behind its own
+   content — gives the flat dark ground some depth/color instead of one solid tone. */
+.bg-aurora{
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    radial-gradient(44% 34% at 18% 12%, var(--pur-glow-a, #9127f0) 0%, transparent 70%),
+    radial-gradient(38% 30% at 88% 22%, var(--pur-glow-b, #a95cff) 0%, transparent 70%),
+    radial-gradient(52% 42% at 46% 96%, var(--pur-glow-c, #6b13b9) 0%, transparent 72%),
+    url('https://rtm-database.pages.dev/assets/img/backdrop.jpg');
+  background-size: auto, auto, auto, cover;
+  background-position: center, center, center, center 30%;
+  background-repeat: no-repeat;
+  filter: blur(70px);
+  opacity: var(--aurora-op);
+  mix-blend-mode: screen;
+}
+::selection{ background:var(--accent); color:var(--accent-ink); }
+h1,h2,h3{ font-family:var(--font-display); letter-spacing:.02em; margin:0; text-wrap:balance; }
+button{ font-family:var(--font-body); cursor:pointer; }
+input,select,textarea,button{ font-size:14px; color:var(--fg); }
+.mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+/* Full-bleed: cancels body's side gutter so the bar reaches both screen edges,
+   while .topbar inside stays on the same 1240px column as the content below. */
+.header-band{
+  position:sticky; top:0; z-index:40;
+  margin-left:calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right:calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-inline:max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  background:var(--header-bg);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  height:56px; max-width:1560px; margin:0 auto;
+}
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand-mark{
+  width:10px; height:10px; transform:rotate(45deg); border-radius:2px;
+  background:var(--accent); box-shadow:0 0 12px var(--glow);
+}
+.topbar h1{ font-size:18px; color:var(--fg); letter-spacing:.03em; }
+.topbar h1 span{ color:var(--accent); }
+.theme-toggle{
+  width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid var(--border); color:var(--fg-dim);
+  border-radius:var(--radius-sm); padding:0;
+}
+.theme-toggle:hover{ color:var(--fg); border-color:var(--accent); }
+.top-actions{ display:flex; align-items:center; gap:8px; }
+.lang-toggle{
+  height:34px; min-width:42px; padding:0 10px; background:transparent; border:1px solid var(--border);
+  color:var(--fg-dim); border-radius:var(--radius-sm); font-size:12px; font-weight:700; letter-spacing:.06em;
+}
+.lang-toggle:hover{ color:var(--fg); border-color:var(--accent); }
+.theme-toggle svg{ width:16px; height:16px; }
+.theme-toggle .ico-sun{ display:none; }
+:root[data-theme="light"] .theme-toggle .ico-sun{ display:block; }
+:root[data-theme="light"] .theme-toggle .ico-moon{ display:none; }
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]) .theme-toggle .ico-sun{ display:block; }
+  :root:not([data-theme="dark"]) .theme-toggle .ico-moon{ display:none; }
+}
+/* Three columns: loadouts | main editor | status & compare. */
+.layout{
+  display:grid; grid-template-columns:260px minmax(0, 1fr) 380px; gap:16px;
+  max-width:1560px; margin:0 auto; align-items:stretch; padding-block:16px 24px;
+}
+.sidebar{
+  min-width:0; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:12px;
+  display:flex; flex-direction:column;
+}
+/* Right column stays in view (with its own scroll) while you edit gear in the middle. */
+.side-right{
+  min-width:0; align-self:start; position:sticky; top:72px;
+  max-height:calc(100vh - 88px); overflow-y:auto; overscroll-behavior:contain;
+  scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent;
+}
+.side-right .tab-panel{ padding:14px; }
+.side-right .sim-grid{ grid-template-columns:repeat(2, 1fr); }
+.side-right .compare-table{ min-width:0; font-size:12px; }
+.side-right .compare-table th, .side-right .compare-table td{ padding:6px 6px; }
+@media (max-width:1280px){
+  .layout{ grid-template-columns:260px minmax(0, 1fr); }
+  .side-right{ grid-column:1 / -1; position:static; max-height:none; overflow:visible; }
+}
+.lo-summary{
+  margin-top:14px; padding:12px; border-radius:var(--radius-sm);
+  background:var(--surface-2); border:1px solid var(--border-soft);
+  display:flex; flex-direction:column; gap:7px;
+}
+.los-head{ display:flex; flex-direction:column; gap:4px; padding-bottom:8px; border-bottom:1px solid var(--border-soft); }
+.los-name{ font-family:var(--font-display); font-size:15px; color:var(--fg); overflow-wrap:anywhere; }
+.los-meta{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--fg-faint); }
+.los-line{ display:flex; justify-content:space-between; gap:8px; font-size:12px; }
+.los-k{ color:var(--fg-faint); }
+.los-v{ color:var(--fg); font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+.los-bar{ height:5px; border-radius:999px; background:var(--surface-3); overflow:hidden; }
+.los-bar span{ display:block; height:100%; background:var(--accent-strong); border-radius:999px; }
+.los-stats{ display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin-top:4px; }
+.los-stat{ display:flex; justify-content:space-between; align-items:baseline; gap:4px; padding:4px 7px; border-radius:6px; background:var(--surface); font-size:10.5px; color:var(--fg-faint); }
+.los-stat strong{ font-family:var(--font-mono); font-size:12.5px; color:var(--accent); }
+.toast{
+  position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:80;
+  max-width:min(90vw, 460px); padding:10px 16px; border-radius:var(--radius-sm);
+  background:var(--surface-3); border:1px solid var(--border-strong); color:var(--fg); font-size:12.5px;
+  box-shadow:var(--shadow-glow);
+}
+.sidebar-actions{
+  display:flex; gap:6px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft);
+}
+.sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:10px; }
+#loadoutList{ flex:0 1 auto; max-height:45vh; overflow-y:auto; }
+.new-btn{
+  width:100%; background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-sm);
+  padding:9px; font-weight:700; margin-bottom:10px; font-size:13px; box-shadow:var(--shadow-glow);
+}
+.loadout-item{
+  display:flex; flex-direction:column; gap:3px; padding:9px 10px; border-radius:7px;
+  border:1px solid transparent; cursor:pointer; margin-bottom:5px;
+}
+.loadout-item:hover{ background:var(--surface-2); }
+.loadout-item.active{ background:var(--surface-3); border-color:var(--border); }
+.loadout-item .name{ font-weight:600; font-size:13px; }
+.loadout-item .meta{ display:flex; gap:6px; align-items:center; font-size:11px; color:var(--fg-faint); }
+.badge{
+  display:inline-flex; align-items:center; gap:4px; padding:1px 7px; border-radius:999px;
+  font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  border:1px solid var(--border-soft);
+}
+.badge.early{ color:var(--early); border-color:var(--early); }
+.badge.mid{ color:var(--mid); border-color:var(--mid); }
+.badge.late{ color:var(--late); border-color:var(--late); }
+.badge.custom{ color:var(--fg-dim); }
+.sidebar-footer{ border-top:1px solid var(--border-soft); margin-top:8px; padding-top:10px; display:flex; gap:6px; }
+.ghost-btn{
+  flex:1; background:transparent; border:1px solid var(--border); color:var(--fg-dim);
+  border-radius:6px; padding:7px 6px; font-size:11.5px;
+}
+.ghost-btn:hover{ border-color:var(--accent); color:var(--accent-strong); }
+.empty-note{ color:var(--fg-faint); font-size:12px; padding:8px 2px; }
+.main{ min-width:0; }
+.loadout-head{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+}
+/* Tabs on the left and the stage switch on the right both sit on the panel's top edge, like tabs.
+   wrap-reverse keeps the tabs on the panel when the row wraps; it also flips the cross axis,
+   so flex-start is what pins both groups to the bottom of the row. */
+#tabsWrap{ container-type:inline-size; }
+#tabsWrap > .tab-panel{ border-radius:0 0 var(--radius) var(--radius); }
+.tabs-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px 12px; flex-wrap:wrap-reverse; }
+.stage-bar{ display:flex; align-items:center; margin-left:auto; }
+.tabs-row .stage-toggle{
+  background:var(--surface-2); border-bottom:none; border-radius:9px 9px 0 0;
+  padding:4px 5px; position:relative; top:1px; z-index:1;
+}
+.tabs-row .stage-btn{ padding:5px 14px; font-size:12px; }
+.tabs-row .stage-level-input{ padding:4px 6px; width:52px; }
+.tabs-row .stage-sep{ height:18px; }
+/* Too narrow for one row: the stage switch sits above the tabs as a standalone pill. */
+@container (max-width:620px){
+  .tabs-row .stage-toggle{ border-bottom:1px solid var(--border); border-radius:var(--radius-sm); top:0; margin-bottom:2px; }
+  #tabsWrap > .tab-panel{ border-radius:0 var(--radius) var(--radius) var(--radius); }
+}
+.stage-toggle{
+  display:inline-flex; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:3px; gap:2px;
+}
+.stage-sep{ width:1px; height:22px; background:var(--border-strong); margin:0 8px 0 6px; }
+.stage-level{ font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--fg-faint); margin-right:6px; }
+.stage-level-input{
+  width:56px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+  padding:6px 7px; color:var(--fg); font-family:var(--font-mono); font-size:13px; margin-right:3px;
+}
+.stage-level-input:focus{ outline:none; border-color:var(--accent); }
+.stage-btn{
+  background:transparent; border:none; color:var(--fg-dim); padding:7px 18px; border-radius:7px;
+  font-size:12.5px; font-weight:700; letter-spacing:.02em;
+}
+.stage-btn.active{ background:var(--accent-strong); color:#fff; box-shadow:var(--shadow-glow); }
+.stage-btn:not(.active):hover{ color:var(--accent); }
+.field{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.field label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); }
+.field input, .field select{
+  background:var(--surface-2); border:1px solid var(--border); border-radius:6px;
+  padding:7px 9px; min-width:0;
+}
+.field.grow{ flex:1 1 180px; }
+.icon-btn-row{ display:flex; gap:6px; margin-left:auto; }
+.icon-btn{
+  background:var(--surface-2); border:1px solid var(--border); color:var(--fg-dim);
+  border-radius:6px; padding:8px 11px; font-size:12px;
+}
+.icon-btn:hover{ color:var(--accent-strong); border-color:var(--accent); }
+.icon-btn.danger:hover{ color:var(--danger); border-color:var(--danger); }
+.tabs{ display:flex; gap:4px; margin-bottom:0; flex-wrap:wrap; }
+.tab-btn{
+  background:var(--surface); border:1px solid var(--border); color:var(--fg-dim);
+  padding:8px 14px; border-radius:7px 7px 0 0; font-size:12.5px; font-weight:600;
+  border-bottom:none; position:relative; top:1px;
+}
+.tab-btn.active{
+  background:var(--surface-2); color:var(--accent); z-index:1;
+  box-shadow:inset 0 2px 0 var(--accent);
+}
+.panel-head{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border-soft);
+}
+.panel-head .stat-strip{ margin:0; padding:0; border:none; }
+.clear-all-btn{
+  background:transparent; border:1px solid var(--border); color:var(--fg-dim);
+  border-radius:var(--radius-sm); padding:7px 12px; font-size:12px; font-weight:600;
+}
+.clear-all-btn:hover{ color:var(--danger); border-color:var(--danger); }
+.clear-all-btn.confirming{ color:#fff; background:var(--danger); border-color:var(--danger); }
+.tab-panel{
+  background:var(--surface-2); border:1px solid var(--border); border-radius:0 var(--radius) var(--radius) var(--radius);
+  padding:16px;
+}
+.stat-strip{
+  display:flex; gap:18px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px;
+  border-bottom:1px solid var(--border-soft);
+}
+.stat{ display:flex; flex-direction:column; gap:2px; }
+.stat .k{ font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-faint); }
+.stat .v{ font-family:var(--font-mono); font-size:16px; color:var(--accent-strong); font-weight:600; }
+.equip-grid{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
+  align-items:stretch;
+}
+/* When a grid has an odd number of slots (e.g. 5 Shadow slots), the last one
+   would otherwise sit alone next to an empty cell. Give it the full row
+   instead, so every grid ends flush with no dangling half-row. */
+.equip-grid > *:last-child:nth-child(odd){ grid-column: 1 / -1; }
+.slot{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px;
+  display:flex; flex-direction:column; gap:7px; min-height:128px;
+}
+.slot .slot-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
+.slot-body{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:5px; text-align:center; border-radius:7px; border:1px dashed var(--border-soft);
+  padding:8px; background:var(--surface-2); cursor:pointer;
+}
+.slot-body:hover{ border-color:var(--accent); }
+.slot-body.filled{ border-style:solid; border-color:var(--border); align-items:stretch; text-align:left; cursor:default; }
+.slot-empty-icon{ font-size:22px; color:var(--fg-faint); line-height:1; }
+.slot-empty-text{ font-size:11px; color:var(--fg-faint); }
+.item-row{ display:flex; gap:8px; align-items:center; }
+.item-row img.sprite{ width:32px; height:32px; object-fit:contain; image-rendering:pixelated; flex:0 0 auto; background:var(--surface-3); border-radius:4px; }
+.sprite-fallback{
+  width:32px; height:32px; border-radius:4px; background:var(--surface-3); color:var(--fg-faint);
+  display:flex; align-items:center; justify-content:center; font-size:14px; flex:0 0 auto;
+}
+.item-info{ min-width:0; }
+.item-name{ font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:help; }
+.item-sub{ font-size:10.5px; color:var(--fg-faint); }
+.extras{ display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.extra-chip{
+  display:inline-flex; align-items:center; gap:3px; max-width:100%; font-size:10.5px; line-height:1.3;
+  padding:2px 3px 2px 7px; border-radius:999px; border:1px dashed var(--border-soft); color:var(--fg-faint);
+}
+.extra-chip span{ overflow-wrap:anywhere; }
+.extra-chip.on{ border-style:solid; border-color:var(--accent); color:var(--accent-strong); }
+.extra-x{ background:transparent; border:0; color:inherit; font-size:12px; line-height:1; padding:0 3px; cursor:pointer; }
+.extra-x:hover{ color:var(--fg); }
+.extra-form{ flex:1 1 100%; margin:0; }
+.extra-form input{
+  width:100%; background:transparent; border:1px dashed var(--border-soft); border-radius:5px;
+  color:var(--fg); font:inherit; font-size:10.5px; padding:3px 6px;
+}
+.extra-form input:focus{ outline:none; border-style:solid; border-color:var(--accent); }
+.slot-actions{ display:flex; gap:4px; margin-top:auto; }
+.mini-btn{
+  flex:1; background:transparent; border:1px solid var(--border-soft); color:var(--fg-faint);
+  border-radius:5px; padding:4px; font-size:10px;
+}
+.mini-btn:hover{ color:var(--accent-strong); border-color:var(--accent); }
+.card-row{ display:flex; gap:5px; margin-top:4px; }
+.card-slot{
+  width:26px; height:26px; border-radius:4px; border:1px dashed var(--border-soft);
+  background:var(--surface-2); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; position:relative;
+}
+.card-slot img{ width:100%; height:100%; object-fit:contain; border-radius:4px; }
+.card-slot:hover{ border-color:var(--accent); }
+.card-slot .x{
+  position:absolute; top:-5px; right:-5px; width:14px; height:14px; border-radius:50%;
+  background:var(--danger); color:#fff; font-size:9px; display:flex; align-items:center;
+  justify-content:center; line-height:1; border:none; padding:0;
+}
+.stat-calc{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.stat-calc h2{ font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:8px; }
+.stat-row{
+  display:grid; grid-template-columns:30px 50px 1fr 40px; align-items:center; gap:6px;
+}
+.stat-row-head{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--fg-faint); margin-bottom:2px; }
+.stat-calc-rows{ display:flex; flex-direction:column; gap:5px; }
+.stat-label{ font-weight:700; color:var(--accent); font-family:var(--font-mono); font-size:12px; }
+.stat-row input[type=number]{
+  width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:5px;
+  padding:4px 5px; color:var(--fg); font-family:var(--font-mono); text-align:center; font-size:12px;
+}
+.stat-bonus{ color:var(--early); font-family:var(--font-mono); font-size:11px; white-space:nowrap; }
+.stat-total{ font-weight:700; font-family:var(--font-mono); text-align:right; font-size:13px; }
+.stat-calc-note{ font-size:10px; color:var(--fg-faint); margin-top:8px; line-height:1.4; }
+.db-status{
+  margin-top:auto; padding-top:10px; border-top:1px solid var(--border-soft);
+  font-size:10.5px; color:var(--fg-faint); line-height:1.4;
+}
+.lo-summary + .db-status, #loadoutList + .lo-summary[hidden] + .db-status{ margin-top:auto; }
+.db-status.err{ color:var(--danger); }
+.status-warning{
+  background:var(--surface-3); border:1px solid var(--mid); border-radius:var(--radius-sm);
+  padding:8px 12px; font-size:12px; color:var(--fg-dim); line-height:1.5; margin-bottom:14px;
+}
+.status-warning summary{ cursor:pointer; list-style-position:inside; }
+.status-warning p{ margin:8px 0 2px; }
+.status-warning strong{ color:var(--mid); }
+.stat-calc + .sim-box{ margin-top:16px; }
+.sim-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.sim-box h2, .sets-box h2{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:10px; }
+/* Compact label:value grid, closer to the game's own Status window than a spreadsheet. */
+.sim-grid{
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:12px;
+}
+@media (max-width:640px){ .sim-grid{ grid-template-columns:repeat(2, 1fr); } }
+.sim-cell{
+  background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+  padding:8px 10px;
+}
+.sim-cell .sc-label{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
+.sim-cell .sc-value{ font-family:var(--font-mono); font-weight:700; font-size:17px; color:var(--accent); }
+.sim-cell .sc-bonus{ font-family:var(--font-mono); font-size:10.5px; color:var(--early); margin-left:5px; }
+.sim-cell .sc-bonus.skill{ color:var(--accent-strong); }
+.skills-box{ margin-top:14px; }
+.skill-row{ border-top:1px solid var(--border-soft); padding:9px 0; }
+.skill-row.has-lv .skill-name{ color:var(--accent-strong); }
+.skill-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.skill-name{ font-weight:700; font-size:13px; }
+.skill-lv{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--fg-faint); }
+.skill-lv input{
+  width:44px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:5px;
+  color:var(--fg); font:inherit; font-family:var(--font-mono); font-size:12px; padding:2px 4px; text-align:center;
+}
+.skill-lv input:focus{ outline:none; border-color:var(--accent); }
+.skill-cls{ font-size:10.5px; color:var(--fg-faint); margin-top:1px; }
+.skill-eff{ font-size:12px; color:var(--fg-dim); margin-top:4px; }
+.skill-skip{ font-size:11px; color:var(--fg-faint); margin-top:3px; }
+.skill-on{ font-size:11.5px; color:var(--early); margin-top:4px; font-weight:700; }
+.skill-off, .skill-warn{ font-size:11.5px; color:var(--mid); margin-top:4px; }
+.skill-others{ margin-top:6px; }
+.skill-others summary{ cursor:pointer; font-size:12px; color:var(--fg-dim); padding:8px 0; }
+.skill-others summary:hover{ color:var(--accent-strong); }
+.aspd-box{ border-top:1px solid var(--border-soft); padding-top:12px; }
+.aspd-box h3{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:8px; }
+.aspd-line{ font-size:12.5px; color:var(--fg-dim); line-height:1.7; }
+.aspd-total{ font-family:var(--font-mono); font-weight:700; color:var(--accent-strong); font-size:18px; }
+.aspd-over{ color:var(--mid); margin-top:4px; }
+.aspd-manual{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--fg-faint); }
+.aspd-manual input{ width:56px; background:var(--surface-2); border:1px solid var(--border); border-radius:5px; padding:4px 6px; color:var(--fg); font-family:var(--font-mono); text-align:center; }
+.sets-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:16px; }
+.set-row{ padding:9px 0; border-bottom:1px solid var(--border-soft); }
+.set-row:last-child{ border-bottom:none; }
+.set-row .st-name{ font-weight:700; font-size:13px; }
+.set-row.complete .st-name{ color:var(--early); }
+.set-row.partial .st-name{ color:var(--fg-dim); }
+.set-row .st-bonus{ font-size:11.5px; color:var(--fg-faint); white-space:pre-line; margin-top:3px; }
+.set-row .st-missing{ font-size:11px; color:var(--mid); margin-top:3px; }
+.set-pill{ display:inline-block; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:1px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+.set-pill.complete{ background:rgba(69,217,154,.15); color:var(--early); }
+.set-pill.partial{ background:rgba(240,180,41,.15); color:var(--mid); }
+/* modal */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:flex-start;
+  justify-content:center; padding:40px 16px; z-index:50; overflow:auto;
+}
+.modal{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%;
+  max-width:480px; padding:16px; max-height:85vh; display:flex; flex-direction:column; gap:10px;
+  box-shadow:var(--shadow-glow);
+}
+.modal-head{ display:flex; justify-content:space-between; align-items:center; }
+.modal-head h3{ font-size:15px; color:var(--accent-strong); }
+.close-x{ background:none; border:none; color:var(--fg-faint); font-size:18px; line-height:1; padding:4px; }
+.search-input{
+  background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:9px 10px; width:100%;
+}
+.filter-row{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--fg-faint); }
+.results{ overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:3px; min-height:60px; }
+.result-row{
+  display:flex; align-items:center; gap:9px; padding:7px; border-radius:7px; cursor:pointer;
+  border:1px solid transparent;
+}
+.result-row:hover{ background:var(--surface-2); border-color:var(--border); }
+.result-empty{ color:var(--fg-faint); font-size:12px; padding:14px 4px; text-align:center; }
+.manual-toggle{
+  background:transparent; border:none; color:var(--accent); font-size:11.5px; text-decoration:underline;
+  padding:4px 0; align-self:flex-start;
+}
+.manual-form{ display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px; }
+.manual-form input{ background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px; }
+.primary-btn{ background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-sm); padding:9px; font-weight:700; box-shadow:var(--shadow-glow); }
+[hidden]{ display:none !important; }
+/* item name as a link to the detail panel + refine input */
+.item-link{
+  background:none; border:none; padding:0; text-align:left; cursor:pointer; color:var(--fg);
+  max-width:100%; font-family:var(--font-body);
+}
+.item-link:hover, .item-link:focus-visible{ color:var(--accent); text-decoration:underline; }
+.item-sub{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.refine-input{
+  display:inline-flex; align-items:center; gap:1px; font-family:var(--font-mono); font-size:11px;
+  color:var(--accent); border:1px solid var(--border); border-radius:5px; padding:0 0 0 5px; background:var(--surface-3);
+}
+.refine-input input{
+  width:34px; border:none; background:transparent; color:var(--fg); font-family:var(--font-mono);
+  font-size:11px; padding:2px 3px;
+}
+.filter-row-wrap{ display:flex; gap:14px; flex-wrap:wrap; }
+.panel-intro{ display:block; font-size:12px; color:var(--fg-faint); line-height:1.5; margin:0 0 14px; max-width:70ch; }
+
+/* detail modal */
+.detail-modal{ max-width:560px; }
+.detail-title{ display:flex; align-items:center; gap:10px; min-width:0; }
+.detail-title img{ width:36px; height:36px; object-fit:contain; image-rendering:pixelated; background:var(--surface-3); border-radius:6px; }
+.detail-title .dt-name{ font-family:var(--font-display); font-size:17px; color:var(--fg); }
+.detail-title .dt-sub{ font-size:11px; color:var(--fg-faint); }
+.detail-body{ overflow-y:auto; display:flex; flex-direction:column; gap:14px; padding-right:2px; }
+.detail-section h4{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-faint); font-family:var(--font-body); }
+.tt-block{ border-left:2px solid var(--border-strong); padding:4px 0 4px 10px; margin-bottom:8px; }
+.tt-block.off{ opacity:.45; }
+.tt-block .tt-head{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; color:var(--fg-dim); margin-bottom:2px; }
+.tt-block .tt-lines{ font-size:12.5px; color:var(--fg); white-space:pre-line; line-height:1.55; }
+.tt-badge{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--surface-3); color:var(--fg-dim); }
+.tt-badge.on{ background:rgba(69,217,154,.15); color:var(--early); }
+.tt-badge.off{ background:rgba(255,107,125,.12); color:var(--danger); }
+.tt-badge.info{ background:rgba(169,92,255,.15); color:var(--accent); }
+.src-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
+.src-row:last-child{ border-bottom:none; }
+.src-row .src-rate{ font-family:var(--font-mono); color:var(--accent); white-space:nowrap; }
+.mvp-tag{ font-size:9.5px; font-weight:700; color:var(--mid); border:1px solid var(--mid); border-radius:999px; padding:0 6px; margin-left:4px; }
+.detail-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.detail-actions a, .detail-actions button{
+  font-size:12px; padding:7px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--surface-2); color:var(--fg-dim); text-decoration:none;
+}
+.detail-actions a:hover, .detail-actions button:hover{ color:var(--accent); border-color:var(--accent); }
+
+/* compare */
+.compare-wrap{ overflow-x:auto; }
+.compare-table{ width:100%; border-collapse:collapse; font-size:13px; min-width:440px; }
+.compare-table th, .compare-table td{ padding:7px 10px; border-bottom:1px solid var(--border-soft); text-align:right; }
+.compare-table th:first-child, .compare-table td:first-child{ text-align:left; color:var(--fg-dim); }
+.compare-table thead th{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
+.compare-table thead th.active{ color:var(--accent); }
+.compare-table td{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+.compare-table td:first-child{ font-family:var(--font-body); }
+.compare-table tr.group td{ font-family:var(--font-body); font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-faint); padding-top:14px; border-bottom:none; text-align:left; }
+.delta{ font-size:10.5px; margin-left:4px; }
+.delta.up{ color:var(--early); }
+.delta.down{ color:var(--danger); }
+
+/* farm */
+.farm-title{ font-family:var(--font-display); font-size:15px; color:var(--fg); }
+.farm-progress{ font-size:12px; color:var(--fg-faint); margin-top:2px; }
+.farm-progress strong{ color:var(--accent); font-family:var(--font-mono); }
+.farm-group{ margin-bottom:16px; }
+.farm-group h4{ margin:0 0 6px; font-size:12px; color:var(--accent); font-family:var(--font-body); display:flex; justify-content:space-between; gap:8px; }
+.farm-group h4 span{ color:var(--fg-faint); font-weight:400; }
+.farm-item{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:var(--radius-sm); background:var(--surface); border:1px solid var(--border-soft); margin-bottom:5px; }
+.farm-item input[type=checkbox]{ width:16px; height:16px; accent-color:var(--accent-strong); flex:0 0 auto; }
+.farm-item .fi-main{ flex:1; min-width:0; }
+.farm-item .fi-src{ font-size:11px; color:var(--fg-faint); }
+.farm-item.owned .item-link, .farm-item.owned .fi-src{ text-decoration:line-through; opacity:.55; }
+.farm-tag{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--mid); margin-left:6px; }
+.farm-entry{ margin-bottom:5px; }
+.farm-entry .farm-item{ margin-bottom:0; cursor:pointer; }
+.farm-entry.open .farm-item{ border-color:var(--border); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.farm-toggle{
+  flex:0 0 auto; width:28px; height:28px; border-radius:7px; border:1px solid var(--border);
+  background:transparent; color:var(--fg-dim); font-size:14px; line-height:1; transition:transform .15s ease;
+}
+.farm-toggle:hover{ color:var(--accent); border-color:var(--accent); }
+.farm-entry.open .farm-toggle{ transform:rotate(180deg); color:var(--accent); }
+@media (prefers-reduced-motion: reduce){ .farm-toggle{ transition:none; } }
+.farm-detail{
+  background:var(--surface-2); border:1px solid var(--border); border-top:none;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm); padding:12px 14px;
+}
+.acq{ display:flex; flex-direction:column; gap:14px; }
+.acq-sec h5{ margin:0 0 6px; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-faint); font-family:var(--font-body); }
+.acq-line{ font-size:12.5px; color:var(--fg); margin-bottom:4px; }
+.acq-line.muted, .route-orig.muted{ color:var(--fg-faint); font-size:11.5px; }
+.mats{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.mats li{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; font-size:12.5px; }
+.mats .mat-src{ font-size:11px; color:var(--fg-faint); }
+.route{ border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; background:var(--surface); }
+.route-zone{ font-weight:700; font-size:12.5px; color:var(--accent); margin-bottom:8px; }
+.route-cols{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.route-cols.single{ grid-template-columns:1fr; }
+@media (max-width:640px){ .route-cols{ grid-template-columns:1fr; } }
+.route-col{ min-width:0; }
+.route-title{ font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-dim); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.route-steps{ margin:0; padding-left:18px; font-size:12px; color:var(--fg); display:flex; flex-direction:column; gap:4px; }
+.route-steps li::marker{ color:var(--fg-faint); }
+.route-npc{ font-size:11px; color:var(--accent); }
+.route-npc.pre{ color:var(--mid); }
+.route-lock{ font-size:11px; color:var(--mid); margin-top:2px; }
+.route-orig{ margin:0 0 6px; font-size:12px; color:var(--fg); line-height:1.5; }
+.route-played{ margin-top:8px; padding:7px 9px; border-radius:7px; border:1px dashed var(--mid); }
+.route-played.ok{ border-style:solid; border-color:var(--early); }
+.route-played-head{ font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--mid); margin-bottom:3px; }
+.route-played.ok .route-played-head{ color:var(--early); }
+.route-played-text{ font-size:12px; color:var(--fg); line-height:1.5; white-space:pre-line; }
+.route-note{ font-size:11.5px; color:var(--fg-faint); }
+
+/* notes */
+.notes-input{
+  width:100%; min-height:260px; resize:vertical; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px; color:var(--fg); font-family:var(--font-body); font-size:13.5px; line-height:1.6;
+}
+.notes-input:focus{ outline:none; border-color:var(--accent); }
+
+@media (max-width:760px){
+  .layout{ grid-template-columns:1fr; }
+  .side-right{ grid-column:auto; }
+  .equip-grid{ grid-template-columns:1fr; }
+  .equip-grid > *:last-child:nth-child(odd){ grid-column:auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-aurora" aria-hidden="true"></div>
+
+<header class="header-band">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>Refuge <span>Build Planner</span></h1>
+    </div>
+    <div class="top-actions">
+    <button class="lang-toggle" id="langToggle" type="button" title="Switch to English" aria-label="Switch to English"
+      data-en="PT" data-en-title="Mudar para português" data-en-aria-label="Mudar para português">EN</button>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema"
+      data-en-aria-label="Toggle light/dark theme" data-en-title="Toggle theme">
+      <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <button class="new-btn" id="newLoadoutBtn" type="button" data-en="+ New Loadout">+ Novo Loadout</button>
+    <div class="sidebar-actions">
+      <button class="ghost-btn" id="exportBtn" type="button" data-en="Export">Exportar</button>
+      <button class="ghost-btn" id="importBtn" type="button" data-en="Import">Importar</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <h2>Loadouts</h2>
+    <div id="loadoutList"></div>
+    <section class="lo-summary" id="loSummary" hidden aria-label="Resumo do loadout ativo" data-en-aria-label="Active loadout summary"></section>
+    <div class="db-status" id="dbStatus" data-en="Loading the public item database…">Carregando a base de itens pública…</div>
+  </aside>
+
+  <main class="main">
+    <div class="loadout-head" id="loadoutHead" hidden>
+      <div class="field grow">
+        <label for="fName" data-en="Loadout name">Nome do loadout</label>
+        <input id="fName" type="text" maxlength="80" placeholder="ex: Sniper — Mid Game" data-en-placeholder="e.g. Sniper — Mid Game">
+      </div>
+      <div class="field">
+        <label for="fClass" data-en="Class">Classe</label>
+        <select id="fClass"></select>
+      </div>
+      <div class="icon-btn-row">
+        <button class="icon-btn" id="shareBtn" type="button" title="Compartilhar" data-en="Share" data-en-title="Share">Compartilhar</button>
+        <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
+        <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
+      </div>
+    </div>
+
+    <div id="tabsWrap" hidden>
+      <!-- Tabs on the left sit on the panel edge; the stage/level switch shares the row on the right. -->
+      <div class="tabs-row">
+        <nav class="tabs" data-group="main">
+          <button class="tab-btn active" data-tab="equip" type="button" data-en="Equipment">Equipamento</button>
+          <button class="tab-btn" data-tab="shadow" type="button">Shadow</button>
+          <button class="tab-btn" data-tab="farm" type="button">Farm</button>
+          <button class="tab-btn" data-tab="notes" type="button" data-en="Notes">Notas</button>
+        </nav>
+        <div class="stage-bar" id="stageBar" hidden>
+          <div class="stage-toggle">
+            <button class="stage-btn active" data-stage="early" type="button">Early</button>
+            <button class="stage-btn" data-stage="mid" type="button">Mid</button>
+            <button class="stage-btn" data-stage="late" type="button">Late</button>
+            <span class="stage-sep" aria-hidden="true"></span>
+            <label class="stage-level" for="fLevel">Lv</label>
+            <input id="fLevel" class="stage-level-input" type="number" min="1" max="150" title="Level desta fase" data-en-title="Level for this stage">
+          </div>
+        </div>
+      </div>
+
+      <section class="tab-panel" id="panel-equip">
+        <div class="panel-head">
+          <div class="stat-strip" id="statStrip"></div>
+          <button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button>
+        </div>
+        <div class="equip-grid" id="equipGrid"></div>
+      </section>
+
+      <section class="tab-panel" id="panel-shadow" hidden>
+        <div class="panel-head">
+          <span></span>
+          <button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button>
+        </div>
+        <div class="equip-grid" id="shadowGrid"></div>
+      </section>
+
+      <section class="tab-panel" id="panel-farm" hidden>
+        <div class="panel-head">
+          <div>
+            <div class="farm-title" id="farmTitle" data-en="Farm list">Lista de farm</div>
+            <div class="farm-progress" id="farmProgress"></div>
+          </div>
+        </div>
+        <p class="panel-intro" data-en="Everything equipped in this stage, plus the missing pieces of incomplete sets, grouped by the map where it drops with the best chance. Tick what you already have.">Tudo o que está equipado nesta fase, mais as peças que faltam nos conjuntos incompletos, agrupado pelo mapa onde dropa com a maior chance. Marque o que você já tem.</p>
+        <div id="farmList"></div>
+      </section>
+
+      <section class="tab-panel" id="panel-notes" hidden>
+        <label class="panel-intro" for="notesInput" data-en="Character notes (shared by all three stages): skill rotation, consumables, reminders.">Anotações do personagem (valem para as três fases): rotação de skills, consumíveis, lembretes.</label>
+        <textarea id="notesInput" class="notes-input" rows="14" maxlength="20000" placeholder="Ex.: buffar com X antes do MVP, levar 20 White Potions…" data-en-placeholder="e.g. buff with X before the MVP, bring 20 White Potions…"></textarea>
+      </section>
+    </div>
+
+    <div class="empty-note" id="noLoadoutNote" data-en="Create a loadout to get started.">Crie um loadout para começar.</div>
+  </main>
+
+  <aside class="side-right" id="sideRight" hidden>
+    <nav class="tabs" data-group="side">
+      <button class="tab-btn active" data-tab="status" type="button">Status</button>
+      <button class="tab-btn" data-tab="compare" type="button" data-en="Compare">Comparar</button>
+    </nav>
+
+    <section class="tab-panel" id="panel-status">
+      <details class="status-warning">
+        <summary><strong data-en="Note:">Aviso:</strong> <span data-en="what the calculation leaves out">o que fica de fora do cálculo</span></summary>
+        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;) and the extra ATK/DEF that refining itself gives. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…") e o ATK/DEF extra que o próprio refino dá. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
+      </details>
+      <div class="stat-calc">
+        <h2 data-en="Stat Points Calculator">Calculadora de Pontos</h2>
+        <div class="stat-row stat-row-head">
+          <span></span><span>Base</span><span>Equip.</span><span>Total</span>
+        </div>
+        <div class="stat-calc-rows" id="statCalcRows"></div>
+        <div class="stat-calc-note" data-en="Base capped at 99. The bonus adds flat item/card bonuses, each piece's refine, complete sets, extra options and passives (below).">Base limitada a 99. O bônus soma o fixo de item/carta, refino de cada peça, conjuntos completos, opções extras e passivas (abaixo).</div>
+      </div>
+
+      <div class="sim-box">
+        <h2 data-en="Simulator">Simulador</h2>
+        <div class="sim-grid" id="simGrid"></div>
+        <div class="aspd-box" id="aspdBox"></div>
+      </div>
+
+      <div class="sets-box" id="setsBox"></div>
+      <div class="sets-box skills-box" id="skillsBox"></div>
+    </section>
+
+    <section class="tab-panel" id="panel-compare" hidden>
+      <p class="panel-intro" data-en="Status of each stage with its own gear, points and level. The arrow shows the change from the previous stage.">Status de cada fase com o equipamento, os pontos e o level dela. A seta mostra a diferença para a fase anterior.</p>
+      <div class="compare-wrap" id="compareTable"></div>
+    </section>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<datalist id="extraSuggestions"></datalist>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle" data-en="Choose item">Escolher item</h3>
+      <button class="close-x" id="modalClose" type="button">&times;</button>
+    </div>
+    <input class="search-input" id="searchInput" type="text" placeholder="Buscar por nome…" data-en-placeholder="Search by name…">
+    <div class="filter-row-wrap">
+      <label class="filter-row"><input type="checkbox" id="ignoreSlotFilter"> <span data-en="ignore slot filter">ignorar filtro de slot</span></label>
+      <label class="filter-row" id="classFilterRow"><input type="checkbox" id="classFilter" checked> <span id="classFilterLabel" data-en="only items of the class">só itens da classe</span></label>
+    </div>
+    <div class="results" id="searchResults"></div>
+    <button class="manual-toggle" id="manualToggleBtn" type="button" data-en="+ manual entry (item not in the database)">+ entrada manual (item fora da base)</button>
+    <div class="manual-form" id="manualForm" hidden>
+      <input id="manualName" type="text" maxlength="120" placeholder="Nome do item" data-en-placeholder="Item name">
+      <input id="manualSprite" type="text" maxlength="300" placeholder="URL do sprite (opcional)" data-en-placeholder="Sprite URL (optional)">
+      <button class="primary-btn" id="manualApply" type="button" data-en="Use this item">Usar este item</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="detailBackdrop" hidden>
+  <div class="modal detail-modal">
+    <div class="modal-head">
+      <div class="detail-title" id="detailTitle"></div>
+      <button class="close-x" id="detailClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="shareModalBackdrop" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-en="Share loadout">Compartilhar loadout</h3>
+      <button class="close-x" id="shareModalClose" type="button">&times;</button>
+    </div>
+
+    <div class="field">
+      <label data-en="This loadout's code — copy it and send it on Discord">Código deste loadout — copie e mande no Discord</label>
+      <textarea class="search-input" id="shareCodeOut" rows="3" readonly style="resize:vertical;font-family:var(--font-mono);font-size:11px;"></textarea>
+    </div>
+    <button class="ghost-btn" id="shareCopyBtn" type="button" data-en="Copy code">Copiar código</button>
+
+    <div class="filter-row" style="border-top:1px solid var(--border-soft);margin-top:4px;padding-top:10px;" data-en="or paste a code a friend sent you:">ou cole um código que um amigo te mandou:</div>
+    <textarea class="search-input" id="shareCodeIn" rows="3" placeholder="Cole o código aqui…" data-en-placeholder="Paste the code here…" style="resize:vertical;font-family:var(--font-mono);font-size:11px;"></textarea>
+    <button class="primary-btn" id="shareImportBtn" type="button" data-en="Import this code">Importar este código</button>
+    <div class="db-status" id="shareStatus"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DB_URL = 'https://rtm-database.pages.dev/assets/data/db-items.json';
+  var ICON = function(id){ return 'https://rtm-database.pages.dev/assets/icons/' + id + '.png'; };
+  // Cards use a separate "art" sprite path for their unique artwork; assets/icons/{id}.png
+  // for a card id 404s (that plain path is only for non-card equipment). Confirmed against
+  // the live site's own item-detail network requests.
+  var CARD_ICON = function(id){ return 'https://rtm-database.pages.dev/assets/icons/art/' + id + '.png'; };
+  var STORAGE_KEY = 'rtm-hud-loadouts-v1';
+  var DB_CACHE_KEY = 'rtm-hud-itemdb-v1';
+  var THEME_KEY = 'rtm-hud-theme';
+  var LANG_KEY = 'rtm-hud-lang';
+
+  // UI language. Switching reloads the page, so every string (including the constant tables
+  // below) is simply built in the chosen language. Item, skill, set and map names come from
+  // the site, which is in English either way.
+  var LANG = (function(){ try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'pt'; } catch(e){ return 'pt'; } })();
+  function L(pt, en){ return LANG === 'en' ? en : pt; }
+  (function applyStaticLang(){
+    document.documentElement.lang = LANG === 'en' ? 'en' : 'pt-BR';
+    if (LANG !== 'en') return;
+    document.querySelectorAll('[data-en]').forEach(function(n){ n.textContent = n.getAttribute('data-en'); });
+    ['title', 'placeholder', 'aria-label'].forEach(function(a){
+      document.querySelectorAll('[data-en-' + a + ']').forEach(function(n){ n.setAttribute(a, n.getAttribute('data-en-' + a)); });
+    });
+  })();
+
+  var EQUIP_SLOTS = [
+    { key:'headUpper', label:L('Chapéu de Cima', 'Upper Headgear'), locs:['Upper headgear','Upper and Middle Headgear','Upper and Mid Headgear'] },
+    { key:'headMid', label:L('Chapéu do Meio', 'Middle Headgear'), locs:['Middle headgear','Mid Headgear','Mid/Low Headgear','Unique Mid/Low Headgear'] },
+    { key:'headLower', label:L('Chapéu de Baixo', 'Lower Headgear'), locs:['Lower headgear','Unique Lower Headgear'] },
+    { key:'armor', label:L('Armadura', 'Armor'), locs:['Armor'] },
+    { key:'weapon', label:L('Arma', 'Weapon'), locs:['Weapon','Weapon (two-handed)'] },
+    { key:'offhand', label:L('Mão Secundária', 'Off-hand'), locs:['Off-hand','Shield'] },
+    { key:'garment', label:L('Capa', 'Garment'), locs:['Garment'] },
+    { key:'shoes', label:L('Calçado', 'Shoes'), locs:['Shoes'] },
+    { key:'accLeft', label:L('Acessório Esquerdo', 'Left Accessory'), locs:['Accessory'] },
+    { key:'accRight', label:L('Acessório Direito', 'Right Accessory'), locs:['Accessory'] }
+  ];
+  var SHADOW_SLOTS = [
+    { key:'shadowArmor', label:'Shadow Armor', locs:['Shadow armor'] },
+    { key:'shadowGloves', label:'Shadow Gloves', locs:['Shadow gloves'] },
+    { key:'shadowShoes', label:'Shadow Shoes', locs:['Shadow shoes'] },
+    { key:'shadowAccLeft', label:L('Shadow Accessory E', 'Shadow Accessory L'), locs:['Shadow accessory'] },
+    { key:'shadowAccRight', label:L('Shadow Accessory D', 'Shadow Accessory R'), locs:['Shadow accessory'] }
+  ];
+  var STAT_KEYS = [
+    { key:'str', label:'STR' }, { key:'agi', label:'AGI' }, { key:'vit', label:'VIT' },
+    { key:'int', label:'INT' }, { key:'dex', label:'DEX' }, { key:'luk', label:'LUK' }
+  ];
+
+  var state = {
+    loadouts: [],
+    activeId: null,
+    db: null,       // { items, classes }
+    dbError: false,
+    places: null,   // { byName, maps, travel } from db-places.json
+    farmOpen: {},   // itemId -> expanded in the farm list
+    modal: null      // { groupName, slotDef, cardIndex|null }
+  };
+
+  // ---------- tiny DOM helpers (no innerHTML with dynamic/network data) ----------
+  function el(tag, attrs, kids){
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs){
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'text') n.textContent = attrs[k];
+      else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    }
+    (kids||[]).forEach(function(c){ if (c) n.appendChild(c); });
+    return n;
+  }
+  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+  function uid(){ return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8); }
+
+  // ---------- persistence ----------
+  // Every loadout that enters the app (saved state, share code, imported file) is rebuilt from a
+  // whitelist: known fields only, right types, clamped numbers, capped string lengths. A crafted
+  // code can't crash rendering, pollute prototypes, bloat storage or break saving.
+  var LIMITS = { loadouts:100, name:80, charClass:40, notes:20000, itemName:120, spriteUrl:300,
+    cards:4, extras:10, extraLen:60, owned:500, codeChars:300000, decodedBytes:2000000, fileBytes:5000000 };
+  var STAGE_KEYS = ['early', 'mid', 'late'];
+  function own(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+  function isObj(v){ return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function cleanStr(v, max){
+    // Plain text only: drop control and bidi-override characters that could disguise text.
+    return typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u202A-\u202E\u2066-\u2069]/g, '').slice(0, max) : '';
+  }
+  function cleanNum(v, lo, hi, def){
+    var n = Number(v);
+    return isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : def;
+  }
+  function cleanItemRef(v){
+    if (!isObj(v)) return null;
+    var o = { itemName: cleanStr(v.itemName, LIMITS.itemName), manual: v.manual === true };
+    if (o.manual){
+      if (!o.itemName) return null;
+      o.spriteUrl = cleanStr(v.spriteUrl, LIMITS.spriteUrl);
+    } else {
+      var id = Number(v.itemId);
+      if (!isFinite(id) || id < 0 || id > 1e8) return null;
+      o.itemId = Math.floor(id);
+    }
+    return o;
+  }
+  function cleanSlot(v){
+    var o = cleanItemRef(v);
+    if (!o) return null;
+    if (own(v, 'refine')) o.refine = cleanNum(v.refine, 0, 20, 0);
+    if (Array.isArray(v.cards)) o.cards = v.cards.slice(0, LIMITS.cards).map(cleanItemRef);
+    if (Array.isArray(v.extras)){
+      var ex = v.extras.filter(function(x){ return typeof x === 'string'; }).slice(0, LIMITS.extras)
+        .map(function(x){ return cleanStr(x, LIMITS.extraLen); }).filter(Boolean);
+      if (ex.length) o.extras = ex;
+    }
+    return o;
+  }
+  function cleanStage(v){
+    var sd = blankStageData();
+    if (!isObj(v)) return sd;
+    sd.level = cleanNum(v.level, 1, MAX_LEVEL, 1);
+    sd.manualAspdBonus = cleanNum(v.manualAspdBonus, 0, 20, 0);
+    var bs = isObj(v.baseStats) ? v.baseStats : {};
+    STAT_KEYS.forEach(function(s){ sd.baseStats[s.key] = cleanNum(bs[s.key], 1, 99, 1); });
+    var sl = isObj(v.slots) ? v.slots : {};
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){ if (own(sl, d.key)) sd.slots[d.key] = cleanSlot(sl[d.key]); });
+    if (isObj(v.owned)) Object.keys(v.owned).slice(0, LIMITS.owned).forEach(function(k){
+      if (/^\d{1,9}$/.test(k) && v.owned[k] === true) sd.owned[k] = true;
+    });
+    if (isObj(v.skills)){
+      sd.skills = {};
+      PASSIVES.forEach(function(p){
+        if (!own(v.skills, p.id)) return;
+        var lv = cleanNum(v.skills[p.id], 0, p.max, 0);
+        if (lv) sd.skills[p.id] = lv;
+      });
+    }
+    return sd;
+  }
+  // keepId: true only for the user's own saved state; imports always get fresh ids.
+  function sanitizeLoadout(raw, keepId){
+    if (!isObj(raw)) return null;
+    var lo = blankLoadout(cleanStr(raw.name, LIMITS.name) || L('Loadout importado', 'Imported loadout'));
+    if (keepId && typeof raw.id === 'string' && /^id-[a-z0-9-]{1,40}$/.test(raw.id)) lo.id = raw.id;
+    lo.charClass = cleanStr(raw.charClass, LIMITS.charClass);
+    lo.notes = cleanStr(raw.notes, LIMITS.notes);
+    lo.updatedAt = cleanNum(raw.updatedAt, 0, 9e15, Date.now());
+    if (isObj(raw.stages)){
+      STAGE_KEYS.forEach(function(k){ if (own(raw.stages, k)) lo.stages[k] = cleanStage(raw.stages[k]); });
+      lo.activeStage = STAGE_KEYS.indexOf(raw.activeStage) !== -1 ? raw.activeStage : 'early';
+    } else if (isObj(raw.slots) || isObj(raw.baseStats)){
+      // Old one-set-per-loadout shape: becomes the stage it was tagged with.
+      var key = (raw.stage === 'mid' || raw.stage === 'late') ? raw.stage : 'early';
+      lo.stages[key] = cleanStage(raw);
+      lo.activeStage = key;
+    } else {
+      return null;
+    }
+    return lo;
+  }
+  function sanitizeLoadouts(list, keepIds){
+    if (!Array.isArray(list)) return [];
+    var seen = {};
+    return list.slice(0, LIMITS.loadouts).map(function(raw){ return sanitizeLoadout(raw, keepIds); })
+      .filter(Boolean).map(function(lo){
+        if (seen[lo.id]) lo.id = uid();
+        seen[lo.id] = true;
+        return lo;
+      });
+  }
+  function loadLoadouts(){
+    var raw = null;
+    try{
+      raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return sanitizeLoadouts(parsed && parsed.loadouts, true);
+    } catch(e){
+      // Unreadable saved data: keep a copy aside before the app starts fresh, never overwrite it.
+      try { if (raw) localStorage.setItem(STORAGE_KEY + '-corrupt-backup', raw); } catch(err){}
+      return [];
+    }
+  }
+  var saveTimer = null, saveWarned = false;
+  function saveLoadouts(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, loadouts: state.loadouts }));
+        saveWarned = false;
+      } catch(e){
+        // Storage full or unavailable: changes live only in this tab. Say so once, never silently.
+        if (!saveWarned) alertInline(L('Não foi possível salvar no navegador (armazenamento cheio ou bloqueado). Use Exportar para guardar um backup.',
+          'Could not save in the browser (storage full or blocked). Use Export to keep a backup.'));
+        saveWarned = true;
+      }
+    }, 180);
+  }
+
+  function blankSlots(){
+    var slots = {};
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(s){ slots[s.key] = null; });
+    return slots;
+  }
+  function blankBaseStats(){
+    var baseStats = {};
+    STAT_KEYS.forEach(function(s){ baseStats[s.key] = 1; });
+    return baseStats;
+  }
+  function blankStageData(){
+    return { level: 1, slots: blankSlots(), baseStats: blankBaseStats(), manualAspdBonus: 0, owned: {} };
+  }
+  function blankLoadout(name){
+    var stages = {};
+    ['early', 'mid', 'late'].forEach(function(s){ stages[s] = blankStageData(); });
+    return {
+      id: uid(),
+      name: name || L('Novo Loadout', 'New Loadout'),
+      charClass: '',
+      activeStage: 'early',
+      stages: stages,
+      notes: '',
+      updatedAt: Date.now()
+    };
+  }
+  function activeLoadout(){
+    return state.loadouts.find(function(l){ return l.id === state.activeId; }) || null;
+  }
+  // The Comparar tab computes every stage's status with the same functions the Status tab
+  // uses, by pointing them at another stage for the duration of one synchronous call.
+  var stageOverride = null;
+  function activeStageData(lo){
+    var key = stageOverride || lo.activeStage;
+    var sd = own(lo.stages, key) ? lo.stages[key] : lo.stages.early;
+    if (!sd.owned) sd.owned = {};
+    return sd;
+  }
+  function withStage(stage, fn){
+    var prev = stageOverride;
+    stageOverride = stage;
+    try { return fn(); } finally { stageOverride = prev; }
+  }
+
+  // ---------- item database ----------
+  // Tooltips mix always-on lines with conditional blocks ("Per Refine:", "If refine is +9:",
+  // "<Name> Set Bonus:", "While wearing X:" ...). Summing every "STR+N" in the raw text would
+  // apply refine/set/conditional bonuses unconditionally, so the tooltip is split into typed
+  // blocks once at load and each block is only counted when its condition holds.
+  var RE_PER_REFINE = /^per\s+(?:(\d+)\s+)?refines?:$/i;
+  var RE_IF_REFINE = /^if\s+refine\s+(?:is\s+)?\+?(\d+)\+?:$/i;
+  var RE_REFINE_OR_HIGHER = /^refine\s+(\d+)\s+or\s+higher:$/i;
+  var RE_SET_REFINE = /^(set refine\b|per (?:\d+ )?total set refines?:|per set refines?:)/i;
+  var RE_NAMED_SET_BONUS = /^(.+?)\s+Set Bonus:$/i;
+  var RE_SET_BONUS = /^Set Bonus:$/i;
+  var RE_SET_HEADER = /^(.+?\bSet):$/i;
+  var RE_PIECE_BONUS = /^Piece Bonus:$/i;
+  var RE_INLINE_REFINE = /\bper\s+(?:(\d+)\s+)?refines?\b\.?/i;
+
+  function blankBonus(){
+    var o = {};
+    STAT_KEYS.forEach(function(s){ o[s.key] = 0; });
+    DERIVED_LABELS.forEach(function(d){ o[d.key] = 0; });
+    return o;
+  }
+  function addBonus(into, from, mult){
+    var m = (mult === undefined) ? 1 : mult;
+    for (var k in from) into[k] += from[k] * m;
+  }
+  // Conservative: lines with "per" (scaling on something we can't know) or "or" (a choice)
+  // are never summed; refine-scaled lines strip their own "per refine" phrase first.
+  function parseLines(lines, isRefineScaled){
+    var out = blankBonus();
+    lines.forEach(function(l){
+      var line = isRefineScaled ? l.replace(RE_INLINE_REFINE, '') : l;
+      if (/\bper\b/i.test(line) || /\bor\b/i.test(line)) return;
+      var all = /All Stats\s*\+\s*(\d+)/i.exec(line);
+      if (all) STAT_KEYS.forEach(function(s){ out[s.key] += parseInt(all[1], 10) || 0; });
+      STAT_KEYS.forEach(function(s){ out[s.key] += parseStatBonus(line, s.label); });
+      DERIVED_LABELS.forEach(function(d){ out[d.key] += parseStatBonus(line, d.pattern); });
+    });
+    return out;
+  }
+  function parseTooltip(desc){
+    var lines = (desc || '').split('\n');
+    var blocks = [];
+    var cur = null;
+    var pendingSetName = null, awaitingSetName = false;
+    function open(b){ b.lines = []; blocks.push(b); cur = b; }
+    open({ kind:'base' });
+    for (var i = 0; i < lines.length; i++){
+      var l = lines[i].trim(), m;
+      if (!l){
+        if (cur.kind !== 'base' || cur.header) open({ kind:'base' });
+        pendingSetName = null; awaitingSetName = false;
+        continue;
+      }
+      if (awaitingSetName){ cur.setName = l; cur.pieces = l; awaitingSetName = false; continue; }
+      if (RE_PIECE_BONUS.test(l)){ open({ kind:'base', header:l }); continue; }
+      if (RE_SET_REFINE.test(l) || (cur.kind === 'set' && (RE_PER_REFINE.test(l) || RE_IF_REFINE.test(l) || RE_REFINE_OR_HIGHER.test(l)))){
+        open({ kind:'setRefine', header:l, setName: cur.setName || null });
+        continue;
+      }
+      if ((m = RE_PER_REFINE.exec(l))){ open({ kind:'perRefine', per: m[1] ? parseInt(m[1], 10) : 1, header:l }); continue; }
+      if ((m = RE_IF_REFINE.exec(l) || RE_REFINE_OR_HIGHER.exec(l))){ open({ kind:'refineAt', min: parseInt(m[1], 10), header:l }); continue; }
+      if ((m = RE_NAMED_SET_BONUS.exec(l))){ open({ kind:'set', setName: m[1].trim(), header:l }); continue; }
+      if (RE_SET_BONUS.test(l)){
+        if (pendingSetName){
+          var pieces = (cur.kind === 'setHead') ? cur.lines.join(', ') : '';
+          if (cur.kind === 'setHead') blocks.pop();
+          open({ kind:'set', setName: pendingSetName, header: pendingSetName, pieces: pieces });
+          pendingSetName = null;
+        } else {
+          open({ kind:'set', setName: null, header:'Set Bonus:' });
+          awaitingSetName = true;
+        }
+        continue;
+      }
+      if ((m = RE_SET_HEADER.exec(l))){ pendingSetName = m[1].trim(); open({ kind:'setHead', header:l }); continue; }
+      if (/:$/.test(l)){ open({ kind:'cond', header:l }); continue; }
+      if (cur.kind === 'base' && (m = RE_INLINE_REFINE.exec(l))){
+        blocks.push({ kind:'perRefine', per: m[1] ? parseInt(m[1], 10) : 1, inline:true, lines:[l] });
+        continue;
+      }
+      cur.lines.push(l);
+    }
+    blocks = blocks.filter(function(b){ return b.lines.length || b.header; });
+    blocks.forEach(function(b){
+      b.bonus = (b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'set')
+        ? parseLines(b.lines, b.kind === 'perRefine') : blankBonus();
+    });
+    return blocks;
+  }
+  var SET_EXTRA_MEMBERS = {
+    'Metal Set': [15416] // Strange Metal Ring — confirmed by the player 2026-10-05
+  };
+  // "" = every class; "All except A, B" = everyone but those; otherwise an explicit list.
+  function canEquip(item, cls){
+    if (!cls) return true;
+    var j = item.jobsText || '';
+    if (!j) return true;
+    if (/^All except /i.test(j)) return j.replace(/^All except /i, '').split(/\s*,\s*/).indexOf(cls) === -1;
+    return j.split(/\s*,\s*/).indexOf(cls) !== -1;
+  }
+  function indexDb(raw){
+    var cols = raw.cols, rows = raw.rows, cats = raw.cats || [], locs = raw.locs || [], classes = raw.classes || [];
+    var mobNames = raw.mobs || [], zoneNames = raw.zones || [], jobs = raw.jobs || [];
+    var idx = {}; cols.forEach(function(c,i){ idx[c]=i; });
+    var cardCatIdx = cats.indexOf('Card');
+    var setMembership = {};
+    var byId = {};
+    var items = rows.map(function(r){
+      var locIdxArr = r[idx.loc] || [];
+      // Cap tooltip size so a broken or hostile database can't stall the parser.
+      var desc = String(r[idx.desc] || '').split('\n').slice(0, 200).map(function(l){ return l.slice(0, 500); }).join('\n');
+      var blocks = parseTooltip(desc);
+      var sources = (Array.isArray(r[idx.src]) ? r[idx.src] : []).map(function(s){
+        return { mobId: s[0], mob: mobNames[s[1]] || ('#' + s[0]), mobLv: s[2], zone: zoneNames[s[3]] || '—', rate: s[4], mvp: !!s[5] };
+      }).sort(function(a, b){ return b.rate - a.rate; });
+      var how = Array.isArray(r[idx.how]) ? r[idx.how] : null;
+      var item = {
+        id: r[idx.id],
+        name: r[idx.name],
+        cat: cats[r[idx.cat]] || '',
+        isCard: r[idx.cat] === cardCatIdx,
+        locs: locIdxArr.map(function(i){ return locs[i]; }).filter(Boolean),
+        lv: r[idx.lv],
+        atk: r[idx.atk], matk: r[idx.matk], def: r[idx.def], mdef: r[idx.mdef], weight: r[idx.weight],
+        slots: Math.max(0, Math.min(4, r[idx.slots] | 0)),
+        refinable: r[idx.refine] === 1,
+        jobsText: jobs[r[idx.jobs]] || '',
+        shop: r[idx.shop] === 1,
+        sources: sources,
+        how: how ? { place: how[0] || '', mats: Array.isArray(how[3]) ? how[3] : [], note: how[4] || '' } : null,
+        desc: desc,
+        blocks: blocks
+      };
+      blocks.forEach(function(b){
+        if (b.kind !== 'set' || !b.setName) return;
+        var list = setMembership[b.setName] = setMembership[b.setName] || [];
+        if (list.indexOf(item.id) === -1) list.push(item.id);
+      });
+      byId[item.id] = item;
+      return item;
+    });
+    // Set pieces whose own tooltip doesn't mention the set (only a partner piece carries the
+    // set text), added only once confirmed by the player.
+    for (var setName in SET_EXTRA_MEMBERS){
+      var list = setMembership[setName];
+      if (!list) continue;
+      SET_EXTRA_MEMBERS[setName].forEach(function(id){ if (byId[id] && list.indexOf(id) === -1) list.push(id); });
+    }
+    return { items: items, byId: byId, classes: classes, setMembership: setMembership };
+  }
+  function itemById(id){ return state.db ? state.db.byId[id] || null : null; }
+  // Item's own bonuses at a given refine level (sets are handled by computeActiveSets).
+  function itemOwnBonuses(item, refine){
+    var out = blankBonus();
+    var r = refine || 0;
+    item.blocks.forEach(function(b){
+      if (b.kind === 'base') addBonus(out, b.bonus);
+      else if (b.kind === 'perRefine') addBonus(out, b.bonus, Math.floor(r / b.per));
+      else if (b.kind === 'refineAt' && r >= b.min) addBonus(out, b.bonus);
+    });
+    return out;
+  }
+
+  // ---------- places / routes (db-places.json) ----------
+  // Each place row carries the server's own "como chegar": `ride` = [travelNpcIdx, destino,
+  // nívelDeOrfanatoExigido], `route` = map indexes walked from where the travel service drops
+  // you, `via` = [stepIdx, npc, x, y, mapIdx, posição, ["see", npc, mapIdx, posição]?].
+  // Positions are numpad-style (9 = canto superior direito, 5 = centro), same as the site.
+  var PLACES_URL = 'https://rtm-database.pages.dev/assets/data/db-places.json';
+  var NUMPAD_POS = LANG === 'en'
+    ? { 1:'bottom-left corner', 2:'bottom', 3:'bottom-right corner', 4:'left side',
+        5:'center', 6:'right side', 7:'top-left corner', 8:'top', 9:'top-right corner' }
+    : { 1:'canto inferior esquerdo', 2:'parte de baixo', 3:'canto inferior direito', 4:'lado esquerdo',
+        5:'centro', 6:'lado direito', 7:'canto superior esquerdo', 8:'parte de cima', 9:'canto superior direito' };
+  function fetchPlaces(){
+    fetch(PLACES_URL).then(function(res){
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function(raw){
+      var ci = {}; raw.cols.forEach(function(c, i){ ci[c] = i; });
+      var byName = {};
+      raw.rows.forEach(function(r){
+        byName[r[ci.name]] = { name: r[ci.name], ride: r[ci.ride], route: r[ci.route] || [], via: Array.isArray(r[ci.via]) ? r[ci.via] : [] };
+      });
+      state.places = { byName: byName, maps: raw.maps || [], travel: raw.travel || [] };
+      if (activeLoadout()) renderFarm(activeLoadout());
+    }).catch(function(){ state.places = { failed: true }; });
+  }
+
+  // Routes players wrote down while actually playing on this server (shared checklist,
+  // 2026-10-05). "Kafra Orfanato" = Kafra Allysia and "Dungeon Caravan" = Skia Nerius (every
+  // destination matches the NPC in db-places). `confirmed` mirrors the checklist tick (all 13 ticked
+  // as of 2026-10-05); unticked notes show as "anotado, não confirmado". Keyed by ride destination.
+  var PLAYER_ROUTES = {
+    "Morroc's Guild": { text:L("Kafra Orfanato > Morroc's Guild", "Orphanage Kafra > Morroc's Guild"), confirmed:true },
+    'Geffen Cave': { text:'Dungeon Caravan > Geffen Cave', confirmed:true },
+    'Forest Maze': { text:'Dungeon Caravan > Forest Maze', confirmed:true },
+    'Judge Headquarters': { text:L('Kafra Orfanato > Prontera (portal spot 8) > Prontera Castle > Judge Headquarters\nou: Dungeon Caravan > Judge Headquarters (só para Judge)', 'Orphanage Kafra > Prontera (portal spot 8) > Prontera Castle > Judge Headquarters\nor: Dungeon Caravan > Judge Headquarters (Judge only)'), confirmed:true },
+    'Airship Crash Site': { text:'Dungeon Caravan > Airship Crash Site', confirmed:true },
+    'Kiel Hyre Factory': { text:'Dungeon Caravan > Kafra Abandoned Warehouse > yuno_fild09 > yuno_fild08 (spot 4)', confirmed:true },
+    'Mora': { text:L('Kafra Orfanato > Mora', 'Orphanage Kafra > Mora'), confirmed:true },
+    'Dragon Nest': { text:'Dungeon Caravan > Dragon Nest', confirmed:true },
+    'Crystal Caves': { text:L('Kafra Orfanato > Hugel (barco) > Frozen Fields > snow_fild02 > snow_fild04 (spot 3)', 'Orphanage Kafra > Hugel (boat) > Frozen Fields > snow_fild02 > snow_fild04 (spot 3)'), confirmed:true },
+    'Frontier/Maroll': { text:L('Kafra Orfanato > Frontier', 'Orphanage Kafra > Frontier'), confirmed:true },
+    'Nomad Village': { text:L('Kafra Orfanato > Prontera (kafra) > Nomad Village', 'Orphanage Kafra > Prontera (Kafra) > Nomad Village'), confirmed:true },
+    'Abandoned Kafra Warehouse': { text:'Dungeon Caravan > Abandoned Kafra Warehouse', confirmed:true },
+    'Sky Garden': { text:L('Kafra Orfanato > Umbala > ygg_dun01 > ygg_dun02 > ygg_fild01 > ygg_fild02 (portal spot 5)', 'Orphanage Kafra > Umbala > ygg_dun01 > ygg_dun02 > ygg_fild01 > ygg_fild02 (portal spot 5)'), confirmed:true }
+  };
+
+  // How to reach each point the server's travel service drops you at, in the ORIGINAL game.
+  // Written from general knowledge of the original game (not from a data source), so only well-known places are
+  // listed; points that may not exist in the original game (Judge HQ, Sky Garden, Frontier…)
+  // are left out on purpose and show only the server route. The walk after that point is the same.
+  var ORIGINAL_ACCESS = {
+    'Prontera': { text:L('Kafra de qualquer cidade principal → Prontera.', 'Kafra from any main town → Prontera.'), sure:true },
+    'Izlude': { text:L('Kafra de Prontera → Izlude, ou a pé saindo de Prontera pelo leste.', 'Prontera Kafra → Izlude, or walk east out of Prontera.'), sure:true },
+    'Alberta': { text:L('Kafra de Payon ou de Morroc → Alberta.', 'Payon or Morroc Kafra → Alberta.'), sure:true },
+    'Geffen': { text:L('Kafra de Prontera → Geffen.', 'Prontera Kafra → Geffen.'), sure:true },
+    'Payon': { text:L('Kafra de Prontera → Payon.', 'Prontera Kafra → Payon.'), sure:true },
+    'Payon Archer Village': { text:L('Kafra de Prontera → Payon; a Vila dos Arqueiros fica ao norte da cidade, a pé.', 'Prontera Kafra → Payon; the Archer Village is north of town, on foot.'), sure:true },
+    'Morroc': { text:L('Kafra de Prontera → Morroc.', 'Prontera Kafra → Morroc.'), sure:true },
+    'Morroc Sphinx': { text:L('Kafra de Prontera → Morroc; a Esfinge fica no deserto de Sograt, a oeste de Morroc, a pé.', 'Prontera Kafra → Morroc; the Sphinx is in the Sograt Desert, west of Morroc, on foot.'), sure:true },
+    'Aldebaran': { text:L('Kafra de Prontera ou de Geffen → Aldebaran.', 'Prontera or Geffen Kafra → Aldebaran.'), sure:true },
+    'Lutie': { text:L('Kafra de Aldebaran → Lutie (há também o NPC de Natal em Aldebaran).', 'Aldebaran Kafra → Lutie (there is also the Christmas NPC in Aldebaran).'), sure:true },
+    'Comodo': { text:L('Kafra de Morroc → Comodo.', 'Morroc Kafra → Comodo.'), sure:true },
+    'Umbala': { text:L('Kafra de Comodo → Umbala.', 'Comodo Kafra → Umbala.'), sure:true },
+    'Niflheim': { text:L('Kafra de Comodo → Umbala; em Umbala, desça pela árvore Yggdrasil (dungeon de Umbala) até Niflheim.', 'Comodo Kafra → Umbala; in Umbala, go down the Yggdrasil tree (Umbala dungeon) to Niflheim.'), sure:true },
+    'Glast Heim': { text:L('Kafra de Prontera → Geffen; Glast Heim fica ao norte de Geffen, a pé pelos campos.', 'Prontera Kafra → Geffen; Glast Heim is north of Geffen, on foot through the fields.'), sure:true },
+    'Orc Village': { text:L('Kafra de Prontera → Geffen; a Vila dos Orcs fica nos campos a oeste de Geffen, a pé.', 'Prontera Kafra → Geffen; the Orc Village is in the fields west of Geffen, on foot.'), sure:true },
+    'Prontera Culvert': { text:L('Os esgotos ficam em Prontera: fale com o guarda dos esgotos na cidade.', 'The culvert is in Prontera: talk to the culvert guard in town.'), sure:true },
+    'Coal Mines': { text:L('A pé de Prontera para o norte até o Monte Mjolnir; a mina fica no Mjolnir.', 'Walk north from Prontera to Mt. Mjolnir; the mine is on Mjolnir.'), sure:true },
+    'Juperos': { text:L('Kafra/aeronave até Juno (Yuno); de Juno, a pé até El Mes Gorge (Vale do Abismo) e à entrada de Juperos.', 'Kafra/airship to Juno (Yuno); from Juno, walk to El Mes Gorge and the Juperos entrance.'), sure:true },
+    'Einbroch': { text:L('Aeronave doméstica (saindo de Juno) → Einbroch.', 'Domestic airship (from Juno) → Einbroch.'), sure:true },
+    'Einbech': { text:L('Aeronave até Einbroch; Einbech fica a pé (ou de trem) a partir de Einbroch.', 'Airship to Einbroch; Einbech is reached on foot (or by train) from Einbroch.'), sure:true },
+    'Lighthalzen': { text:L('Aeronave doméstica (saindo de Juno) → Lighthalzen.', 'Domestic airship (from Juno) → Lighthalzen.'), sure:true },
+    'Hugel': { text:L('Aeronave doméstica (saindo de Juno) → Hugel.', 'Domestic airship (from Juno) → Hugel.'), sure:true },
+    'Thanatos Tower': { text:L('Aeronave até Hugel; a Torre de Thanatos fica no campo ao norte de Hugel.', 'Airship to Hugel; Thanatos Tower is in the field north of Hugel.'), sure:true },
+    'Abyss Lake': { text:L('Aeronave até Hugel; o Lago do Abismo fica nos campos de Hugel (exige a quest de acesso).', 'Airship to Hugel; Abyss Lake is in the Hugel fields (requires the access quest).'), sure:true },
+    'Rachel': { text:L('Aeronave internacional (saindo de Juno ou Izlude) → Rachel.', 'International airship (from Juno or Izlude) → Rachel.'), sure:true },
+    'Veins': { text:L('Aeronave até Rachel; Veins fica ao sul de Rachel, a pé pelos campos.', 'Airship to Rachel; Veins is south of Rachel, on foot through the fields.'), sure:true }
+  };
+
+  function fetchDb(){
+    var statusEl = document.getElementById('dbStatus');
+    function tryCache(){
+      try{
+        var raw = localStorage.getItem(DB_CACHE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch(e){}
+      return null;
+    }
+    fetch(DB_URL).then(function(res){
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function(raw){
+      state.db = indexDb(raw); // throws on a malformed payload, so a bad response is never cached
+      try{ localStorage.setItem(DB_CACHE_KEY, JSON.stringify(raw)); } catch(e){}
+      statusEl.textContent = state.db.items.length.toLocaleString(L('pt-BR', 'en-US')) + L(' itens carregados da base de itens pública.', ' items loaded from the public item database.');
+      statusEl.classList.remove('err');
+      populateClassOptions();
+      render();
+    }).catch(function(err){
+      var cached = tryCache(), db = null;
+      if (cached){ try { db = indexDb(cached); } catch(e){ db = null; } }
+      if (db){
+        state.db = db;
+        statusEl.textContent = L('Offline: usando cópia salva da base de itens (pode estar desatualizada).', 'Offline: using a saved copy of the item database (may be out of date).');
+        statusEl.classList.remove('err');
+        populateClassOptions();
+        render();
+      } else {
+        state.dbError = true;
+        statusEl.textContent = L('Não foi possível carregar a base do site agora. Entrada manual ainda funciona normalmente — use "+ entrada manual" ao escolher um item.', 'Could not load the site database right now. Manual entry still works — use "+ manual entry" when choosing an item.');
+        statusEl.classList.add('err');
+      }
+    });
+  }
+
+  function slotMatchesItem(slotDef, item, ignoreFilter){
+    if (ignoreFilter) return true;
+    return item.locs.some(function(l){ return slotDef.locs.indexOf(l) !== -1; });
+  }
+
+  function searchItems(query, slotDef, wantCards, ignoreFilter, cls){
+    if (!state.db) return [];
+    var q = (query||'').trim().toLowerCase();
+    var out = [];
+    for (var i=0; i<state.db.items.length; i++){
+      var it = state.db.items[i];
+      if (wantCards !== it.isCard) continue;
+      if (q && it.name.toLowerCase().indexOf(q) === -1) continue;
+      if (!slotMatchesItem(slotDef, it, ignoreFilter)) continue;
+      if (!wantCards && cls && !canEquip(it, cls)) continue;
+      out.push(it);
+      if (out.length >= 50) break;
+    }
+    out.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    return out;
+  }
+
+  function populateClassOptions(){
+    var sel = document.getElementById('fClass');
+    var current = sel.value;
+    clear(sel);
+    sel.appendChild(el('option',{text:'—', value:''}));
+    var list = (state.db && state.db.classes) || [];
+    list.forEach(function(c){ sel.appendChild(el('option',{text:c, value:c})); });
+    if (current) sel.value = current;
+  }
+
+  // ---------- sprite element with graceful fallback ----------
+  // src: a resolved image URL (caller picks ICON/CARD_ICON/manual spriteUrl beforehand)
+  function spriteEl(src){
+    var wrap = el('span', { class:'item-row' });
+    var img = document.createElement('img');
+    img.className = 'sprite';
+    img.loading = 'lazy';
+    img.alt = '';
+    var fallback = el('span', { class:'sprite-fallback', text:'?' });
+    if (src){
+      img.src = src;
+      fallback.hidden = true;
+      img.addEventListener('error', function(){ img.hidden = true; fallback.hidden = false; });
+    } else {
+      img.hidden = true;
+      fallback.hidden = false;
+    }
+    wrap.appendChild(img);
+    wrap.appendChild(fallback);
+    return wrap;
+  }
+
+  // ---------- rendering ----------
+  function renderSidebar(){
+    var list = document.getElementById('loadoutList');
+    clear(list);
+    if (state.loadouts.length === 0){
+      list.appendChild(el('div', { class:'empty-note', text:L('Nenhum loadout ainda.', 'No loadouts yet.') }));
+      return;
+    }
+    state.loadouts.slice().sort(function(a,b){ return b.updatedAt - a.updatedAt; }).forEach(function(lo){
+      var row = el('div', { class:'loadout-item' + (lo.id === state.activeId ? ' active' : '') });
+      row.appendChild(el('div', { class:'name', text: lo.name }));
+      var meta = el('div', { class:'meta' });
+      meta.appendChild(el('span', { class:'badge ' + lo.activeStage, text: stageLabel(lo.activeStage) }));
+      if (lo.charClass) meta.appendChild(el('span', { text: lo.charClass }));
+      row.appendChild(meta);
+      row.addEventListener('click', function(){ state.activeId = lo.id; render(); });
+      list.appendChild(row);
+    });
+  }
+
+  function stageLabel(s){
+    return { early:'Early', mid:'Mid', late:'Late' }[s] || s;
+  }
+
+  function renderHeadForm(lo){
+    document.getElementById('fName').value = lo.name;
+    document.getElementById('fLevel').value = activeStageData(lo).level || 1;
+    populateClassOptions();
+    document.getElementById('fClass').value = lo.charClass || '';
+  }
+
+  function computeTotals(lo){
+    var t = { atk:0, matk:0, def:0, mdef:0, weight:0 };
+    if (!state.db) return t;
+    var slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.forEach(function(s){
+      var v = slots[s.key];
+      if (!v || v.manual) return;
+      var it = itemById(v.itemId);
+      if (!it) return;
+      t.atk += it.atk||0; t.matk += it.matk||0; t.def += it.def||0; t.mdef += it.mdef||0; t.weight += it.weight||0;
+    });
+    return t;
+  }
+
+  function renderStatStrip(lo){
+    var strip = document.getElementById('statStrip');
+    clear(strip);
+    var t = computeTotals(lo);
+    [['ATK', t.atk], ['MATK', t.matk], ['DEF', t.def], ['MDEF', t.mdef], [L('Peso', 'Weight'), t.weight]].forEach(function(pair){
+      strip.appendChild(el('div', { class:'stat' }, [
+        el('div', { class:'k', text: pair[0] }),
+        el('div', { class:'v mono', text: String(pair[1]) })
+      ]));
+    });
+  }
+
+  // Rolled options of this copy of the item: one chip per line, plus an inline "add" field.
+  function renderExtras(val){
+    var wrap = el('div', { class:'extras' });
+    wrap.addEventListener('click', function(ev){ ev.stopPropagation(); });
+    var extras = Array.isArray(val.extras) ? val.extras.filter(function(x){ return typeof x === 'string'; }) : [];
+    extras.forEach(function(line, i){
+      var counted = extraIsCounted(line);
+      var chip = el('span', { class:'extra-chip' + (counted ? ' on' : ''),
+        title: counted ? L('Somado no simulador', 'Added to the simulator') : L('Não calculado: aparece só como anotação', 'Not calculated: shown as a note only') }, [
+        el('span', { text: line })
+      ]);
+      var x = el('button', { type:'button', class:'extra-x', text:'×', 'aria-label':L('Remover ', 'Remove ') + line });
+      x.addEventListener('click', function(){
+        val.extras = extras.filter(function(_, j){ return j !== i; });
+        if (!val.extras.length) delete val.extras;
+        saveLoadouts(); render();
+      });
+      chip.appendChild(x);
+      wrap.appendChild(chip);
+    });
+    var form = el('form', { class:'extra-form' });
+    var input = el('input', { type:'text', list:'extraSuggestions', maxlength:'60', placeholder:L('+ opção (ex: ATK +3)', '+ option (e.g. ATK +3)'),
+      'aria-label':L('Adicionar opção extra ao item', 'Add an extra option to the item') });
+    form.appendChild(input);
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var line = input.value.replace(/\s+/g, ' ').trim();
+      if (!line || /\+\s*$/.test(line)) return;
+      val.extras = extras.concat([line]);
+      saveLoadouts(); render();
+    });
+    wrap.appendChild(form);
+    return wrap;
+  }
+
+  function renderSlotGrid(containerId, slotDefs, lo, groupName){
+    var grid = document.getElementById(containerId);
+    clear(grid);
+    var sd = activeStageData(lo);
+    slotDefs.forEach(function(def){
+      var val = sd.slots[def.key];
+      var slot = el('div', { class:'slot' }, [ el('div', { class:'slot-label', text: def.label }) ]);
+      var body = el('div', { class:'slot-body' + (val ? ' filled' : '') });
+
+      if (!val){
+        body.appendChild(el('div', { class:'slot-empty-icon', text:'+' }));
+        body.appendChild(el('div', { class:'slot-empty-text', text:L('Vazio', 'Empty') }));
+        body.addEventListener('click', function(){ openModal(groupName, def, null); });
+      } else {
+        var row = spriteEl(val.manual ? (val.spriteUrl||'') : ICON(val.itemId));
+        var info = el('div', { class:'item-info' });
+        var matchedItem = (!val.manual && state.db) ? itemById(val.itemId) : null;
+        var nameEl = el(matchedItem ? 'button' : 'div', { class:'item-name' + (matchedItem ? ' item-link' : ''), text: val.itemName });
+        if (matchedItem){
+          nameEl.type = 'button';
+          nameEl.title = L('Ver detalhes, tooltip e onde dropa', 'See details, tooltip and drop sources');
+          nameEl.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            openDetail(matchedItem.id, { refine: val.refine || 0 });
+          });
+        }
+        info.appendChild(nameEl);
+        if (matchedItem){
+          var sub = el('div', { class:'item-sub' });
+          sub.appendChild(document.createTextNode('Lv ' + (matchedItem.lv||'?') + (matchedItem.slots ? ' · ' + matchedItem.slots + '-slot' : '')));
+          if (matchedItem.refinable){
+            var refWrap = el('label', { class:'refine-input', title:L('Nível de refino', 'Refine level') });
+            refWrap.appendChild(document.createTextNode('+'));
+            var refIn = el('input', { type:'number', min:'0', max:'20', value: String(val.refine || 0), 'aria-label':L('Refino de ', 'Refine of ') + val.itemName });
+            refIn.addEventListener('click', function(ev){ ev.stopPropagation(); });
+            refIn.addEventListener('change', function(){
+              val.refine = Math.max(0, Math.min(20, parseInt(refIn.value, 10) || 0));
+              saveLoadouts();
+              render();
+            });
+            refWrap.appendChild(refIn);
+            sub.appendChild(refWrap);
+          }
+          info.appendChild(sub);
+        }
+        row.appendChild(info);
+        body.appendChild(row);
+
+        var maxCards = matchedItem ? (matchedItem.slots||0) : 0;
+        if (maxCards > 0){
+          var cardRow = el('div', { class:'card-row' });
+          val.cards = val.cards || [];
+          for (var ci=0; ci<maxCards; ci++){
+            (function(ci){
+              var c = val.cards[ci];
+              var cs = el('div', { class:'card-slot' });
+              if (c){
+                var cimg = document.createElement('img');
+                cimg.src = c.manual ? (c.spriteUrl||'') : CARD_ICON(c.itemId);
+                cimg.alt = ''; cimg.loading = 'lazy';
+                cimg.addEventListener('error', function(){ cimg.style.visibility='hidden'; });
+                cs.appendChild(cimg);
+                cs.title = c.itemName;
+                var xBtn = el('button', { class:'x', text:'×' });
+                xBtn.addEventListener('click', function(ev){ ev.stopPropagation(); val.cards[ci] = null; saveLoadouts(); render(); });
+                cs.appendChild(xBtn);
+                cs.addEventListener('click', function(){
+                  if (c.manual || !itemById(c.itemId)){ openModal(groupName, def, ci); return; }
+                  openDetail(c.itemId, { onSwap: function(){ openModal(groupName, def, ci); }, swapLabel:L('Trocar carta', 'Change card') });
+                });
+              } else {
+                cs.title = L('Adicionar carta', 'Add card');
+                cs.addEventListener('click', function(){ openModal(groupName, def, ci); });
+              }
+              cardRow.appendChild(cs);
+            })(ci);
+          }
+          body.appendChild(cardRow);
+        }
+
+        body.appendChild(renderExtras(val));
+
+        var actions = el('div', { class:'slot-actions' });
+        var swapBtn = el('button', { class:'mini-btn', text:L('Trocar', 'Change') });
+        swapBtn.addEventListener('click', function(ev){ ev.stopPropagation(); openModal(groupName, def, null); });
+        var clearBtn = el('button', { class:'mini-btn', text:L('Limpar', 'Clear') });
+        clearBtn.addEventListener('click', function(ev){ ev.stopPropagation(); sd.slots[def.key] = null; saveLoadouts(); render(); });
+        actions.appendChild(swapBtn); actions.appendChild(clearBtn);
+        body.appendChild(actions);
+      }
+      slot.appendChild(body);
+      grid.appendChild(slot);
+    });
+  }
+
+  // ---------- stat points calculator ----------
+  // Sums only plain "STR+3" style flat bonuses out of an item's tooltip text —
+  // not percentages, not set/refine-conditional lines — same scoping the
+  // site's own Arsenal page uses, because neither can know the player's refines.
+  function parseStatBonus(desc, statLabel){
+    if (!desc) return 0;
+    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)(?![\\d.])(?!\\s*%)', 'gi');
+    var total = 0, m;
+    while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
+    return total;
+  }
+  // Calls fn(item, refine, slotVal, isCard) for every equipped DB item and card of the active stage.
+  function forEachEquipped(lo, fn){
+    if (!state.db) return;
+    var slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(def){
+      var val = slots[def.key];
+      if (!val) return;
+      if (!val.manual){
+        var it = itemById(val.itemId);
+        if (it) fn(it, val.refine || 0, val, false);
+      }
+      (val.cards || []).forEach(function(c){
+        if (!c || c.manual) return;
+        var ci = itemById(c.itemId);
+        if (ci) fn(ci, 0, val, true);
+      });
+    });
+  }
+  // All equipment-sourced bonuses for the active stage: own effects (refine-aware) + complete sets.
+  function computeAllBonuses(lo){
+    var out = blankBonus();
+    forEachEquipped(lo, function(it, refine){ addBonus(out, itemOwnBonuses(it, refine)); });
+    addBonus(out, computeActiveSets(lo).bonus);
+    var slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(def){
+      var val = slots[def.key];
+      if (val && Array.isArray(val.extras)) addBonus(out, parseLines(val.extras.filter(function(x){ return typeof x === 'string'; }), false));
+    });
+    return out;
+  }
+  // Random options rolled on a specific copy of an item ("ATK +3", "Max SP +3%"), typed in by
+  // the player. Only flat bonuses the parser knows are summed; the rest is shown as text.
+  var EXTRA_SUGGESTIONS = ['STR +', 'AGI +', 'VIT +', 'INT +', 'DEX +', 'LUK +', 'All Stats +', 'ATK +', 'MATK +',
+    'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD Limit +', 'Max HP +', 'Max SP +'];
+  (function fillExtraSuggestions(){
+    var dl = document.getElementById('extraSuggestions');
+    if (dl) EXTRA_SUGGESTIONS.forEach(function(s){ var o = document.createElement('option'); o.value = s; dl.appendChild(o); });
+  })();
+  function extraIsCounted(line){
+    var b = parseLines([line], false);
+    for (var k in b) if (b[k]) return true;
+    return false;
+  }
+  function computeStatBonuses(lo){
+    var all = computeAllBonuses(lo), sk = computeSkillBonuses(lo), out = {};
+    STAT_KEYS.forEach(function(s){ out[s.key] = all[s.key] + sk[s.key]; });
+    return out;
+  }
+  var MAX_LEVEL = 150; // the server goes to level 150 (base stats stay capped at 99)
+  function renderStatCalc(lo){
+    var sd = activeStageData(lo);
+    var rows = document.getElementById('statCalcRows');
+    clear(rows);
+    var bonuses = computeStatBonuses(lo);
+    STAT_KEYS.forEach(function(s){
+      var row = el('div', { class:'stat-row' });
+      row.appendChild(el('span', { class:'stat-label', text:s.label }));
+      var input = el('input', { type:'number', min:'1', max:'99', value: sd.baseStats[s.key] });
+      var totalEl = el('span', { class:'stat-total', text: String(sd.baseStats[s.key] + bonuses[s.key]) });
+      input.addEventListener('input', function(){
+        sd.baseStats[s.key] = Math.max(1, Math.min(99, Number(input.value) || 1));
+        totalEl.textContent = String(sd.baseStats[s.key] + bonuses[s.key]);
+        saveLoadouts();
+        renderStatusPanel(lo);
+        renderSummary(lo);
+      });
+      row.appendChild(input);
+      row.appendChild(el('span', { class:'stat-bonus', text: '+' + bonuses[s.key] }));
+      row.appendChild(totalEl);
+      rows.appendChild(row);
+    });
+  }
+
+  function render(){
+    renderSidebar();
+    var lo = activeLoadout();
+    document.getElementById('loadoutHead').hidden = !lo;
+    document.getElementById('stageBar').hidden = !lo;
+    document.getElementById('tabsWrap').hidden = !lo;
+    document.getElementById('sideRight').hidden = !lo;
+    document.getElementById('loSummary').hidden = !lo;
+    document.getElementById('noLoadoutNote').hidden = !!lo;
+    if (!lo) return;
+    document.querySelectorAll('.stage-btn').forEach(function(b){
+      b.classList.toggle('active', b.dataset.stage === lo.activeStage);
+    });
+    renderHeadForm(lo);
+    renderStatStrip(lo);
+    renderSlotGrid('equipGrid', EQUIP_SLOTS, lo, 'equip');
+    renderSlotGrid('shadowGrid', SHADOW_SLOTS, lo, 'shadow');
+    renderStatCalc(lo);
+    renderStatusPanel(lo);
+    renderCompare(lo);
+    renderFarm(lo);
+    renderSummary(lo);
+    var notes = document.getElementById('notesInput');
+    if (document.activeElement !== notes) notes.value = lo.notes || '';
+  }
+
+  // ---------- modal ----------
+  function openModal(groupName, slotDef, cardIndex){
+    state.modal = { groupName:groupName, slotDef:slotDef, cardIndex:cardIndex };
+    document.getElementById('modalTitle').textContent = (cardIndex === null ? L('Escolher: ', 'Choose: ') : L('Carta para: ', 'Card for: ')) + slotDef.label;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('ignoreSlotFilter').checked = false;
+    var lo = activeLoadout();
+    var cls = (lo && lo.charClass) || '';
+    var classRow = document.getElementById('classFilterRow');
+    classRow.hidden = !cls || cardIndex !== null;
+    document.getElementById('classFilter').checked = true;
+    document.getElementById('classFilterLabel').textContent = L('só itens que ' + cls + ' pode usar', 'only items ' + cls + ' can use');
+    document.getElementById('manualForm').hidden = true;
+    document.getElementById('manualName').value = '';
+    document.getElementById('manualSprite').value = '';
+    document.getElementById('modalBackdrop').hidden = false;
+    renderResults('');
+    document.getElementById('searchInput').focus();
+  }
+  function closeModal(){
+    document.getElementById('modalBackdrop').hidden = true;
+    state.modal = null;
+  }
+
+  function applySelection(item){
+    var lo = activeLoadout(); if (!lo || !state.modal) return;
+    var slots = activeStageData(lo).slots;
+    var m = state.modal;
+    var val = { itemId:item.id, itemName:item.name, manual:false };
+    if (m.cardIndex === null){
+      slots[m.slotDef.key] = val;
+    } else {
+      var slotVal = slots[m.slotDef.key];
+      if (!slotVal) return;
+      slotVal.cards = slotVal.cards || [];
+      slotVal.cards[m.cardIndex] = { itemId:item.id, itemName:item.name, manual:false };
+    }
+    saveLoadouts();
+    closeModal();
+    render();
+  }
+
+  function applyManual(name, spriteUrl){
+    var lo = activeLoadout(); if (!lo || !state.modal || !name) return;
+    var slots = activeStageData(lo).slots;
+    var m = state.modal;
+    var val = { itemName:name, spriteUrl:spriteUrl||'', manual:true };
+    if (m.cardIndex === null){
+      slots[m.slotDef.key] = val;
+    } else {
+      var slotVal = slots[m.slotDef.key];
+      if (!slotVal) return;
+      slotVal.cards = slotVal.cards || [];
+      slotVal.cards[m.cardIndex] = val;
+    }
+    saveLoadouts();
+    closeModal();
+    render();
+  }
+
+  function renderResults(query){
+    var results = document.getElementById('searchResults');
+    clear(results);
+    if (!state.db){
+      results.appendChild(el('div', { class:'result-empty', text: L('Base de itens indisponível. Use "+ entrada manual" abaixo.', 'Item database unavailable. Use "+ manual entry" below.') }));
+      return;
+    }
+    var m = state.modal; if (!m) return;
+    var ignoreFilter = document.getElementById('ignoreSlotFilter').checked;
+    var wantCards = m.cardIndex !== null;
+    var lo = activeLoadout();
+    var cls = (lo && lo.charClass && document.getElementById('classFilter').checked) ? lo.charClass : '';
+    var found = searchItems(query, m.slotDef, wantCards, ignoreFilter, cls);
+    if (found.length === 0){
+      results.appendChild(el('div', { class:'result-empty', text: query ? L('Nada encontrado para "', 'Nothing found for "') + query + '".' : L('Digite para buscar…', 'Type to search…') }));
+      return;
+    }
+    found.forEach(function(it){
+      var row = el('div', { class:'result-row' });
+      row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
+      var info = el('div', { class:'item-info' });
+      info.appendChild(el('div', { class:'item-name', text: it.name }));
+      info.appendChild(el('div', { class:'item-sub', text: 'Lv ' + (it.lv||'?') + (it.slots ? ' · ' + it.slots + '-slot' : '') }));
+      row.appendChild(info);
+      row.addEventListener('click', function(){ applySelection(it); });
+      results.appendChild(row);
+    });
+  }
+
+  // ---------- derived status (HIT/FLEE/Crit/Perfect Dodge/ATK/MATK/soft DEF/soft MDEF) ----------
+  // Formulas quoted from the site's own Codex (/codex "The six stats" + "Attack" + "Defence
+  // and survival" sections), confirmed 2026-10 against this server — EXCEPT the Codex's claim
+  // that INT raises max SP, which the player confirmed is wrong in the live game, so SP/HP
+  // (which need unpublished per-class base tables anyway) are intentionally left out.
+  var RANGED_ATK_CATS = ['bow','revolver','whip','instrument','book','deck'];
+  var DERIVED_LABELS = [
+    { key:'hit', pattern:'HIT' }, { key:'flee', pattern:'FLEE' },
+    { key:'crit', pattern:'Critical(?: Rate)?' }, { key:'pdodge', pattern:'Perfect Dodge' },
+    { key:'aspdLimit', pattern:'ASPD Limit' },
+    { key:'def', pattern:'DEF' }, { key:'mdef', pattern:'MDEF' },
+    { key:'atk', pattern:'ATK' }, { key:'matk', pattern:'MATK' }
+  ];
+  function computeDerivedBonuses(lo){
+    var all = computeAllBonuses(lo), out = {};
+    DERIVED_LABELS.forEach(function(d){ out[d.key] = all[d.key]; });
+    return out;
+  }
+  // ---------- class passive skills ----------
+  // Hand-verified 2026-10-05 against every Passive/Permanent row of db-skills.json (126 rows):
+  // only these 23 skills give a flat bonus the simulator models. Where the site's "numbers"
+  // field disagreed with the description, the skill's patch history ("moved"/"said") showed the
+  // description is the current text (Perfection Mastery's crit was later confirmed against the
+  // in-game tooltip by the player). `h` is a hash of the description at verification
+  // time: if the site changes the text, that skill stops counting until it is re-checked.
+  // Weapon classes are strict; categories only *probably* in a class are listed as unsure and
+  // never count (underestimating beats overestimating).
+  var WEAPON_CLASS = {
+    axe:      { label:L('machado', 'axe'), cats:['Axe', 'One-Handed Axe'] },
+    dagger:   { label:L('adaga', 'dagger'), cats:['Dagger'] },
+    sword:    { label:L('espada', 'sword'), cats:['Sword'], unsure:['Long Sword', 'Two-Handed Sword', 'Knight Sword', 'Bone Sword'] },
+    katar:    { label:'katar', cats:['Katar'] },
+    bow:      { label:L('arco', 'bow'), cats:['Bow'], unsure:['Heavy Bow'] },
+    revolver: { label:L('revólver', 'revolver'), cats:['Revolver'] },
+    whip:     { label:L('chicote', 'whip'), cats:['Whip'] },
+    scythe:   { label:L('foice', 'scythe'), cats:['Scythe'] },
+    deck:     { label:'deck', cats:['Deck'] },
+    codex:    { label:'codex', cats:['Codex'] },
+    spear:    { label:L('lança', 'spear'), cats:['Spear', 'Wyrm Spear', 'Two-Handed Spear'] }
+  };
+  var PASSIVES = [
+    { id:'advanced-axe-mastery', name:'Advanced Axe Mastery', max:5, h:'jwxsmj', cls:['Black Plague', 'Blast Juggler'],
+      parts:[{ need:['axe'], per:{ atk:5, hit:3 } }] },
+    { id:'advanced-blade-mastery', name:'Advanced Blade Mastery', max:5, h:'xnet7n', cls:['Legend', 'Night Raven', 'Satsujin'],
+      parts:[{ need:['dagger', 'sword'], per:{ atk:3, hit:5 } }] },
+    { id:'advanced-katar-mastery', name:'Advanced Katar Mastery', max:5, h:'mu9b2m', cls:['Gravekeeper'],
+      parts:[{ need:['katar'], per:{ atk:3 } }] },
+    { id:'advanced-scythe-mastery', name:'Advanced Scythe Mastery', max:10, h:'h1fdlx', cls:['Revenant'],
+      parts:[{ need:['scythe'], per:{ atk:5, crit:1, flee:2 } }] },
+    { id:'axe-mastery', name:'Axe Mastery', max:10, h:'l5m3dj', cls:['Assassin'],
+      parts:[{ need:['axe'], per:{ atk:3 } }], skipped:L('+35 HP por nível', '+35 HP per level') },
+    { id:'blade-mastery', name:'Blade Mastery', max:10, h:'1gxkpq6', cls:['Assassin', 'Dark Knight', 'Rogue', 'Unchained Thief', 'Vagabond'],
+      parts:[{ need:['dagger', 'sword'], per:{ atk:3 } }], skipped:L('+1% de ASPD por nível', '+1% ASPD per level') },
+    { id:'bow-mastery', name:'Bow Mastery', max:10, h:'noznr0', cls:['Rogue', 'Unchained Thief'],
+      parts:[{ need:['bow'], per:{ dex:1 } }] },
+    { id:'card-mastery', name:'Card Mastery', max:7, h:'1h6forh', cls:['Jester'],
+      parts:[{ need:['deck'], per:{ atk:3 }, atMax:{ aspdLimit:1 } }], skipped:L('+4% de ASPD por nível', '+4% ASPD per level') },
+    { id:'chain-mastery', name:'Chain Mastery', max:10, h:'1p0p5ah', cls:['Peacekeeper'],
+      parts:[{ need:['whip'], per:{ atk:1 } }], skipped:L('+2% de SP máximo por nível', '+2% max SP per level') },
+    { id:'codex-mastery', name:'Codex Mastery', max:10, h:'1csmku3', cls:['Mimic'],
+      parts:[{ need:['codex'], per:{ str:1, agi:1, vit:1, int:1, dex:1, luk:1 } }] },
+    { id:'evasion-mastery', name:'Evasion Mastery', max:10, h:'cndnql', cls:['Prowler'],
+      parts:[{ need:['dagger'], per:{ atk:5 } }, { per:{ pdodge:1, flee:2 } }], skipped:L('+1% de SP máximo por nível', '+1% max SP per level') },
+    { id:'final-blade-mastery', name:'Final Blade Mastery', max:10, h:'1od1s17', cls:['Legend'],
+      parts:[{ need:['dagger'], per:{ atk:2 } }], skipped:L('Leech Power +2% no nível 10', 'Leech Power +2% at level 10') },
+    { id:'gadget-mastery', name:'Gadget Mastery', max:10, h:'15yx8v4', cls:['Rogue', 'Unchained Thief'],
+      parts:[{ per:{ int:1 } }], skipped:L('SP extra, alcance de armadilhas e dano de bombas', 'extra SP, trap range and bomb damage') },
+    { id:'improve-dodge', name:'Improve Dodge', max:10, h:'icy7gg', cls:['Bouncer', 'Thief', 'Vagabond'],
+      parts:[{ per:{ flee:4 } }] },
+    { id:'judgment-mastery', name:'Judgment Mastery', max:10, h:'1vac88j', cls:['Judge'],
+      parts:[{ need:['revolver'], per:{ atk:3 } }] },
+    { id:'katar-mastery', name:'Katar Mastery', max:10, h:'52fvik', cls:['Assassin', 'Phantom Thief'],
+      parts:[{ need:['katar'], per:{ atk:3, crit:1 } }] },
+    { id:'perfection-mastery', name:'Perfection Mastery', max:10, h:'3q1lg2', cls:['Ronin'],
+      parts:[{ need:['sword1h'], base:{ crit:25, hit:-300 }, per:{ crit:3, matk:15 } }],
+      skipped:L('"+25 de MATK a mais no Lv 5" (não diz se vale só no 5 ou do 5 em diante) e cura +3%', '"+25 more MATK at Lv 5" (unclear whether only at 5 or from 5 up) and healing +3%') },
+    { id:'relentless-daggers', name:'Relentless Daggers', max:10, h:'m81ccx', cls:['Legend'],
+      parts:[{ need:['dualDagger'], per:{ atk:1 } }], skipped:L('+2% de ASPD por nível', '+2% ASPD per level') },
+    { id:'scythe-mastery', name:'Scythe Mastery', max:10, h:'pi8u0s', cls:['Trickster'],
+      parts:[{ need:['scythe'], per:{ atk:2, crit:1, pdodge:1 } }] },
+    { id:'shadow-mastery', name:'Shadow Mastery', max:10, h:'171szwy', cls:['Assassin', 'Unchained Thief', 'Vagabond'],
+      parts:[{ per:{ flee:3 } }], skipped:L('+1% de ASPD por nível', '+1% ASPD per level') },
+    { id:'sidestep-mastery', name:'Sidestep Mastery', max:10, h:'1m4hu3b', cls:['Ronin'],
+      parts:[{ per:{ pdodge:1, flee:3 } }], skipped:L('+2% de velocidade de movimento por nível', '+2% movement speed per level') },
+    { id:'sleight-mastery', name:'Sleight Mastery', max:7, h:'fy6qxi', cls:['Jester'],
+      parts:[{ per:{ flee:3 }, atMax:{ aspdLimit:1 } }], skipped:L('+3% de chance de esquivar magia por nível', '+3% chance to dodge magic per level') },
+    { id:'spear-mastery', name:'Spear Mastery', max:10, h:'2hoxrl', cls:['Raider'],
+      parts:[{ need:['spear'], per:{ atk:2 } }, { need:['spear2h'], per:{ flee:3 } }], skipped:L('+25 HP por nível com lança de uma mão', '+25 HP per level with a one-handed spear') }
+  ];
+  var BONUS_LABEL = { str:'STR', agi:'AGI', vit:'VIT', int:'INT', dex:'DEX', luk:'LUK', atk:'ATK', matk:'MATK', hit:'HIT',
+    flee:'FLEE', crit:'Critical', pdodge:'Perfect Dodge', aspdLimit:'ASPD Limit', def:'DEF', mdef:'MDEF' };
+  var NEED_LABEL = { sword1h:L('espada de uma mão', 'one-handed sword'), spear2h:L('lança de duas mãos', 'two-handed spear'), dualDagger:L('adaga nas duas mãos', 'a dagger in each hand') };
+  // Hash check against the live skill DB: null = not checked yet / unavailable, else {id: true|false}.
+  var passiveCheck = null;
+  function hashText(s){
+    var x = 5381;
+    for (var i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0;
+    return (x >>> 0).toString(36);
+  }
+  function checkPassivesAgainstSite(){
+    fetch('https://rtm-database.pages.dev/assets/data/db-skills.json').then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(raw){
+      var ki = raw.cols.indexOf('key'), di = raw.cols.indexOf('desc');
+      var bySlug = {};
+      raw.rows.forEach(function(r){ var slug = String(r[ki]).split('/')[1]; (bySlug[slug] = bySlug[slug] || []).push(r[di] || ''); });
+      var res = {};
+      PASSIVES.forEach(function(p){
+        var descs = bySlug[p.id] || [];
+        res[p.id] = descs.length > 0 && descs.every(function(d){ return hashText(d) === p.h; });
+      });
+      passiveCheck = res;
+      var lo = activeLoadout(); if (lo) render();
+    }).catch(function(err){
+      console.warn('Não foi possível conferir as passivas com o site:', err);
+    });
+  }
+  function weaponItem(lo, slotKey){
+    var v = activeStageData(lo).slots[slotKey];
+    if (!v || v.manual || !state.db) return null;
+    return itemById(v.itemId);
+  }
+  function isTwoHanded(it){ return (it.locs || []).indexOf('Weapon (two-handed)') !== -1; }
+  // Returns { ok:true } or { ok:false, why:'...' } for one weapon requirement.
+  function checkNeed(lo, need){
+    var w = weaponItem(lo, 'weapon');
+    if (need === 'dualDagger'){
+      var off = weaponItem(lo, 'offhand');
+      var ok = !!(w && off && w.cat === 'Dagger' && off.cat === 'Dagger');
+      return ok ? { ok:true } : { ok:false, why:L('precisa de adaga nas duas mãos', 'needs a dagger in each hand') };
+    }
+    var cls = need === 'sword1h' ? 'sword' : need === 'spear2h' ? 'spear' : need;
+    var def = WEAPON_CLASS[cls];
+    if (!w) return { ok:false, why:L('precisa de ' + (NEED_LABEL[need] || def.label) + ' equipado(a)', 'needs a ' + (NEED_LABEL[need] || def.label) + ' equipped') };
+    if (def.cats.indexOf(w.cat) === -1){
+      if ((def.unsure || []).indexOf(w.cat) !== -1) return { ok:false, why: w.cat + L(' ainda não foi confirmado(a) como ' + def.label + ' para esta skill', ' is not confirmed as a ' + def.label + ' for this skill yet') };
+      return { ok:false, why:L('precisa de ', 'needs a ') + (NEED_LABEL[need] || def.label) };
+    }
+    if (need === 'sword1h' && isTwoHanded(w)) return { ok:false, why:L('precisa de espada de uma mão', 'needs a one-handed sword') };
+    if (need === 'spear2h' && !isTwoHanded(w)) return { ok:false, why:L('precisa de lança de duas mãos', 'needs a two-handed spear') };
+    return { ok:true };
+  }
+  function stageSkills(lo){
+    var sd = activeStageData(lo);
+    if (!sd.skills || typeof sd.skills !== 'object') sd.skills = {};
+    return sd.skills;
+  }
+  function skillLevel(lo, p){
+    var lv = parseInt(stageSkills(lo)[p.id], 10) || 0;
+    return Math.max(0, Math.min(p.max, lv));
+  }
+  // Per skill: { lv, bonus, parts:[{ok, why}], blocked } where blocked = description changed on the site.
+  function evalPassive(lo, p){
+    var lv = skillLevel(lo, p);
+    var out = { lv:lv, bonus:blankBonus(), parts:[], blocked: !!(passiveCheck && passiveCheck[p.id] === false) };
+    p.parts.forEach(function(part){
+      var why = null;
+      (part.need || []).some(function(n){ var c = checkNeed(lo, n); if (c.ok){ why = null; return true; } why = why || c.why; return false; });
+      var ok = !why;
+      out.parts.push({ ok:ok, why:why });
+      if (!ok || !lv || out.blocked) return;
+      var k;
+      for (k in (part.base || {})) out.bonus[k] += part.base[k];
+      for (k in (part.per || {})) out.bonus[k] += part.per[k] * lv;
+      if (part.atMax && lv === p.max) for (k in part.atMax) out.bonus[k] += part.atMax[k];
+    });
+    return out;
+  }
+  function computeSkillBonuses(lo){
+    var out = blankBonus();
+    PASSIVES.forEach(function(p){ addBonus(out, evalPassive(lo, p).bonus); });
+    return out;
+  }
+  function describeParts(p){
+    return p.parts.map(function(part){
+      var bits = [];
+      var k;
+      for (k in (part.per || {})) bits.push('+' + part.per[k] + ' ' + BONUS_LABEL[k] + L('/nível', '/level'));
+      for (k in (part.base || {})) bits.push((part.base[k] > 0 ? '+' : '') + part.base[k] + ' ' + BONUS_LABEL[k]);
+      for (k in (part.atMax || {})) bits.push('+' + part.atMax[k] + ' ' + BONUS_LABEL[k] + L(' no nível máximo', ' at max level'));
+      var cond = (part.need || []).map(function(n){ return NEED_LABEL[n] || WEAPON_CLASS[n].label; }).join(L(' ou ', ' or '));
+      return bits.filter(Boolean).join(', ') + (cond ? L(' (com ', ' (with ') + cond + ')' : '');
+    }).join('; ');
+  }
+
+  // ---------- set / shadow-set bonuses (only count once every piece is equipped) ----------
+  function getEquippedItemIds(lo){
+    var ids = [];
+    forEachEquipped(lo, function(it){ ids.push(it.id); });
+    return ids;
+  }
+  function blockText(b){
+    return (b.pieces && b.pieces !== b.setName ? b.pieces + '\n' : '') + b.lines.join('\n');
+  }
+  // A set's DB members are not all required: several can be alternative versions of one piece
+  // (six "Dragon Plate"s, three "Metal Boots") that share a slot only one item fits in. Members
+  // are grouped by the slot they occupy; a group needs as many items as that slot can hold at
+  // once (accessories and one-handed weapons 2, other gear 1). Cards are always their own piece.
+  // The set's own piece list ("Ring and Boots") is a cross-check: if it names more pieces than the
+  // known members can fill, a piece is missing from the DB and the set never completes.
+  function slotCapacity(locKey){
+    if (locKey === 'Accessory' || locKey === 'Shadow accessory') return 2;
+    if (locKey === 'Weapon') return 2;
+    return 1;
+  }
+  function countListedPieces(pieces){
+    if (!pieces) return 0;
+    var parts = pieces.split(/,|\band\b|\+/i).map(function(s){ return s.trim(); }).filter(Boolean);
+    // Broken lists like "Brawler's Tankard, Madlad's, Tankard": a lone word already inside
+    // another fragment is a leftover, not a piece.
+    return parts.filter(function(p, i){
+      return /\s/.test(p) || !parts.some(function(q, j){ return j !== i && /\s/.test(q) && q.split(/\s+/).indexOf(p) !== -1; });
+    }).length;
+  }
+  function evalSetPieces(members, equippedSet, pieces){
+    var groups = {}, order = [];
+    members.forEach(function(mid){
+      var it = itemById(mid);
+      // Items without a `loc` (shadow pieces) can't be grouped by slot: each is its own piece.
+      var locKey = it && it.locs && it.locs.length ? it.locs.slice().sort().join('/') : '';
+      var key = !it || !locKey ? 'id:' + mid : it.isCard ? 'card:' + mid : locKey;
+      if (!groups[key]){ groups[key] = { ids:[], cap: key.indexOf('card:') === 0 || key.indexOf('id:') === 0 ? 1 : slotCapacity(key) }; order.push(key); }
+      if (groups[key].ids.indexOf(mid) === -1) groups[key].ids.push(mid);
+    });
+    var total = 0, have = 0, missingIds = [], missingText = [];
+    order.forEach(function(key){
+      var g = groups[key];
+      var need = Math.min(g.ids.length, g.cap);
+      var worn = g.ids.filter(function(id){ return equippedSet[id]; }).length;
+      total += need; have += Math.min(worn, need);
+      if (worn >= need) return;
+      var left = g.ids.filter(function(id){ return !equippedSet[id]; });
+      var names = left.map(function(id){ var mi = itemById(id); return mi ? mi.name : ('#' + id); });
+      // More candidates than open spots = alternatives: "one of A, B or C". Only exact pieces go
+      // to missingIds (the Farm list), so it doesn't fill up with every alternative version.
+      if (left.length > need - worn) missingText.push((need - worn > 1 ? (need - worn) + L(' entre: ', ' of: ') : L('um entre: ', 'one of: ')) + names.join(', '));
+      else { missingText = missingText.concat(names); missingIds = missingIds.concat(left); }
+    });
+    var listed = countListedPieces(pieces);
+    var unknownPartner = total < 2 || (listed > total);
+    if (unknownPartner && listed > total){
+      var absent = piecesNotInDb(pieces, order);
+      if (absent.length) missingText.push(absent.join(', ') + L(' (não está na base de itens)', ' (not in the item database)'));
+    }
+    return { complete: !unknownPartner && have === total, have: have, total: Math.max(total, listed),
+      unknownPartner: unknownPartner, missingIds: missingIds, missingText: missingText };
+  }
+  // Display only: which words of the set's piece list ("Ring and Boots") no known member's slot covers.
+  var PIECE_WORDS = [
+    { loc:/Shoes/, re:/boot|shoe|sandal|geta/i },
+    { loc:/Armor/, re:/armor|plate|robe|coat|suit|mail|tunic|shirt/i },
+    { loc:/Garment/, re:/cape|garment|manteau|mantle|shawl|muffler|hood/i },
+    { loc:/Accessory/, re:/ring|necklace|pendant|brooch|earring|belt|glove|accessor/i },
+    { loc:/headgear|Headgear/, re:/helm|hat|cap|crown|headgear|band/i },
+    { loc:/Weapon/, re:/weapon|sword|dagger|axe|bow|spear|staff/i },
+    { loc:/Shield|Off-hand/, re:/shield|guard|buckler/i }
+  ];
+  function piecesNotInDb(pieces, groupKeys){
+    if (!pieces) return [];
+    return pieces.split(/,|\band\b|\+/i).map(function(s){ return s.trim(); }).filter(Boolean).filter(function(word){
+      var kind = PIECE_WORDS.filter(function(k){ return k.re.test(word); })[0];
+      if (!kind) return false; // can't tell what it is: don't claim it's missing
+      return !groupKeys.some(function(g){ return kind.loc.test(g); });
+    });
+  }
+  function computeActiveSets(lo){
+    var result = { complete: [], partial: [], bonus: blankBonus() };
+    if (!state.db) return result;
+    var equippedIds = getEquippedItemIds(lo);
+    var equippedSet = {}; equippedIds.forEach(function(id){ equippedSet[id] = true; });
+    var seenSetNames = {};
+    equippedIds.forEach(function(id){
+      var it = itemById(id);
+      if (!it) return;
+      it.blocks.forEach(function(b){
+        if (b.kind !== 'set' || !b.setName || seenSetNames[b.setName]) return;
+        seenSetNames[b.setName] = true;
+        var st = evalSetPieces(state.db.setMembership[b.setName] || [], equippedSet, b.pieces);
+        if (st.complete){
+          result.complete.push({ name: b.setName, bonusText: blockText(b) });
+          addBonus(result.bonus, b.bonus);
+        } else {
+          result.partial.push({
+            name: b.setName, bonusText: blockText(b), have: st.have, total: st.total,
+            unknownPartner: st.unknownPartner, piecesText: b.pieces || '',
+            missingIds: st.missingIds, missing: st.missingText
+          });
+        }
+      });
+    });
+    return result;
+  }
+  function getEquippedWeaponCat(lo){
+    var w = activeStageData(lo).slots.weapon;
+    if (!w || w.manual || !state.db) return null;
+    var it = itemById(w.itemId);
+    return it ? it.cat : null;
+  }
+  // Every number the Status tab shows, for the active (or overridden) stage.
+  function computeStatusSummary(lo){
+    var sd = activeStageData(lo);
+    var bonuses = computeStatBonuses(lo);
+    var totals = {}; STAT_KEYS.forEach(function(s){ totals[s.key] = (sd.baseStats[s.key]||0) + bonuses[s.key]; });
+    var S = totals.str, A = totals.agi, V = totals.vit, I = totals.int, D = totals.dex, L = totals.luk;
+    var level = sd.level || 1;
+    var equipDerived = computeDerivedBonuses(lo);
+    var skillBonus = computeSkillBonuses(lo);
+    // `derived` = equipment + passive skills, used by every formula below.
+    var derived = {};
+    DERIVED_LABELS.forEach(function(d){ derived[d.key] = equipDerived[d.key] + skillBonus[d.key]; });
+    var activeSets = computeActiveSets(lo);
+    var weaponCat = (getEquippedWeaponCat(lo) || '').toLowerCase();
+    var isRanged = RANGED_ATK_CATS.indexOf(weaponCat) !== -1;
+    var strAtk = isRanged ? S*0.2 : (S + Math.floor(S/10));
+    var dexAtkBase = Math.floor(D/5) + Math.floor(D/20);
+    var dexAtkSpecial = isRanged ? D : 0;
+    var lukAtk = Math.floor(L/3);
+    var agiPush = Math.floor(A/40);
+    var manual = sd.manualAspdBonus || 0;
+    var items = computeTotals(lo);
+    var equippedCount = 0;
+    forEachEquipped(lo, function(){ equippedCount++; });
+    return {
+      level: level, totals: totals, bonuses: bonuses, derived: derived, equipDerived: equipDerived, skillBonus: skillBonus,
+      activeSets: activeSets, isRanged: isRanged,
+      hit: level + 2*D + Math.floor(L/5) + 175 + derived.hit,
+      flee: level + A + Math.floor(A/10) + Math.floor(L/5) + 100 + derived.flee,
+      crit: 1 + Math.floor(L/3) + 2*Math.floor(L/10) + derived.crit,
+      pdodge: Math.min(100, 1 + Math.floor((A+L)/10) + derived.pdodge),
+      atk: Math.round(strAtk + dexAtkBase + dexAtkSpecial + lukAtk) + derived.atk,
+      matkMin: Math.round(I*1.5 + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(L/3)) + derived.matk,
+      matkMax: Math.round(I*1.5 + Math.floor(I/10)*4 + Math.floor(D/5) + Math.floor(L/3)) + derived.matk,
+      softDef: V + Math.floor(V/10)*5 + derived.def,
+      softMdef: Math.floor(V/10)*5 + Math.floor(V/5)*1 + Math.floor(D/5) + derived.mdef,
+      agiPush: agiPush, manualAspd: manual,
+      aspdCap: Math.min(190, 180 + agiPush + derived.aspdLimit + manual),
+      aspdCapRaw: 180 + agiPush + derived.aspdLimit + manual,
+      itemAtk: items.atk, itemMatk: items.matk, itemDef: items.def, itemMdef: items.mdef, weight: items.weight,
+      equippedCount: equippedCount, completeSets: activeSets.complete.length
+    };
+  }
+  function renderStatusPanel(lo){
+    var grid = document.getElementById('simGrid');
+    var aspdBox = document.getElementById('aspdBox');
+    var setsBox = document.getElementById('setsBox');
+    if (!grid || !aspdBox || !setsBox) return;
+    clear(grid); clear(aspdBox); clear(setsBox);
+    if (!state.db){
+      grid.appendChild(el('div', { class:'empty-note', text:L('Esperando a base de itens carregar…', 'Waiting for the item database to load…') }));
+      return;
+    }
+    var sd = activeStageData(lo);
+    var s = computeStatusSummary(lo);
+    var derived = s.derived, activeSets = s.activeSets;
+
+    function signed(n){ return (n > 0 ? '+' : '') + n; }
+    function cell(label, total, key){
+      var c = el('div', { class:'sim-cell' });
+      c.appendChild(el('div', { class:'sc-label', text:label }));
+      var valWrap = el('div');
+      valWrap.appendChild(el('span', { class:'sc-value', text:String(Math.round(total)) }));
+      var eq = s.equipDerived[key], sk = s.skillBonus[key];
+      if (eq) valWrap.appendChild(el('span', { class:'sc-bonus', text: signed(eq) + ' equip' }));
+      if (sk) valWrap.appendChild(el('span', { class:'sc-bonus skill', text: signed(sk) + ' skill' }));
+      c.appendChild(valWrap);
+      grid.appendChild(c);
+    }
+    cell('ATK', s.atk, 'atk');
+    cell(s.matkMin === s.matkMax ? 'MATK' : 'MATK ' + s.matkMin + '–' + s.matkMax, s.matkMax, 'matk');
+    cell('HIT', s.hit, 'hit');
+    cell('FLEE', s.flee, 'flee');
+    cell('Critical', s.crit, 'crit');
+    cell('Perfect Dodge', s.pdodge, 'pdodge');
+    cell(L('DEF suave', 'Soft DEF'), s.softDef, 'def');
+    cell(L('MDEF suave', 'Soft MDEF'), s.softMdef, 'mdef');
+
+    var agiPush = s.agiPush;
+    var manual = s.manualAspd;
+    var cap = s.aspdCap;
+    aspdBox.appendChild(el('h3', { text:'ASPD' }));
+    aspdBox.appendChild(el('div', { class:'aspd-line', text:L('Teto é 180 igual pra toda classe aqui (não depende mais de tabela por job). A fórmula exata de ASPD abaixo do teto com base em AGI não está documentada publicamente — isto mostra só o cálculo do teto alcançável.', 'The cap is 180 for every class here (no per-job table). The exact ASPD formula below the cap from AGI is not publicly documented — this only shows the reachable cap.') }));
+    aspdBox.appendChild(el('div', { class:'aspd-line' }, [
+      document.createTextNode('180 + ' + agiPush + ' (AGI÷40) + ' + s.equipDerived.aspdLimit + L(' (ASPD Limit do equip. e opções extras) + ', ' (gear and extra-option ASPD Limit) + ') +
+        s.skillBonus.aspdLimit + L(' (passivas) + ', ' (passives) + ') + manual + ' (manual) = ')
+    ]));
+    var capEl = el('span', { class:'aspd-total', text: String(cap) + ' / 190' });
+    aspdBox.appendChild(capEl);
+    if (s.aspdCapRaw > 190){
+      aspdBox.appendChild(el('div', { class:'aspd-line aspd-over', text:L('A soma dá ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' acima do teto máximo de 190 do Codex. Esse excedente não entra; dá para trocar ASPD Limit por outra opção.',
+        'The sum is ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' over the Codex hard cap of 190. The excess does nothing; you could swap some ASPD Limit for another option.') }));
+    }
+    var manualRow = el('div', { class:'aspd-manual' }, [
+      el('span', { text:L('Bônus manual de skill (ex: Frenzy +3):', 'Manual skill bonus (e.g. Frenzy +3):') })
+    ]);
+    var manualInput = el('input', { type:'number', min:'0', max:'20', value: manual });
+    manualInput.addEventListener('input', function(){
+      sd.manualAspdBonus = cleanNum(manualInput.value, 0, 20, 0);
+      saveLoadouts();
+      renderStatusPanel(lo);
+    });
+    manualRow.appendChild(manualInput);
+    aspdBox.appendChild(manualRow);
+
+    renderSetsBox(setsBox, activeSets);
+    renderSkillsBox(lo);
+  }
+
+  function renderSkillsBox(lo){
+    var box = document.getElementById('skillsBox');
+    if (!box) return;
+    clear(box);
+    box.appendChild(el('h2', { text:L('Habilidades passivas', 'Passive skills') }));
+    box.appendChild(el('div', { class:'empty-note', text:L('Coloque o nível de cada passiva que o personagem tem nesta fase. Só entram as que dão bônus fixo que o simulador calcula (ATK, HIT, FLEE, atributos…); HP, SP, % de ASPD e dano de skill ficam de fora. Todas as passivas do site foram conferidas em 05/10/2026.', 'Enter the level of each passive the character has in this stage. Only flat bonuses the simulator computes count (ATK, HIT, FLEE, stats…); HP, SP, ASPD % and skill damage are left out. Every passive on the site was checked on 2026-10-05.') }));
+    if (passiveCheck === null) box.appendChild(el('div', { class:'skill-warn', text:L('Conferindo as descrições com o site…', 'Checking descriptions against the site…') }));
+    var cls = lo.charClass || '';
+    var mine = PASSIVES.filter(function(p){ return cls && p.cls.indexOf(cls) !== -1; });
+    var others = PASSIVES.filter(function(p){ return mine.indexOf(p) === -1; });
+    function row(p){
+      var ev = evalPassive(lo, p);
+      var r = el('div', { class:'skill-row' + (ev.lv ? ' has-lv' : '') });
+      var head = el('div', { class:'skill-head' });
+      head.appendChild(el('span', { class:'skill-name', text:p.name }));
+      var lvWrap = el('label', { class:'skill-lv' });
+      lvWrap.appendChild(document.createTextNode('Lv'));
+      var input = el('input', { type:'number', min:'0', max:String(p.max), value:String(ev.lv), 'aria-label':L('Nível de ', 'Level of ') + p.name });
+      input.addEventListener('change', function(){
+        var v = Math.max(0, Math.min(p.max, parseInt(input.value, 10) || 0));
+        var skills = stageSkills(lo);
+        if (v) skills[p.id] = v; else delete skills[p.id];
+        saveLoadouts(); render();
+      });
+      lvWrap.appendChild(input);
+      lvWrap.appendChild(el('span', { class:'skill-max', text:'/' + p.max }));
+      head.appendChild(lvWrap);
+      r.appendChild(head);
+      r.appendChild(el('div', { class:'skill-cls', text:p.cls.join(', ') }));
+      r.appendChild(el('div', { class:'skill-eff', text:describeParts(p) }));
+      if (p.skipped) r.appendChild(el('div', { class:'skill-skip', text:L('Não calculado: ', 'Not calculated: ') + p.skipped }));
+      if (p.note) r.appendChild(el('div', { class:'skill-skip', text:p.note }));
+      if (ev.blocked){
+        r.appendChild(el('div', { class:'skill-warn', text:L('A descrição desta skill mudou no site depois da conferência; ela não está sendo somada até ser revisada.', "This skill's description changed on the site after it was checked; it is not counted until reviewed.") }));
+      } else if (ev.lv){
+        var sums = [];
+        for (var k in ev.bonus) if (ev.bonus[k]) sums.push((ev.bonus[k] > 0 ? '+' : '') + ev.bonus[k] + ' ' + BONUS_LABEL[k]);
+        var off = ev.parts.filter(function(x){ return !x.ok; }).map(function(x){ return x.why; });
+        if (sums.length) r.appendChild(el('div', { class:'skill-on', text:L('Somando: ', 'Adding: ') + sums.join(', ') }));
+        if (off.length) r.appendChild(el('div', { class:'skill-off', text:L('Inativa: ', 'Inactive: ') + off.join('; ') }));
+      }
+      return r;
+    }
+    if (mine.length){
+      mine.forEach(function(p){ box.appendChild(row(p)); });
+    } else {
+      box.appendChild(el('div', { class:'empty-note', text: cls
+        ? L('A classe ' + cls + ' não tem passiva própria que mexa nesses números. Passivas herdadas (ex.: Improve Dodge do Thief) estão abaixo.', cls + ' has no passive of its own that changes these numbers. Inherited passives (e.g. Thief\'s Improve Dodge) are below.')
+        : L('Escolha a classe do loadout para ver as passivas dela primeiro.', "Choose the loadout's class to see its passives first.") }));
+    }
+    var det = el('details', { class:'skill-others' });
+    var anyOtherLv = others.some(function(p){ return skillLevel(lo, p) > 0; });
+    if (anyOtherLv || !mine.length) det.open = true;
+    det.appendChild(el('summary', { text:L('Passivas de outras classes (' + others.length + ') — use as que o personagem herdou', 'Passives from other classes (' + others.length + ') — use the ones the character inherited') }));
+    others.forEach(function(p){ det.appendChild(row(p)); });
+    box.appendChild(det);
+  }
+
+  function renderSetsBox(setsBox, activeSets){
+    setsBox.appendChild(el('h2', { text:L('Conjuntos', 'Sets') }));
+    if (activeSets.complete.length === 0 && activeSets.partial.length === 0){
+      setsBox.appendChild(el('div', { class:'empty-note', text:L('Nenhuma peça equipada faz parte de um conjunto (set de shadow, cartas combinadas, etc). Sets completos somam automaticamente na calculadora e no simulador acima.', 'No equipped piece belongs to a set (shadow sets, card combos, etc). Complete sets are added automatically to the calculator and simulator above.') }));
+      return;
+    }
+    activeSets.complete.forEach(function(s){
+      var row = el('div', { class:'set-row complete' });
+      row.appendChild(el('span', { class:'st-name', text:s.name }));
+      row.appendChild(el('span', { class:'set-pill complete', text:L('Completo', 'Complete') }));
+      row.appendChild(el('div', { class:'st-bonus', text:s.bonusText || '' }));
+      setsBox.appendChild(row);
+    });
+    activeSets.partial.forEach(function(s){
+      var row = el('div', { class:'set-row partial' });
+      row.appendChild(el('span', { class:'st-name', text:s.name }));
+      row.appendChild(el('span', { class:'set-pill partial', text: s.unknownPartner ? '?' : (s.have + '/' + s.total) }));
+      row.appendChild(el('div', { class:'st-bonus', text:s.bonusText || '' }));
+      var missTxt = s.missing.length ? L('Falta: ', 'Missing: ') + s.missing.join('; ') + '. ' : '';
+      row.appendChild(el('div', { class:'st-missing', text: s.unknownPartner
+        ? missTxt + L('Peças do conjunto: ', 'Set pieces: ') + (s.piecesText || '?') + L('. Como alguma peça não aparece na base com o texto deste conjunto, o bônus não é somado automaticamente.', ". Since a piece isn't in the database with this set's text, the bonus is not added automatically.")
+        : L('Falta: ', 'Missing: ') + s.missing.join('; ') }));
+      setsBox.appendChild(row);
+    });
+  }
+
+  // ---------- item detail panel (formatted tooltip + where to get it) ----------
+  var SITE_ITEM_URL = function(it){ return 'https://rtm-database.pages.dev/?q=' + encodeURIComponent(it.name) + '&id=' + it.id; };
+  function sourceText(s){
+    return s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone;
+  }
+  function blockBadge(b, refine, setStatus){
+    if (b.kind === 'base') return b.header ? [L('Sempre', 'Always'), 'on'] : null;
+    if (b.kind === 'perRefine'){
+      var steps = Math.floor((refine || 0) / b.per);
+      return [(b.per === 1 ? L('Por refino', 'Per refine') : L('A cada ' + b.per + ' refinos', 'Every ' + b.per + ' refines')) + ' · ×' + steps, steps > 0 ? 'on' : 'off'];
+    }
+    if (b.kind === 'refineAt') return [L('Refino +', 'Refine +') + b.min + ((refine || 0) >= b.min ? L(' · ativo', ' · active') : L(' · inativo', ' · inactive')), (refine || 0) >= b.min ? 'on' : 'off'];
+    if (b.kind === 'set'){
+      var st = setStatus[b.setName];
+      return st === 'complete' ? [L('Conjunto completo', 'Set complete'), 'on'] : [L('Conjunto incompleto', 'Set incomplete'), 'off'];
+    }
+    if (b.kind === 'setRefine') return [L('Refino do conjunto · não calculado', 'Set refine · not calculated'), 'info'];
+    if (b.kind === 'cond') return [L('Condicional · não calculado', 'Conditional · not calculated'), 'info'];
+    return null;
+  }
+  function openDetail(itemId, opts){
+    var it = itemById(itemId); if (!it) return;
+    opts = opts || {};
+    var refine = opts.refine || 0;
+    var lo = activeLoadout();
+    var setStatus = {};
+    if (lo){
+      var sets = computeActiveSets(lo);
+      sets.complete.forEach(function(s){ setStatus[s.name] = 'complete'; });
+    }
+    var title = document.getElementById('detailTitle');
+    clear(title);
+    var img = document.createElement('img');
+    img.src = it.isCard ? CARD_ICON(it.id) : ICON(it.id); img.alt = '';
+    img.addEventListener('error', function(){ img.style.visibility = 'hidden'; });
+    title.appendChild(img);
+    var tWrap = el('div');
+    tWrap.appendChild(el('div', { class:'dt-name', text: it.name + (it.refinable && refine ? ' +' + refine : '') }));
+    var subBits = [it.cat];
+    if (it.lv) subBits.push('Lv ' + it.lv);
+    if (it.slots) subBits.push(it.slots + '-slot');
+    if (it.jobsText) subBits.push(it.jobsText);
+    tWrap.appendChild(el('div', { class:'dt-sub', text: subBits.filter(Boolean).join(' · ') }));
+    title.appendChild(tWrap);
+
+    var body = document.getElementById('detailBody');
+    clear(body);
+
+    var ttSec = el('div', { class:'detail-section' }, [ el('h4', { text:'Tooltip' }) ]);
+    it.blocks.forEach(function(b){
+      if (b.kind === 'setHead') return;
+      var badge = blockBadge(b, refine, setStatus);
+      var off = badge && badge[1] === 'off';
+      var block = el('div', { class:'tt-block' + (off ? ' off' : '') });
+      if (b.header || badge){
+        var head = el('div', { class:'tt-head' });
+        if (b.header && !b.inline) head.appendChild(el('span', { text: b.header }));
+        if (badge) head.appendChild(el('span', { class:'tt-badge ' + badge[1], text: badge[0] }));
+        block.appendChild(head);
+      }
+      var text = (b.pieces && b.kind === 'set' ? b.pieces + '\n' : '') + b.lines.join('\n');
+      if (text) block.appendChild(el('div', { class:'tt-lines', text: text }));
+      ttSec.appendChild(block);
+    });
+    body.appendChild(ttSec);
+
+    var srcSec = el('div', { class:'detail-section' }, [ el('h4', { text:L('Onde conseguir', 'Where to get it') }) ]);
+    if (it.sources.length){
+      it.sources.forEach(function(s){
+        var row = el('div', { class:'src-row' });
+        var left = el('span', { text: sourceText(s) });
+        if (s.mvp) left.appendChild(el('span', { class:'mvp-tag', text:'MVP' }));
+        row.appendChild(left);
+        row.appendChild(el('span', { class:'src-rate', text: s.rate + '%' }));
+        srcSec.appendChild(row);
+      });
+    }
+    if (it.how){
+      var mats = it.how.mats.map(function(m){ return m[0] + '× ' + m[1]; }).join(', ');
+      srcSec.appendChild(el('div', { class:'src-row' }, [
+        el('span', { text: 'Quest / craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '') + (mats ? ': ' + mats : '') + (it.how.note ? ' — ' + it.how.note : '') })
+      ]));
+    }
+    if (it.shop) srcSec.appendChild(el('div', { class:'src-row' }, [ el('span', { text:L('Vendido em loja (NPC).', 'Sold in an NPC shop.') }) ]));
+    if (!it.sources.length && !it.how && !it.shop){
+      srcSec.appendChild(el('div', { class:'empty-note', text:L('A base não lista drop, quest nem loja para este item. Veja a página dele no site.', "The database lists no drop, quest or shop for this item. Check its page on the site.") }));
+    }
+    body.appendChild(srcSec);
+
+    var actions = el('div', { class:'detail-actions' });
+    var link = el('a', { href: SITE_ITEM_URL(it), target:'_blank', rel:'noopener noreferrer', text:L('Abrir no site ↗', 'Open on the site ↗') });
+    actions.appendChild(link);
+    if (opts.onSwap){
+      var swap = el('button', { type:'button', text: opts.swapLabel || L('Trocar', 'Change') });
+      swap.addEventListener('click', function(){ closeDetail(); opts.onSwap(); });
+      actions.appendChild(swap);
+    }
+    body.appendChild(actions);
+
+    document.getElementById('detailBackdrop').hidden = false;
+    document.getElementById('detailClose').focus();
+  }
+  function closeDetail(){
+    document.getElementById('detailBackdrop').hidden = true;
+  }
+
+  // ---------- compare stages ----------
+  var STAGES = ['early', 'mid', 'late'];
+  function renderCompare(lo){
+    var wrap = document.getElementById('compareTable');
+    if (!wrap) return;
+    clear(wrap);
+    if (!state.db){ wrap.appendChild(el('div', { class:'empty-note', text:L('Esperando a base de itens carregar…', 'Waiting for the item database to load…') })); return; }
+    var sums = STAGES.map(function(st){ return withStage(st, function(){ return computeStatusSummary(lo); }); });
+    var rows = [
+      ['group', L('Personagem', 'Character')],
+      ['Level', function(s){ return s.level; }],
+      [L('Itens equipados', 'Equipped items'), function(s){ return s.equippedCount; }],
+      [L('Conjuntos completos', 'Complete sets'), function(s){ return s.completeSets; }],
+      ['group', L('Atributos (base + equip.)', 'Stats (base + gear)')],
+      ['STR', function(s){ return s.totals.str; }], ['AGI', function(s){ return s.totals.agi; }],
+      ['VIT', function(s){ return s.totals.vit; }], ['INT', function(s){ return s.totals.int; }],
+      ['DEX', function(s){ return s.totals.dex; }], ['LUK', function(s){ return s.totals.luk; }],
+      ['group', L('Simulador', 'Simulator')],
+      [L('ATK (stats + bônus)', 'ATK (stats + bonus)'), function(s){ return s.atk; }], [L('MATK máx (stats + bônus)', 'Max MATK (stats + bonus)'), function(s){ return s.matkMax; }],
+      ['HIT', function(s){ return s.hit; }], ['FLEE', function(s){ return s.flee; }],
+      ['Critical', function(s){ return s.crit; }], ['Perfect Dodge', function(s){ return s.pdodge; }],
+      [L('DEF suave', 'Soft DEF'), function(s){ return s.softDef; }], [L('MDEF suave', 'Soft MDEF'), function(s){ return s.softMdef; }],
+      [L('Teto de ASPD', 'ASPD cap'), function(s){ return s.aspdCap; }],
+      ['group', L('Valores dos itens', 'Item values')],
+      [L('ATK dos itens', 'Item ATK'), function(s){ return s.itemAtk; }], [L('MATK dos itens', 'Item MATK'), function(s){ return s.itemMatk; }],
+      [L('DEF dos itens', 'Item DEF'), function(s){ return s.itemDef; }], [L('MDEF dos itens', 'Item MDEF'), function(s){ return s.itemMdef; }],
+      [L('Peso', 'Weight'), function(s){ return s.weight; }, true]
+    ];
+    var table = el('table', { class:'compare-table' });
+    var thead = el('thead'), hr = el('tr');
+    hr.appendChild(el('th', { text:'' }));
+    STAGES.forEach(function(st){ hr.appendChild(el('th', { class: st === lo.activeStage ? 'active' : '', text: stageLabel(st) })); });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = el('tbody');
+    rows.forEach(function(r){
+      var tr = el('tr');
+      if (r[0] === 'group'){
+        tr.className = 'group';
+        tr.appendChild(el('td', { text: r[1], colspan:'4' }));
+        tbody.appendChild(tr); return;
+      }
+      var lowerIsBetter = !!r[2];
+      tr.appendChild(el('td', { text: r[0] }));
+      var prev = null;
+      sums.forEach(function(s){
+        var v = Math.round(r[1](s));
+        var td = el('td', { text: String(v) });
+        if (prev !== null && v !== prev){
+          var better = lowerIsBetter ? v < prev : v > prev;
+          td.appendChild(el('span', { class:'delta ' + (better ? 'up' : 'down'), text: (v > prev ? '▲' : '▼') + Math.abs(v - prev) }));
+        }
+        prev = v;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+  }
+
+  // ---------- routes to a place: server (from db-places) + original game (hand-written) ----------
+  function posText(p){ return NUMPAD_POS[p] || ''; }
+  function routeBlock(zoneName){
+    var wrap = el('div', { class:'route' });
+    wrap.appendChild(el('div', { class:'route-zone', text: zoneName }));
+    var P = state.places;
+    if (!P){ wrap.appendChild(el('div', { class:'route-note', text:L('Carregando rotas…', 'Loading routes…') })); return wrap; }
+    if (P.failed){ wrap.appendChild(el('div', { class:'route-note', text:L('Não foi possível carregar as rotas do site agora.', 'Could not load routes from the site right now.') })); return wrap; }
+    var place = P.byName[zoneName];
+    if (!place || !place.ride){
+      wrap.appendChild(el('div', { class:'route-note', text:L('Este lugar não tem rota na base de Lugares do site.', "This place has no route in the site's Places database.") }));
+      return wrap;
+    }
+    var cols = el('div', { class:'route-cols' });
+
+    // Server route: travel NPC → ride destination, then the walk, with NPC steps attached.
+    var srv = el('div', { class:'route-col' });
+    srv.appendChild(el('div', { class:'route-title', text:L('Servidor (Refuge)', 'Server (Refuge)') }));
+    var steps = el('ol', { class:'route-steps' });
+    var travel = P.travel[place.ride[0]] || {};
+    var first = el('li');
+    first.appendChild(document.createTextNode((travel.npc || L('Teleporte', 'Teleport')) + ' (' + (travel.map || L('Orfanato', 'Orphanage')) +
+      (travel.part ? ', ' + posText(travel.part) : '') + ') → ' + place.ride[1] + (travel.cost ? ' · ' + travel.cost.toLocaleString(L('pt-BR', 'en-US')) + 'z' : '')));
+    if (place.ride[2]) first.appendChild(el('div', { class:'route-lock', text:L('Disponível quando o Orfanato chega no nível de investimento ', 'Available once the Orphanage reaches investment level ') + place.ride[2] + '.' }));
+    steps.appendChild(first);
+    place.route.forEach(function(mapIdx, k){
+      var li = el('li', { text: P.maps[mapIdx] || (L('mapa #', 'map #') + mapIdx) });
+      place.via.filter(function(v){ return v[0] === k + 1; }).forEach(function(v){
+        var talk = el('div', { class:'route-npc', text:L('fale com ', 'talk to ') + v[1] + (posText(v[5]) ? ' (' + posText(v[5]) + ')' : '') });
+        li.appendChild(talk);
+        var pre = Array.isArray(v[6]) && v[6][0] === 'see' ? v[6] : null;
+        if (pre) li.appendChild(el('div', { class:'route-npc pre', text:L('antes, fale com ', 'first, talk to ') + pre[1] + ' (' + (P.maps[pre[2]] || '?') + (posText(pre[3]) ? ', ' + posText(pre[3]) : '') + ')' }));
+      });
+      steps.appendChild(li);
+    });
+    srv.appendChild(steps);
+    var played = PLAYER_ROUTES[place.ride[1]];
+    if (played){
+      var pBox = el('div', { class:'route-played' + (played.confirmed ? ' ok' : '') });
+      pBox.appendChild(el('div', { class:'route-played-head', text: played.confirmed ? L('Confirmado em jogo', 'Confirmed in game') : L('Anotado em jogo (ainda não confirmado)', 'Noted in game (not confirmed yet)') }));
+      pBox.appendChild(el('div', { class:'route-played-text', text: played.text }));
+      srv.appendChild(pBox);
+    }
+    cols.appendChild(srv);
+
+    // Original route: how to reach the same starting point in the original game, then the same walk.
+    var info = ORIGINAL_ACCESS[place.ride[1]];
+    if (!info){
+      cols.classList.add('single');
+      wrap.appendChild(cols);
+      return wrap;
+    }
+    var org = el('div', { class:'route-col' });
+    org.appendChild(el('div', { class:'route-title', text:L('Jogo original', 'Original game') }));
+    org.appendChild(el('p', { class:'route-orig', text: info.text }));
+    var startName = P.maps[place.route[0]];
+    if (startName && place.route.length > 1){
+      org.appendChild(el('p', { class:'route-orig muted', text:L('Chegando em ' + startName + ', o caminho a pé até o mapa é o mesmo da coluna do servidor.', 'Once in ' + startName + ', the walk to the map is the same as in the server column.') }));
+    }
+    cols.appendChild(org);
+    wrap.appendChild(cols);
+    return wrap;
+  }
+
+  function bestSourceText(it){
+    if (!it || !it.sources.length) return '';
+    var s = it.sources[0];
+    return s.mob + ' · ' + s.zone + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '');
+  }
+  function buildAcquireInfo(it){
+    var box = el('div', { class:'acq' });
+    if (it.sources.length){
+      var sec = el('div', { class:'acq-sec' }, [ el('h5', { text:L('Dropa de', 'Drops from') }) ]);
+      it.sources.forEach(function(s){
+        var row = el('div', { class:'src-row' });
+        var left = el('span', { text: s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone });
+        if (s.mvp) left.appendChild(el('span', { class:'mvp-tag', text:'MVP' }));
+        row.appendChild(left);
+        row.appendChild(el('span', { class:'src-rate', text: s.rate + '%' }));
+        sec.appendChild(row);
+      });
+      box.appendChild(sec);
+      var zones = [];
+      it.sources.forEach(function(s){ if (zones.indexOf(s.zone) === -1) zones.push(s.zone); });
+      var rsec = el('div', { class:'acq-sec' }, [ el('h5', { text: zones.length > 1 ? L('Como chegar (mapas com maior chance primeiro)', 'How to get there (best-chance maps first)') : L('Como chegar', 'How to get there') }) ]);
+      zones.slice(0, 3).forEach(function(z){ rsec.appendChild(routeBlock(z)); });
+      if (zones.length > 3) rsec.appendChild(el('div', { class:'route-note', text:'+' + (zones.length - 3) + L(' outros mapas — veja todos no detalhe do item.', ' more maps — see them all in the item details.') }));
+      box.appendChild(rsec);
+    }
+    if (it.how){
+      var q = el('div', { class:'acq-sec' }, [ el('h5', { text:'Quest / craft' }) ]);
+      if (it.how.place) q.appendChild(el('div', { class:'acq-line', text:L('Onde: ', 'Where: ') + it.how.place }));
+      if (it.how.note) q.appendChild(el('div', { class:'acq-line muted', text: it.how.note }));
+      if (it.how.mats.length){
+        var ul = el('ul', { class:'mats' });
+        it.how.mats.forEach(function(m){
+          var mi = itemById(m[2]);
+          var li = el('li');
+          var nm = el(mi ? 'button' : 'span', { class: mi ? 'item-link' : '', text: m[0] + '× ' + m[1] });
+          if (mi){ nm.type = 'button'; nm.addEventListener('click', function(){ openDetail(mi.id); }); }
+          li.appendChild(nm);
+          var src = bestSourceText(mi);
+          if (src) li.appendChild(el('span', { class:'mat-src', text: src }));
+          ul.appendChild(li);
+        });
+        q.appendChild(ul);
+      }
+      box.appendChild(q);
+    }
+    if (it.shop) box.appendChild(el('div', { class:'acq-sec' }, [ el('h5', { text:L('Loja', 'Shop') }), el('div', { class:'acq-line', text:L('Vendido em loja (NPC).', 'Sold in an NPC shop.') }) ]));
+    if (!it.sources.length && !it.how && !it.shop){
+      box.appendChild(el('div', { class:'route-note', text:L('A base não lista drop, quest nem loja para este item.', 'The database lists no drop, quest or shop for this item.') }));
+    }
+    return box;
+  }
+
+  // ---------- farm list ----------
+  // Everything equipped in the active stage, plus the missing pieces of partial sets.
+  function computeFarmTargets(lo){
+    var targets = {}; // id -> { item, tag }
+    forEachEquipped(lo, function(it, refine, slotVal, isCard){
+      if (!targets[it.id]) targets[it.id] = { item: it, tag: isCard ? L('carta', 'card') : '' };
+    });
+    computeActiveSets(lo).partial.forEach(function(p){
+      p.missingIds.forEach(function(mid){
+        var mi = itemById(mid);
+        if (mi && !targets[mid]) targets[mid] = { item: mi, tag: L('falta p/ ', 'missing for ') + p.name };
+      });
+    });
+    return targets;
+  }
+
+  // ---------- active loadout summary (bottom of the left column) ----------
+  function renderSummary(lo){
+    var box = document.getElementById('loSummary');
+    if (!box) return;
+    clear(box);
+    var head = el('div', { class:'los-head' });
+    head.appendChild(el('div', { class:'los-name', text: lo.name || L('Sem nome', 'Unnamed') }));
+    var meta = el('div', { class:'los-meta' });
+    meta.appendChild(el('span', { class:'badge ' + lo.activeStage, text: stageLabel(lo.activeStage) }));
+    meta.appendChild(el('span', { text: lo.charClass || L('sem classe', 'no class') }));
+    head.appendChild(meta);
+    box.appendChild(head);
+    if (!state.db){ box.appendChild(el('div', { class:'empty-note', text:L('Carregando…', 'Loading…') })); return; }
+
+    var s = computeStatusSummary(lo);
+    var totalSlots = EQUIP_SLOTS.length + SHADOW_SLOTS.length;
+    var filled = 0, slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){ if (slots[d.key]) filled++; });
+    var targets = Object.keys(computeFarmTargets(lo));
+    var owned = activeStageData(lo).owned;
+    var got = targets.filter(function(id){ return owned[id]; }).length;
+
+    function line(k, v){
+      return el('div', { class:'los-line' }, [ el('span', { class:'los-k', text:k }), el('span', { class:'los-v', text:v }) ]);
+    }
+    box.appendChild(line('Level', String(s.level)));
+    box.appendChild(line(L('Slots ocupados', 'Slots filled'), filled + L(' de ', ' of ') + totalSlots));
+    box.appendChild(line(L('Conjuntos completos', 'Complete sets'), String(s.completeSets)));
+    var farmLine = line('Farm', targets.length ? got + '/' + targets.length + L(' obtidos', ' obtained') : '—');
+    box.appendChild(farmLine);
+    if (targets.length){
+      var bar = el('div', { class:'los-bar', role:'progressbar', 'aria-valuemin':'0', 'aria-valuemax': String(targets.length), 'aria-valuenow': String(got) });
+      var fill = el('span');
+      fill.style.width = Math.round(got / targets.length * 100) + '%';
+      bar.appendChild(fill);
+      box.appendChild(bar);
+    }
+    var stats = el('div', { class:'los-stats' });
+    STAT_KEYS.forEach(function(k){
+      stats.appendChild(el('div', { class:'los-stat' }, [ el('span', { text:k.label }), el('strong', { text:String(s.totals[k.key]) }) ]));
+    });
+    box.appendChild(stats);
+  }
+
+  function renderFarm(lo){
+    var list = document.getElementById('farmList');
+    var prog = document.getElementById('farmProgress');
+    var titleEl = document.getElementById('farmTitle');
+    if (!list) return;
+    clear(list); clear(prog);
+    titleEl.textContent = L('Lista de farm — ', 'Farm list — ') + stageLabel(lo.activeStage);
+    if (!state.db){ list.appendChild(el('div', { class:'empty-note', text:L('Esperando a base de itens carregar…', 'Waiting for the item database to load…') })); return; }
+    var sd = activeStageData(lo);
+    var targets = computeFarmTargets(lo);
+    var ids = Object.keys(targets);
+    if (!ids.length){
+      list.appendChild(el('div', { class:'empty-note', text:L('Nada equipado nesta fase ainda. Equipe itens nas abas Equipamento/Shadow e eles aparecem aqui.', 'Nothing equipped in this stage yet. Equip items in the Equipment/Shadow tabs and they show up here.') }));
+      return;
+    }
+    var groups = {};
+    var QUEST_GROUP = L('Quest / Craft / Loja', 'Quest / Craft / Shop');
+    ids.forEach(function(id){
+      var t = targets[id], it = t.item;
+      var key = it.sources.length ? it.sources[0].zone : QUEST_GROUP;
+      (groups[key] = groups[key] || []).push(t);
+    });
+    var ownedCount = ids.filter(function(id){ return sd.owned[id]; }).length;
+    prog.appendChild(el('strong', { text: ownedCount + '/' + ids.length }));
+    prog.appendChild(document.createTextNode(L(' itens obtidos', ' items obtained')));
+    Object.keys(groups).sort(function(a, b){
+      if (a === QUEST_GROUP) return 1;
+      if (b === QUEST_GROUP) return -1;
+      return a.localeCompare(b);
+    }).forEach(function(zone){
+      var g = el('div', { class:'farm-group' });
+      var pending = groups[zone].filter(function(t){ return !sd.owned[t.item.id]; }).length;
+      g.appendChild(el('h4', {}, [ document.createTextNode(zone), el('span', { text: pending ? pending + L(' faltando', ' missing') : L('tudo obtido', 'all obtained') }) ]));
+      groups[zone].sort(function(a, b){ return a.item.name.localeCompare(b.item.name); }).forEach(function(t){
+        var it = t.item;
+        var owned = !!sd.owned[it.id];
+        var isOpen = !!state.farmOpen[it.id];
+        var entry = el('div', { class:'farm-entry' + (isOpen ? ' open' : '') });
+        var row = el('div', { class:'farm-item' + (owned ? ' owned' : '') });
+        var cb = el('input', { type:'checkbox', 'aria-label':L('Já tenho ', 'I have ') + it.name });
+        cb.checked = owned;
+        cb.addEventListener('change', function(){
+          if (cb.checked) sd.owned[it.id] = true; else delete sd.owned[it.id];
+          saveLoadouts();
+          renderFarm(lo);
+          renderSummary(lo);
+        });
+        row.appendChild(cb);
+        row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
+        var main = el('div', { class:'fi-main' });
+        var nameBtn = el('button', { type:'button', class:'item-name item-link', text: it.name });
+        nameBtn.addEventListener('click', function(){ openDetail(it.id); });
+        main.appendChild(nameBtn);
+        if (t.tag) main.lastChild.appendChild(el('span', { class:'farm-tag', text: t.tag }));
+        var srcLine;
+        if (it.sources.length){
+          var s = it.sources[0];
+          srcLine = s.mob + ' · Lv' + s.mobLv + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '') + (it.sources.length > 1 ? ' · +' + (it.sources.length - 1) + L(' fontes', ' sources') : '');
+        } else if (it.how){
+          srcLine = 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
+        } else if (it.shop){
+          srcLine = L('Loja (NPC)', 'Shop (NPC)');
+        } else {
+          srcLine = L('Origem não listada na base', 'Source not listed in the database');
+        }
+        main.appendChild(el('div', { class:'fi-src', text: srcLine }));
+        row.appendChild(main);
+        var toggle = el('button', { type:'button', class:'farm-toggle', 'aria-expanded': String(isOpen),
+          'aria-label': (isOpen ? L('Recolher', 'Collapse') : L('Expandir', 'Expand')) + L(' detalhes de ', ' details of ') + it.name, text:'▾' });
+        row.appendChild(toggle);
+        var panel = el('div', { class:'farm-detail' });
+        panel.hidden = !isOpen;
+        if (isOpen) panel.appendChild(buildAcquireInfo(it));
+        function flip(){
+          var nowOpen = !state.farmOpen[it.id];
+          if (nowOpen) state.farmOpen[it.id] = true; else delete state.farmOpen[it.id];
+          entry.classList.toggle('open', nowOpen);
+          toggle.setAttribute('aria-expanded', String(nowOpen));
+          if (nowOpen && !panel.firstChild) panel.appendChild(buildAcquireInfo(it));
+          panel.hidden = !nowOpen;
+        }
+        toggle.addEventListener('click', flip);
+        row.addEventListener('click', function(e){
+          if (e.target === cb || e.target.closest('.item-link') || e.target === toggle) return;
+          flip();
+        });
+        entry.appendChild(row);
+        entry.appendChild(panel);
+        g.appendChild(entry);
+      });
+      list.appendChild(g);
+    });
+  }
+
+  // ---------- share codes (single loadout, gzip+base64 when supported) ----------
+  function bytesToBase64(bytes){
+    var bin = '';
+    var chunk = 0x8000;
+    for (var i=0; i<bytes.length; i+=chunk){
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+    }
+    return btoa(bin);
+  }
+  function base64ToBytes(b64){
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i=0; i<bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  function encodeLoadoutCode(lo){
+    var json = JSON.stringify(lo);
+    if (window.CompressionStream){
+      var cs = new CompressionStream('gzip');
+      var writer = cs.writable.getWriter();
+      writer.write(new TextEncoder().encode(json));
+      writer.close();
+      return new Response(cs.readable).arrayBuffer().then(function(buf){
+        return 'RTM1:' + bytesToBase64(new Uint8Array(buf));
+      });
+    }
+    return Promise.resolve('RTM0:' + btoa(unescape(encodeURIComponent(json))));
+  }
+  // Reads a gzip stream but gives up past LIMITS.decodedBytes, so a tiny "bomb" code that
+  // inflates to gigabytes can't freeze the tab.
+  function inflateCapped(bytes){
+    var ds = new DecompressionStream('gzip');
+    var writer = ds.writable.getWriter();
+    writer.write(bytes).catch(function(){});
+    writer.close().catch(function(){});
+    var reader = ds.readable.getReader(), chunks = [], total = 0;
+    function pump(){
+      return reader.read().then(function(r){
+        if (r.done){
+          var out = new Uint8Array(total), at = 0;
+          chunks.forEach(function(c){ out.set(c, at); at += c.length; });
+          return out;
+        }
+        total += r.value.length;
+        if (total > LIMITS.decodedBytes){
+          reader.cancel().catch(function(){});
+          throw new Error(L('Código grande demais.', 'Code is too large.'));
+        }
+        chunks.push(r.value);
+        return pump();
+      });
+    }
+    return pump();
+  }
+  function decodeLoadoutCode(code){
+    code = (code||'').trim();
+    if (code.length > LIMITS.codeChars) return Promise.reject(new Error(L('Código grande demais.', 'Code is too large.')));
+    if (code.indexOf('RTM1:') === 0){
+      if (!window.DecompressionStream){
+        return Promise.reject(new Error(L('Este navegador não suporta descompressão (RTM1). Tente um navegador mais recente, ou peça um código RTM0.', "This browser can't decompress (RTM1). Try a newer browser, or ask for an RTM0 code.")));
+      }
+      var bytes;
+      try { bytes = base64ToBytes(code.slice(5)); } catch(e){ return Promise.reject(new Error(L('Código corrompido ou incompleto.', 'Corrupted or incomplete code.'))); }
+      return inflateCapped(bytes).then(function(buf){
+        return JSON.parse(new TextDecoder().decode(buf));
+      });
+    }
+    if (code.indexOf('RTM0:') === 0){
+      try{
+        var json = decodeURIComponent(escape(atob(code.slice(5))));
+        return Promise.resolve(JSON.parse(json));
+      } catch(e){ return Promise.reject(new Error(L('Código corrompido ou incompleto.', 'Corrupted or incomplete code.'))); }
+    }
+    return Promise.reject(new Error(L('Isso não parece um código válido do Refuge Build Planner.', "That doesn't look like a valid Refuge Build Planner code.")));
+  }
+
+  // ---------- events ----------
+  function atLoadoutLimit(){
+    if (state.loadouts.length < LIMITS.loadouts) return false;
+    alertInline(L('Limite de 100 loadouts atingido. Exclua algum para criar outro.', 'Limit of 100 loadouts reached. Delete one to create another.'));
+    return true;
+  }
+  document.getElementById('newLoadoutBtn').addEventListener('click', function(){
+    if (atLoadoutLimit()) return;
+    var lo = blankLoadout(L('Novo Loadout ', 'New Loadout ') + (state.loadouts.length+1));
+    state.loadouts.push(lo);
+    state.activeId = lo.id;
+    saveLoadouts();
+    render();
+  });
+  document.getElementById('dupBtn').addEventListener('click', function(){
+    var lo = activeLoadout(); if (!lo) return;
+    if (atLoadoutLimit()) return;
+    var copy = JSON.parse(JSON.stringify(lo));
+    copy.id = uid(); copy.name = (lo.name + L(' (cópia)', ' (copy)')).slice(0, LIMITS.name); copy.updatedAt = Date.now();
+    state.loadouts.push(copy); state.activeId = copy.id;
+    saveLoadouts(); render();
+  });
+  document.getElementById('delBtn').addEventListener('click', function(){
+    var lo = activeLoadout(); if (!lo) return;
+    state.loadouts = state.loadouts.filter(function(l){ return l.id !== lo.id; });
+    state.activeId = state.loadouts.length ? state.loadouts[0].id : null;
+    saveLoadouts(); render();
+  });
+
+  document.getElementById('shareBtn').addEventListener('click', function(){
+    var lo = activeLoadout(); if (!lo) return;
+    var out = document.getElementById('shareCodeOut');
+    var status = document.getElementById('shareStatus');
+    out.value = L('Gerando…', 'Generating…');
+    status.textContent = '';
+    status.classList.remove('err');
+    document.getElementById('shareCodeIn').value = '';
+    document.getElementById('shareModalBackdrop').hidden = false;
+    encodeLoadoutCode(lo).then(function(code){ out.value = code; }).catch(function(err){
+      out.value = ''; status.textContent = L('Falha ao gerar código: ', 'Could not generate the code: ') + err.message; status.classList.add('err');
+    });
+  });
+  document.getElementById('shareModalClose').addEventListener('click', function(){
+    document.getElementById('shareModalBackdrop').hidden = true;
+  });
+  document.getElementById('shareModalBackdrop').addEventListener('click', function(e){
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+  });
+  document.getElementById('shareCopyBtn').addEventListener('click', function(){
+    var out = document.getElementById('shareCodeOut');
+    var status = document.getElementById('shareStatus');
+    if (!out.value) return;
+    out.select();
+    var done = function(){ status.textContent = L('Copiado! Cole no Discord.', 'Copied! Paste it on Discord.'); status.classList.remove('err'); };
+    var fail = function(){
+      try{ document.execCommand('copy'); done(); }
+      catch(e){ status.textContent = L('Não copiou sozinho — selecione o texto acima e copie manualmente (Ctrl+C).', "Couldn't copy automatically — select the text above and copy it manually (Ctrl+C)."); status.classList.add('err'); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(out.value).then(done).catch(fail);
+    } else { fail(); }
+  });
+  document.getElementById('shareImportBtn').addEventListener('click', function(){
+    var raw = document.getElementById('shareCodeIn').value;
+    var status = document.getElementById('shareStatus');
+    status.textContent = L('Importando…', 'Importing…'); status.classList.remove('err');
+    decodeLoadoutCode(raw).then(function(lo){
+      lo = sanitizeLoadout(lo, false);
+      if (!lo) throw new Error(L('Código não contém um loadout válido.', "The code doesn't contain a valid loadout."));
+      if (state.loadouts.length >= LIMITS.loadouts) throw new Error(L('Limite de 100 loadouts atingido.', 'Limit of 100 loadouts reached.'));
+      lo.updatedAt = Date.now();
+      state.loadouts.push(lo);
+      state.activeId = lo.id;
+      saveLoadouts(); render();
+      status.textContent = L('Importado: "', 'Imported: "') + lo.name + '".'; status.classList.remove('err');
+    }).catch(function(err){
+      status.textContent = L('Falha ao importar: ', 'Import failed: ') + err.message; status.classList.add('err');
+    });
+  });
+  document.getElementById('fName').addEventListener('input', function(e){
+    var lo = activeLoadout(); if (!lo) return; lo.name = e.target.value; lo.updatedAt = Date.now(); saveLoadouts(); renderSidebar(); renderSummary(lo);
+  });
+  document.getElementById('fClass').addEventListener('change', function(e){
+    var lo = activeLoadout(); if (!lo) return; lo.charClass = e.target.value; saveLoadouts(); renderSidebar(); renderSummary(lo);
+  });
+  document.getElementById('fLevel').addEventListener('input', function(e){
+    var lo = activeLoadout(); if (!lo) return;
+    activeStageData(lo).level = Math.max(1, Math.min(MAX_LEVEL, Number(e.target.value) || 1));
+    saveLoadouts();
+    renderStatusPanel(lo);
+    renderCompare(lo);
+    renderSummary(lo);
+  });
+  document.querySelectorAll('.clear-all-btn').forEach(function(btn){
+    var resetTimer = null;
+    function reset(){
+      clearTimeout(resetTimer);
+      btn.classList.remove('confirming');
+      btn.textContent = L('Limpar tudo', 'Clear all');
+    }
+    btn.addEventListener('click', function(){
+      var lo = activeLoadout(); if (!lo) return;
+      if (!btn.classList.contains('confirming')){
+        btn.classList.add('confirming');
+        btn.textContent = L('Confirmar? (', 'Confirm? (') + stageLabel(lo.activeStage) + ')';
+        resetTimer = setTimeout(reset, 3000);
+        return;
+      }
+      reset();
+      var defs = btn.dataset.group === 'shadow' ? SHADOW_SLOTS : EQUIP_SLOTS;
+      var slots = activeStageData(lo).slots;
+      defs.forEach(function(d){ slots[d.key] = null; });
+      lo.updatedAt = Date.now();
+      saveLoadouts();
+      render();
+    });
+  });
+  document.querySelectorAll('.stage-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var lo = activeLoadout(); if (!lo) return;
+      lo.activeStage = btn.dataset.stage;
+      saveLoadouts();
+      render();
+    });
+  });
+  // Each .tabs nav (middle column, right column) only switches its own panels.
+  document.querySelectorAll('.tabs').forEach(function(nav){
+    var btns = Array.prototype.slice.call(nav.querySelectorAll('.tab-btn'));
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        btns.forEach(function(b){
+          b.classList.toggle('active', b === btn);
+          document.getElementById('panel-' + b.dataset.tab).hidden = (b !== btn);
+        });
+      });
+    });
+  });
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalBackdrop').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeModal(); });
+  var searchDebounce = null;
+  document.getElementById('searchInput').addEventListener('input', function(e){
+    clearTimeout(searchDebounce);
+    var q = e.target.value;
+    searchDebounce = setTimeout(function(){ renderResults(q); }, 120);
+  });
+  document.getElementById('ignoreSlotFilter').addEventListener('change', function(){
+    renderResults(document.getElementById('searchInput').value);
+  });
+  document.getElementById('classFilter').addEventListener('change', function(){
+    renderResults(document.getElementById('searchInput').value);
+  });
+  document.getElementById('detailClose').addEventListener('click', closeDetail);
+  document.getElementById('detailBackdrop').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeDetail(); });
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('detailBackdrop').hidden) closeDetail();
+    else if (!document.getElementById('modalBackdrop').hidden) closeModal();
+  });
+  document.getElementById('notesInput').addEventListener('input', function(e){
+    var lo = activeLoadout(); if (!lo) return;
+    lo.notes = e.target.value;
+    saveLoadouts();
+  });
+  document.getElementById('manualToggleBtn').addEventListener('click', function(){
+    var f = document.getElementById('manualForm');
+    f.hidden = !f.hidden;
+  });
+  document.getElementById('manualApply').addEventListener('click', function(){
+    applyManual(document.getElementById('manualName').value.trim(), document.getElementById('manualSprite').value.trim());
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var text = JSON.stringify({ schemaVersion:1, loadouts: state.loadouts }, null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        alertInline(L('Loadouts copiados para a área de transferência. Cole em um arquivo .json para guardar backup.', 'Loadouts copied to the clipboard. Paste them into a .json file to keep a backup.'));
+      }).catch(function(){ promptFallbackExport(text); });
+    } else {
+      promptFallbackExport(text);
+    }
+  });
+  function promptFallbackExport(text){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); alertInline(L('Copiado para a área de transferência.', 'Copied to the clipboard.')); }
+    catch(e){ alertInline(L('Não foi possível copiar automaticamente. Selecione e copie o texto manualmente no console.', "Couldn't copy automatically. Select and copy the text manually from the console.")); }
+    document.body.removeChild(ta);
+  }
+  var toastTimer = null;
+  function alertInline(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.hidden = true; }, 3200);
+  }
+
+  document.getElementById('importBtn').addEventListener('click', function(){
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', function(e){
+    var file = e.target.files[0]; if (!file) return;
+    if (file.size > LIMITS.fileBytes){
+      alertInline(L('Arquivo grande demais para ser um backup de loadouts.', 'File is too large to be a loadouts backup.'));
+      e.target.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var parsed = JSON.parse(reader.result);
+        if (!parsed || !Array.isArray(parsed.loadouts)) throw new Error('invalid format');
+        var room = LIMITS.loadouts - state.loadouts.length;
+        parsed.loadouts = sanitizeLoadouts(parsed.loadouts, false).slice(0, Math.max(0, room));
+        if (!parsed.loadouts.length) throw new Error('nothing valid to import');
+        state.loadouts = state.loadouts.concat(parsed.loadouts);
+        if (!state.activeId && state.loadouts.length) state.activeId = state.loadouts[0].id;
+        saveLoadouts(); render();
+        alertInline(L('Importado: ' + parsed.loadouts.length + ' loadout(s) adicionados.', 'Imported: ' + parsed.loadouts.length + ' loadout(s) added.'));
+      } catch(err){
+        alertInline(L('Falha ao importar: arquivo não é um JSON de loadouts válido.', 'Import failed: the file is not a valid loadouts JSON.'));
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('themeToggle').addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme') ||
+      (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try{ localStorage.setItem(THEME_KEY, next); } catch(e){}
+  });
+  document.getElementById('langToggle').addEventListener('click', function(){
+    try{ localStorage.setItem(LANG_KEY, LANG === 'en' ? 'pt' : 'en'); } catch(e){}
+    location.reload();
+  });
+  (function initTheme(){
+    try{
+      var saved = localStorage.getItem(THEME_KEY);
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    } catch(e){}
+  })();
+
+  // ---------- boot ----------
+  state.loadouts = loadLoadouts();
+  if (state.loadouts.length === 0){
+    state.loadouts.push(blankLoadout(L('Exemplo — Mago Mid Game', 'Example — Mage Mid Game')));
+  }
+  state.activeId = state.loadouts[0].id;
+  try { render(); } catch(e){
+    console.warn('Render failed at boot:', e);
+    alertInline(L('Um loadout salvo não pôde ser exibido. Os outros continuam disponíveis.', 'A saved loadout could not be shown. The others are still available.'));
+  }
+  fetchDb();
+  fetchPlaces();
+  checkPassivesAgainstSite();
+})();
+</script>
+</body>
+</html>

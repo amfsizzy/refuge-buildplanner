@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: In-game test checklist
+    url: https://github.com/amfsizzy/refuge-buildplanner/blob/main/CHECKLIST.md
+    about: See which mechanics still need to be tested in game.

@@ -1,0 +1,31 @@
+name: Bug report
+description: Something in the planner looks wrong or doesn't work.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **Never post your account login, password, email or any personal information.**
+        Security problems should be reported privately; see SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: loadout
+    attributes:
+      label: Loadout share code (optional)
+      description: Use the "Share" button in the planner and paste the code, so we can see the same thing.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: "e.g. Chrome 140 on Windows"
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots

@@ -1,0 +1,48 @@
+name: In-game test result
+description: Share a result for an open item of the test checklist.
+title: "[Test] "
+labels: ["test-result"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping! Pick an open item from the [test checklist](https://github.com/amfsizzy/refuge-buildplanner/blob/main/CHECKLIST.md) and tell us what you saw in game.
+
+        ⚠️ **Never post your account login, password, email or any personal information.** A screenshot of the in-game Status window is all we need; crop or blur your character and account names before uploading.
+  - type: input
+    id: item
+    attributes:
+      label: Checklist item
+      description: The item you tested, e.g. "ATK per refine: level 2 weapon" or its code (r2).
+    validations:
+      required: true
+  - type: input
+    id: character
+    attributes:
+      label: Class and level
+      placeholder: "e.g. Assassin, level 87"
+    validations:
+      required: true
+  - type: input
+    id: stats
+    attributes:
+      label: Base stats
+      placeholder: "STR / AGI / VIT / INT / DEX / LUK, e.g. 80 / 90 / 30 / 1 / 50 / 20"
+  - type: textarea
+    id: gear
+    attributes:
+      label: Gear (with refine levels and extra options)
+      placeholder: "e.g. +7 Keris [ATK +3], +4 Dragon Scale Cape, …"
+  - type: textarea
+    id: result
+    attributes:
+      label: What you measured
+      description: The numbers you saw, before and after the change you made.
+      placeholder: "e.g. Weapon at +0: ATK 210. At +4: ATK 222. At +7: ATK 231."
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag and drop your Status window screenshots here (crop or blur your character name).

@@ -523,6 +523,26 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   font-size:11px; padding:2px 3px;
 }
 .filter-row-wrap{ display:flex; gap:14px; flex-wrap:wrap; }
+.filter-pills{ display:flex; gap:4px 16px; flex-wrap:wrap; align-items:center; }
+.filter-pills:empty{ display:none; }
+/* Compact on/off switches for the item picker's filters. */
+.filter-pill{
+  display:inline-flex; align-items:center; gap:7px; padding:3px 0; background:none; border:0;
+  color:var(--fg-dim); font-size:12px; font-weight:600; cursor:pointer;
+}
+.filter-pill:hover{ color:var(--fg); }
+.filter-pill .fp-track{
+  position:relative; flex:none; width:26px; height:14px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--border); transition:background .15s, border-color .15s;
+}
+.filter-pill .fp-track::after{
+  content:''; position:absolute; top:2px; left:2px; width:8px; height:8px; border-radius:50%;
+  background:var(--fg-faint); transition:transform .15s, background .15s;
+}
+.filter-pill[aria-checked="true"]{ color:var(--fg); }
+.filter-pill[aria-checked="true"] .fp-track{ background:var(--accent-strong); border-color:var(--accent-strong); }
+.filter-pill[aria-checked="true"] .fp-track::after{ transform:translateX(12px); background:#fff; }
+.filter-pill:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
 .panel-intro{ display:block; font-size:12px; color:var(--fg-faint); line-height:1.5; margin:0 0 14px; max-width:70ch; }
 
 /* detail modal */
@@ -792,10 +812,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       <button class="close-x" id="modalClose" type="button">&times;</button>
     </div>
     <input class="search-input" id="searchInput" type="text" placeholder="Buscar por nome…" data-en-placeholder="Search by name…">
-    <div class="filter-row-wrap">
-      <label class="filter-row"><input type="checkbox" id="ignoreSlotFilter"> <span data-en="ignore slot filter">ignorar filtro de slot</span></label>
-      <label class="filter-row" id="classFilterRow"><input type="checkbox" id="classFilter" checked> <span id="classFilterLabel" data-en="only items of the class">só itens da classe</span></label>
-    </div>
+    <div class="filter-pills" id="filterPills" role="group" aria-label="Filtros" data-en-aria-label="Filters"></div>
     <div class="results" id="searchResults"></div>
     <button class="manual-toggle" id="manualToggleBtn" type="button" data-en="+ manual entry (item not in the database)">+ entrada manual (item fora da base)</button>
     <div class="manual-form" id="manualForm" hidden>
@@ -881,9 +898,14 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     { key:'shadowArmor', label:'Shadow Armor', locs:['Shadow armor'] },
     { key:'shadowGloves', label:'Shadow Gloves', locs:['Shadow gloves'] },
     { key:'shadowShoes', label:'Shadow Shoes', locs:['Shadow shoes'] },
-    { key:'shadowAccLeft', label:L('Shadow Accessory E', 'Shadow Accessory L'), locs:['Shadow accessory'] },
-    { key:'shadowAccRight', label:L('Shadow Accessory D', 'Shadow Accessory R'), locs:['Shadow accessory'] }
+    // Pendants and manuals share the DB's "Shadow accessory" loc, so they are told apart by
+    // category. Manuals and runes are one-of-a-kind passive slots. The keys predate this split
+    // (both used to be "Shadow accessory"); migrateShadowSlots() moves old picks to the right one.
+    { key:'shadowAccLeft', label:'Shadow Pendant', locs:['Shadow accessory'], excludeCats:['Manual'] },
+    { key:'shadowAccRight', label:'Manual', locs:[], cats:['Manual'] },
+    { key:'shadowRune', label:L('Runa', 'Rune'), locs:['Rune or orb'], cats:['Rune'] }
   ];
+  var SHADOW_PASSIVE_KEYS = ['shadowAccLeft', 'shadowAccRight', 'shadowRune'];
   var STAT_KEYS = [
     { key:'str', label:'STR' }, { key:'agi', label:'AGI' }, { key:'vit', label:'VIT' },
     { key:'int', label:'INT' }, { key:'dex', label:'DEX' }, { key:'luk', label:'LUK' }
@@ -985,6 +1007,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     if (keepId && typeof raw.id === 'string' && /^id-[a-z0-9-]{1,40}$/.test(raw.id)) lo.id = raw.id;
     lo.charClass = cleanStr(raw.charClass, LIMITS.charClass);
     lo.notes = cleanStr(raw.notes, LIMITS.notes);
+    if (raw.dualWield === true) lo.dualWield = true;
     lo.updatedAt = cleanNum(raw.updatedAt, 0, 9e15, Date.now());
     if (isObj(raw.stages)){
       STAGE_KEYS.forEach(function(k){ if (own(raw.stages, k)) lo.stages[k] = cleanStage(raw.stages[k]); });
@@ -1117,7 +1140,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       var all = /All Stats\s*\+\s*(\d+)/i.exec(line);
       if (all) STAT_KEYS.forEach(function(s){ out[s.key] += parseInt(all[1], 10) || 0; });
       STAT_KEYS.forEach(function(s){ out[s.key] += parseStatBonus(line, s.label); });
-      DERIVED_LABELS.forEach(function(d){ out[d.key] += parseStatBonus(line, d.pattern); });
+      DERIVED_LABELS.forEach(function(d){ out[d.key] += d.pct ? parsePctBonus(line, d.pattern) : parseStatBonus(line, d.pattern); });
     });
     return out;
   }
@@ -1360,12 +1383,18 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     });
   }
 
-  function slotMatchesItem(slotDef, item, ignoreFilter){
-    if (ignoreFilter) return true;
-    return item.locs.some(function(l){ return slotDef.locs.indexOf(l) !== -1; });
+  // opts.anySlot: last-resort "show everything"; opts.dualWield: the off-hand also takes
+  // one-handed weapons (dual wielders). Slot defs may add `cats` (accepted by category too)
+  // and `excludeCats` (refused even when the loc fits).
+  function slotMatchesItem(slotDef, item, opts){
+    if (opts.anySlot) return true;
+    if (slotDef.excludeCats && slotDef.excludeCats.indexOf(item.cat) !== -1) return false;
+    if (slotDef.cats && slotDef.cats.indexOf(item.cat) !== -1) return true;
+    if (item.locs.some(function(l){ return slotDef.locs.indexOf(l) !== -1; })) return true;
+    return slotDef.key === 'offhand' && opts.dualWield && item.locs.indexOf('Weapon') !== -1;
   }
 
-  function searchItems(query, slotDef, wantCards, ignoreFilter, cls){
+  function searchItems(query, slotDef, wantCards, opts, cls){
     if (!state.db) return [];
     var q = (query||'').trim().toLowerCase();
     var out = [];
@@ -1373,7 +1402,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       var it = state.db.items[i];
       if (wantCards !== it.isCard) continue;
       if (q && it.name.toLowerCase().indexOf(q) === -1) continue;
-      if (!slotMatchesItem(slotDef, it, ignoreFilter)) continue;
+      if (!wantCards && !slotMatchesItem(slotDef, it, opts)) continue;
+      if (wantCards && !opts.anySlot && !it.locs.some(function(l){ return (opts.cardLocs || slotDef.locs).indexOf(l) !== -1; })) continue;
       if (!wantCards && cls && !canEquip(it, cls)) continue;
       out.push(it);
       if (out.length >= 50) break;
@@ -1617,6 +1647,14 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
     return total;
   }
+  // Same as parseStatBonus, for percent lines only ("ASPD +5%").
+  function parsePctBonus(desc, statLabel){
+    if (!desc) return 0;
+    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)\\s*%', 'gi');
+    var total = 0, m;
+    while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
+    return total;
+  }
   // Calls fn(item, refine, slotVal, isCard) for every equipped DB item and card of the active stage.
   function forEachEquipped(lo, fn){
     if (!state.db) return;
@@ -1650,7 +1688,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   // Random options rolled on a specific copy of an item ("ATK +3", "Max SP +3%"), typed in by
   // the player. Only flat bonuses the parser knows are summed; the rest is shown as text.
   var EXTRA_SUGGESTIONS = ['STR +', 'AGI +', 'VIT +', 'INT +', 'DEX +', 'LUK +', 'All Stats +', 'ATK +', 'MATK +',
-    'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD Limit +', 'Max HP +', 'Max SP +'];
+    'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD +', 'ASPD +%', 'ASPD Limit +', 'Max HP +', 'Max SP +'];
   (function fillExtraSuggestions(){
     var dl = document.getElementById('extraSuggestions');
     if (dl) EXTRA_SUGGESTIONS.forEach(function(s){ var o = document.createElement('option'); o.value = s; dl.appendChild(o); });
@@ -1692,7 +1730,48 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 
   // Rebuilding the panels briefly shortens the page, which made the browser jump back to the
   // top after every edit; keep the page (and the right column's own scroll) where it was.
+  // Older versions had two generic "Shadow accessory" slots, so a saved manual can sit in the
+  // pendant slot (or a pendant in the manual one). Once the item DB is known, each pick moves to
+  // the slot its category belongs to. Nothing is dropped: 3 picks always fit the 3 slots, and
+  // manual entries or unknown items stay where they are when that slot is still free.
+  function shadowSlotFor(val){
+    var it = val && !val.manual ? itemById(val.itemId) : null;
+    if (!it) return null;
+    if (it.cat === 'Manual') return 'shadowAccRight';
+    if (it.cat === 'Rune' || it.locs.indexOf('Rune or orb') !== -1) return 'shadowRune';
+    if (it.locs.indexOf('Shadow accessory') !== -1) return 'shadowAccLeft';
+    return null;
+  }
+  function migrateShadowSlots(slots){
+    var keys = SHADOW_PASSIVE_KEYS;
+    var vals = keys.map(function(k){ return slots[k] || null; });
+    var want = vals.map(shadowSlotFor);
+    var settled = vals.every(function(v, i){ return !v || !want[i] || want[i] === keys[i]; });
+    if (settled) return false;
+    var next = {}, leftover = [];
+    vals.forEach(function(v, i){
+      if (!v) return;
+      if (want[i] && !next[want[i]]) next[want[i]] = v; else leftover.push(i);
+    });
+    leftover.forEach(function(i){
+      var k = !next[keys[i]] ? keys[i] : keys.filter(function(x){ return !next[x]; })[0];
+      next[k] = vals[i];
+    });
+    keys.forEach(function(k){ slots[k] = next[k] || null; });
+    return true;
+  }
+  function migrateAllShadowSlots(){
+    if (!state.db) return;
+    var changed = false;
+    state.loadouts.forEach(function(lo){
+      STAGE_KEYS.forEach(function(k){
+        if (own(lo.stages, k) && migrateShadowSlots(lo.stages[k].slots)) changed = true;
+      });
+    });
+    if (changed) saveLoadouts();
+  }
   function render(){
+    migrateAllShadowSlots();
     var sx = window.scrollX, sy = window.scrollY;
     var side = document.getElementById('sideRight');
     var sideTop = side ? side.scrollTop : 0;
@@ -1728,16 +1807,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 
   // ---------- modal ----------
   function openModal(groupName, slotDef, cardIndex){
-    state.modal = { groupName:groupName, slotDef:slotDef, cardIndex:cardIndex };
+    var lo = activeLoadout();
+    state.modal = { groupName:groupName, slotDef:slotDef, cardIndex:cardIndex,
+      anySlot:false, classOnly:true, dualWield: !!(lo && lo.dualWield) };
     document.getElementById('modalTitle').textContent = (cardIndex === null ? L('Escolher: ', 'Choose: ') : L('Carta para: ', 'Card for: ')) + slotDef.label;
     document.getElementById('searchInput').value = '';
-    document.getElementById('ignoreSlotFilter').checked = false;
-    var lo = activeLoadout();
-    var cls = (lo && lo.charClass) || '';
-    var classRow = document.getElementById('classFilterRow');
-    classRow.hidden = !cls || cardIndex !== null;
-    document.getElementById('classFilter').checked = true;
-    document.getElementById('classFilterLabel').textContent = L('só itens que ' + cls + ' pode usar', 'only items ' + cls + ' can use');
+    renderFilterPills();
     document.getElementById('manualForm').hidden = true;
     document.getElementById('manualName').value = '';
     document.getElementById('manualSprite').value = '';
@@ -1748,6 +1823,39 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   function closeModal(){
     document.getElementById('modalBackdrop').hidden = true;
     state.modal = null;
+  }
+  // Cards follow the item actually in the slot: a dagger in the off-hand takes weapon cards.
+  function cardLocsFor(lo, slotDef){
+    var val = lo ? activeStageData(lo).slots[slotDef.key] : null;
+    var it = val && !val.manual ? itemById(val.itemId) : null;
+    if (slotDef.key === 'offhand' && it && it.locs.indexOf('Weapon') !== -1) return slotDef.locs.concat(['Weapon']);
+    return slotDef.locs;
+  }
+  // The item picker's filters, as small on/off switches: dual wield (off-hand only, remembered
+  // per loadout), class filter (when the loadout has a class) and the "any slot" escape hatch.
+  function renderFilterPills(){
+    var box = document.getElementById('filterPills');
+    var m = state.modal; if (!box || !m) return;
+    clear(box);
+    var lo = activeLoadout();
+    var cls = (lo && lo.charClass) || '';
+    function toggle(text, hint, on, onToggle){
+      var b = el('button', { type:'button', class:'filter-pill', role:'switch', 'aria-checked': String(on), title: hint });
+      b.appendChild(el('span', { class:'fp-track', 'aria-hidden':'true' }));
+      b.appendChild(document.createTextNode(text));
+      b.addEventListener('click', function(){ onToggle(); renderFilterPills(); renderResults(document.getElementById('searchInput').value); });
+      box.appendChild(b);
+    }
+    if (m.cardIndex === null && m.slotDef.key === 'offhand'){
+      toggle(L('Duas armas', 'Dual wield'), L('Mostra armas de uma mão para a mão secundária', 'Shows one-handed weapons for the off-hand'), m.dualWield, function(){
+        m.dualWield = !m.dualWield;
+        if (lo){ lo.dualWield = m.dualWield; saveLoadouts(); }
+      });
+    }
+    if (m.cardIndex === null && cls){
+      toggle(L('Só itens que ' + cls + ' pode usar', 'Only items ' + cls + ' can use'), L('Só itens que ' + cls + ' pode usar', 'Only items ' + cls + ' can use'), m.classOnly, function(){ m.classOnly = !m.classOnly; });
+    }
+    toggle(L('Mostrar itens de qualquer slot', 'Show items for any slot'), L('Ignora o filtro de slot deste espaço', 'Ignores this slot\'s filter'), m.anySlot, function(){ m.anySlot = !m.anySlot; });
   }
 
   function applySelection(item){
@@ -1794,11 +1902,11 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       return;
     }
     var m = state.modal; if (!m) return;
-    var ignoreFilter = document.getElementById('ignoreSlotFilter').checked;
     var wantCards = m.cardIndex !== null;
     var lo = activeLoadout();
-    var cls = (lo && lo.charClass && document.getElementById('classFilter').checked) ? lo.charClass : '';
-    var found = searchItems(query, m.slotDef, wantCards, ignoreFilter, cls);
+    var cls = (lo && lo.charClass && m.classOnly) ? lo.charClass : '';
+    var opts = { anySlot: m.anySlot, dualWield: m.dualWield, cardLocs: wantCards ? cardLocsFor(lo, m.slotDef) : null };
+    var found = searchItems(query, m.slotDef, wantCards, opts, cls);
     if (found.length === 0){
       results.appendChild(el('div', { class:'result-empty', text: query ? L('Nada encontrado para "', 'Nothing found for "') + query + '".' : L('Digite para buscar…', 'Type to search…') }));
       return;
@@ -1825,6 +1933,10 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     { key:'hit', pattern:'HIT' }, { key:'flee', pattern:'FLEE' },
     { key:'crit', pattern:'Critical(?: Rate)?' }, { key:'pdodge', pattern:'Perfect Dodge' },
     { key:'aspdLimit', pattern:'ASPD Limit' },
+    // "ASPD +N" and "ASPD +N%" (not "ASPD Limit"): summed and shown, but not applied — the base
+    // ASPD formula below the cap isn't published, so there is nothing to add it to yet.
+    { key:'aspd', pattern:'ASPD(?! Limit)' },
+    { key:'aspdPct', pattern:'ASPD(?! Limit)', pct:true },
     { key:'def', pattern:'DEF' }, { key:'mdef', pattern:'MDEF' },
     { key:'atk', pattern:'ATK' }, { key:'matk', pattern:'MATK' }
   ];
@@ -2196,6 +2308,17 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     var manual = s.manualAspd;
     var cap = s.aspdCap;
     aspdBox.appendChild(el('h3', { text:'ASPD' }));
+    var gearAspd = [];
+    if (s.equipDerived.aspd) gearAspd.push('ASPD +' + s.equipDerived.aspd);
+    if (s.equipDerived.aspdPct) gearAspd.push('ASPD +' + s.equipDerived.aspdPct + '%');
+    if (gearAspd.length){
+      aspdBox.appendChild(el('div', { class:'aspd-line aspd-gear', text:L(
+        'Do equipamento e opções extras: ' + gearAspd.join(' e ') + '. Somado aqui, mas ainda fora do ASPD final.',
+        'From gear and extra options: ' + gearAspd.join(' and ') + '. Summed here, but not in the final ASPD yet.') }));
+    }
+    aspdBox.appendChild(el('div', { class:'aspd-line', text:L(
+      'Por que o ASPD final não é calculado: este servidor mudou as regras de ASPD e não publicou a fórmula nova. Sem saber o ASPD base de cada arma, quanto o AGI soma (e se o DEX conta) e como "ASPD +N" e "ASPD +N%" entram na conta, qualquer número seria chute. Os testes que faltam estão no checklist; quando forem medidos no jogo, o cálculo entra aqui.',
+      'Why the final ASPD is not calculated: this server changed the ASPD rules and has not published the new formula. Without each weapon\'s base ASPD, how much AGI adds (and whether DEX counts), and how "ASPD +N" and "ASPD +N%" enter the math, any number would be a guess. The missing tests are in the checklist; once they are measured in game, the calculation goes here.') }));
     aspdBox.appendChild(el('div', { class:'aspd-line', text:L('Teto é 180 igual pra toda classe aqui (não depende mais de tabela por job). A fórmula exata de ASPD abaixo do teto com base em AGI não está documentada publicamente — isto mostra só o cálculo do teto alcançável.', 'The cap is 180 for every class here (no per-job table). The exact ASPD formula below the cap from AGI is not publicly documented — this only shows the reachable cap.') }));
     aspdBox.appendChild(el('div', { class:'aspd-line' }, [
       document.createTextNode('180 + ' + agiPush + ' (AGI÷40) + ' + s.equipDerived.aspdLimit + L(' (ASPD Limit do equip. e opções extras) + ', ' (gear and extra-option ASPD Limit) + ') +
@@ -2964,12 +3087,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     clearTimeout(searchDebounce);
     var q = e.target.value;
     searchDebounce = setTimeout(function(){ renderResults(q); }, 120);
-  });
-  document.getElementById('ignoreSlotFilter').addEventListener('change', function(){
-    renderResults(document.getElementById('searchInput').value);
-  });
-  document.getElementById('classFilter').addEventListener('change', function(){
-    renderResults(document.getElementById('searchInput').value);
   });
   document.getElementById('detailClose').addEventListener('click', closeDetail);
   document.getElementById('detailBackdrop').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeDetail(); });

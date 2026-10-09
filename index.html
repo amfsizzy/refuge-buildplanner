@@ -1500,7 +1500,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       var line = input.value.replace(/\s+/g, ' ').trim();
       if (!line || /\+\s*$/.test(line)) return;
       val.extras = extras.concat([line]);
+      // Put the cursor back in the same field after the redraw, so several options can be typed in a row.
+      var fields = Array.prototype.slice.call(document.querySelectorAll('.extra-form input'));
+      var at = fields.indexOf(input);
       saveLoadouts(); render();
+      var again = document.querySelectorAll('.extra-form input')[at];
+      if (again) again.focus({ preventScroll: true });
     });
     wrap.appendChild(form);
     return wrap;
@@ -1685,7 +1690,17 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     });
   }
 
+  // Rebuilding the panels briefly shortens the page, which made the browser jump back to the
+  // top after every edit; keep the page (and the right column's own scroll) where it was.
   function render(){
+    var sx = window.scrollX, sy = window.scrollY;
+    var side = document.getElementById('sideRight');
+    var sideTop = side ? side.scrollTop : 0;
+    renderContent();
+    if (window.scrollX !== sx || window.scrollY !== sy) window.scrollTo(sx, sy);
+    if (side && side.scrollTop !== sideTop) side.scrollTop = sideTop;
+  }
+  function renderContent(){
     renderSidebar();
     var lo = activeLoadout();
     document.getElementById('loadoutHead').hidden = !lo;

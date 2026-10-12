@@ -6,7 +6,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 17 of 52 items confirmed.
+**Progress:** 18 of 54 items confirmed.
 
 ## Refine
 
@@ -55,17 +55,20 @@ We don't have access to the game files: the planner only knows what the server's
 
 ## Stat points
 
-*High priority* · Not in the tool yet. Provisional rule: 10 points at level 1, +2 per level, +10 every 10 levels; raising a stat costs 1 point up to 49 and 2 from 50 on.
+*High priority* · Not in the tool yet. Confirmed: 18 points at level 1; raising a stat costs 1 up to 49, 2 from 49→50 up to 98, and 3 for 98→99. The gain rule (+2 per level, +10 every 10 levels) matches at level 49 but not at levels 85 and 105. The tests below measure the gain directly at level up.
 
-**Open (2)**
+**Open (3)**
 
-- [ ] `p1` **Free points at level 1**: On a new level 1 character, how many stat points are there to spend? The provisional rule uses 10. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `p2` **Total points at level 100**: Under the current rule it would be 308. Add the points already spent (each stat's cost from 1) to the ones still free on a level 100 character. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p2` **Points per regular level up**: Note "Status Point" before and after a level up that does not end in 0, in three ranges: below 50, between 50 and 99, and above 100 (e.g. 45→46, 85→86, 105→106). The provisional rule says +2 in all of them. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p5` **Bonus at levels ending in 0**: Same test when reaching a level ending in 0, including 50 (e.g. 49→50, 89→90, 99→100, 109→110). The provisional rule says +12 (2 + 10). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p6` **Other characters' spent points**: A screenshot of the Status window (base stats and "Status Point") of characters at other levels, ideally 60, 70, 95 and 100+. Each one shows the total earned so far. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Result: Medido até agora (base level; pontos gastos + "Status Point" livres): · Nível 49: 154 (a regra dá 154, bate) · Nível 85: 259 (a regra dá 266, 7 a menos) · Nível 105: 334 (a regra dá 326, 8 a mais) · Classe, quest e reset foram descartados. A diferença está em algum ponto entre o nível 50 e o 105.
 
 <details>
-<summary>Confirmed (2)</summary>
+<summary>Confirmed (3)</summary>
 
-- [x] `p3` **Stat cost above 50**: Confirmado: o custo não sobe mais. Do 49 para o 50 passa a custar 2 e fica em 2 até o máximo.
+- [x] `p1` **Free points at level 1**: Confirmado: 18 pontos no nível 1.
+- [x] `p3` **Stat cost**: Confirmado: custa 1 até o 49, 2 do 49→50 até o 97→98, e 3 do 98→99. Não há outro degrau.
 - [x] `p4` **Base stat cap at level 150**: Confirmado: o atributo base continua limitado a 99, mesmo no nível 150.
 
 </details>

@@ -6,7 +6,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 17 de 52 itens confirmados.
+**Progresso:** 18 de 54 itens confirmados.
 
 ## Refino
 
@@ -55,17 +55,20 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ## Pontos de atributo
 
-*Prioridade alta* · Ainda fora da ferramenta. Regra provisória: 10 pontos no nível 1, +2 por nível, +10 a cada 10 níveis; subir um atributo custa 1 ponto até 49 e 2 do 50 em diante.
+*Prioridade alta* · Ainda fora da ferramenta. Confirmado: 18 pontos no nível 1; subir um atributo custa 1 até o 49, 2 do 49→50 até o 98 e 3 do 98→99. A regra de ganho (+2 por nível, +10 a cada 10 níveis) fecha no nível 49, mas não nos níveis 85 e 105. Os testes abaixo medem o ganho direto no level up.
 
-**Em aberto (2)**
+**Em aberto (3)**
 
-- [ ] `p1` **Pontos livres no nível 1**: Num personagem novo, nível 1, quantos pontos de atributo aparecem para distribuir? A regra provisória usa 10. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `p2` **Total de pontos no nível 100**: Pela regra atual daria 308. Some os pontos já gastos (o custo de cada atributo desde 1) com os que ainda estão livres num personagem nível 100. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p2` **Pontos por level up comum**: Anote os "Status Point" antes e depois de subir um nível que não termina em 0, em três faixas: abaixo do 50, entre o 50 e o 99, e acima do 100 (ex.: 45→46, 85→86, 105→106). A regra provisória diz +2 em todos. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p5` **Bônus nos níveis terminados em 0**: Mesmo teste ao subir para um nível terminado em 0, incluindo o 50 (ex.: 49→50, 89→90, 99→100, 109→110). A regra provisória diz +12 (2 + 10). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `p6` **Pontos gastos de outros personagens**: Print da janela de Status (atributos base e "Status Point") de personagens em outros níveis, de preferência 60, 70, 95 e 100+. Cada print mostra o total ganho até ali. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Resultado: Medido até agora (base level; pontos gastos + "Status Point" livres): · Nível 49: 154 (a regra dá 154, bate) · Nível 85: 259 (a regra dá 266, 7 a menos) · Nível 105: 334 (a regra dá 326, 8 a mais) · Classe, quest e reset foram descartados. A diferença está em algum ponto entre o nível 50 e o 105.
 
 <details>
-<summary>Confirmados (2)</summary>
+<summary>Confirmados (3)</summary>
 
-- [x] `p3` **Custo do atributo acima de 50**: Confirmado: o custo não sobe mais. Do 49 para o 50 passa a custar 2 e fica em 2 até o máximo.
+- [x] `p1` **Pontos livres no nível 1**: Confirmado: 18 pontos no nível 1.
+- [x] `p3` **Custo do atributo**: Confirmado: custa 1 até o 49, 2 do 49→50 até o 97→98, e 3 do 98→99. Não há outro degrau.
 - [x] `p4` **Limite do atributo base com o nível 150**: Confirmado: o atributo base continua limitado a 99, mesmo no nível 150.
 
 </details>

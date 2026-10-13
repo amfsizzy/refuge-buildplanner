@@ -6,7 +6,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 23 of 56 items confirmed.
+**Progress:** 24 of 56 items confirmed.
 
 ## Refine
 
@@ -14,12 +14,12 @@ We don't have access to the game files: the planner only knows what the server's
 
 **Open (11)**
 
-- [ ] `r1` **ATK per refine: level 1 weapon**: Note the ATK in the Status window with the weapon at +0 and at two other refines (e.g. +4 and +7). This shows whether the gain per refine is fixed or changes from some point on. Use a weapon with no refine lines in its description (e.g. no "ATK +1 per refine") and note its level. Lead to confirm: +0.5 ATK and MATK per weapon level per refine (level 1 weapon = +1 every 2 refines). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r1` **ATK per refine: level 1 weapon**: Note the ATK in the Status window with the weapon at +0, +1, +2 and +4 (this shows how the 0.5 is rounded). Use a weapon with no refine lines in its description (e.g. no "ATK +1 per refine") and note its level. Lead to confirm: +0.5 ATK and MATK per weapon level per refine (level 1 weapon = +1 every 2 refines). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r2` **ATK per refine: level 2 weapon**: Same test with a level 2 weapon (the level is shown in the item details). Lead: +1 per refine. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r3` **ATK per refine: level 3 weapon**: Same test with a level 3 weapon. Lead: +1.5 per refine. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r4` **ATK per refine: level 4 weapon**: Same test with a level 4 weapon. Lead: +2 per refine. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r5` **MATK per refine**: With a magic weapon (staff, book…), check whether MATK goes up when refining, and by how much. Lead: weapons with base MATK raise MATK at the same rate as ATK. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r6` **DEF/MDEF per refine: armor**: Note DEF and MDEF with the armor at +0 and at +N. Lead: +1 DEF every 2 refines. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r6` **DEF/MDEF per refine: armor**: Note DEF and MDEF with the armor at +0, +2 and +4. Lead: +1 DEF every 2 refines. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r7` **DEF/MDEF per refine: shield**: Same test with a shield. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r8` **DEF/MDEF per refine: garment**: Same test with a garment. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r9` **DEF/MDEF per refine: shoes**: Same test with shoes. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
@@ -30,16 +30,16 @@ We don't have access to the game files: the planner only knows what the server's
 
 *High priority* · The tool only shows the ASPD cap today, not the actual value. Leads to confirm: AGI gives +1 ASPD every 10 points, and ASPD % bonuses scale with total AGI.
 
-**Open (4)**
+**Open (3)**
 
-- [ ] `a1` **ASPD curve from AGI**: With the same weapon and DEX, note the ASPD with AGI at 1, 20, 40, 60, 80 and 99. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `a1` **ASPD curve from AGI**: Reset character with no gear, always with the same weapon (or always without one) and the same DEX: note the ASPD with AGI at 1, 10, 20, 40, 60, 80 and 99. Say which class and weapon you used. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `a2` **DEX effect on ASPD**: With the same weapon and AGI, change only DEX (e.g. 1 and 60) and see whether ASPD changes. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `a3` **Weapon type**: With the same AGI, switch weapon types (dagger, sword, bow, staff…) and note the ASPD of each. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `a4` **Class**: Confirmed: the base cap differs by class. Still missing the value for each class: with no gear and AGI 1, note the ASPD cap of each class you play. Lead: 180, 182 or 185 (Legend 185, Judge 182). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmed (1)</summary>
+<summary>Confirmed (2)</summary>
 
+- [x] `a4` **Class**: Confirmado: o teto base é 180 para todas as classes. Só skills sobem o limite: Jester (Card Mastery e Sleight Mastery no máximo, +1 cada), Legend (Frenzy, +3 passivo; ativo fixa o ASPD em 193) e Dracomancer com espada (Weapon Quicken, +1).
 - [x] `a5` **Hard ASPD cap**: Confirmado: o teto máximo do servidor é 190. Skills podem passar disso: o Legend chega a 193 com Frenzy.
 
 </details>
@@ -80,7 +80,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ## Formulas the tool already uses
 
-*Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). Without gear, compare the Status window with the tool's Status tab.
+*Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). How to test: with no gear, enter the same level and stats as the character in the tool and compare each number in the Status window with the tool's Status tab.
 
 **Open (8)**
 

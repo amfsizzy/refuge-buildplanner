@@ -2158,7 +2158,7 @@ input.invalid{ border-color:var(--danger) !important; }
   }
   // ---------- class passive skills ----------
   // Hand-verified 2026-10-05 against every Passive/Permanent row of db-skills.json (126 rows):
-  // only these 23 skills give a flat bonus the simulator models. Where the site's "numbers"
+  // only these 23 skills give a flat bonus the simulator models (plus Frenzy's passive part, below). Where the site's "numbers"
   // field disagreed with the description, the skill's patch history ("moved"/"said") showed the
   // description is the current text (Perfection Mastery's crit was later confirmed against the
   // in-game tooltip by the player). `h` is a hash of the description at verification
@@ -2203,6 +2203,10 @@ input.invalid{ border-color:var(--danger) !important; }
       parts:[{ need:['dagger'], per:{ atk:5 } }, { per:{ pdodge:1, flee:2 } }], skipped:L('+1% de SP máximo por nível', '+1% max SP per level') },
     { id:'final-blade-mastery', name:'Final Blade Mastery', max:10, h:'1od1s17', cls:['Legend'],
       parts:[{ need:['dagger'], per:{ atk:2 } }], skipped:L('Leech Power +2% no nível 10', 'Leech Power +2% at level 10') },
+    // Frenzy is an active skill whose description also says "Passively adds +3 ASPD Limit"
+    // (added 2026-10-13). The active part fixes ASPD at 193, which the cap math can't express, so it is only noted.
+    { id:'frenzy', name:'Frenzy', max:1, h:'1a468b4', cls:['Vagabond', 'Legend'],
+      parts:[{ base:{ aspdLimit:3 } }], skipped:L('ativa: fixa o ASPD em 193 por 120s', 'active: sets ASPD to 193 for 120s') },
     { id:'gadget-mastery', name:'Gadget Mastery', max:10, h:'15yx8v4', cls:['Rogue', 'Unchained Thief'],
       parts:[{ per:{ int:1 } }], skipped:L('SP extra, alcance de armadilhas e dano de bombas', 'extra SP, trap range and bomb damage') },
     { id:'improve-dodge', name:'Improve Dodge', max:10, h:'icy7gg', cls:['Bouncer', 'Thief', 'Vagabond'],
@@ -2475,8 +2479,8 @@ input.invalid{ border-color:var(--danger) !important; }
       softDef: V + Math.floor(V/10)*5 + derived.def,
       softMdef: Math.floor(V/10)*5 + Math.floor(V/5)*1 + Math.floor(D/5) + derived.mdef,
       agiPush: agiPush, manualAspd: manual,
-      // 190 is the server's hard cap for gear and passives; skills like Legend's Frenzy go
-      // past it (a Legend reaches 193), so the manual skill bonus is added after the clamp.
+      // 190 is the server's hard cap for gear and passives; buffs typed in as the manual skill
+      // bonus are added after the clamp (active Frenzy, which fixes ASPD at 193, is only noted).
       aspdCap: Math.min(190, 180 + agiPush + derived.aspdLimit) + manual,
       aspdCapRaw: 180 + agiPush + derived.aspdLimit,
       itemAtk: items.atk, itemMatk: items.matk, itemDef: items.def, itemMdef: items.mdef, weight: items.weight,
@@ -2533,7 +2537,7 @@ input.invalid{ border-color:var(--danger) !important; }
     aspdBox.appendChild(el('div', { class:'aspd-line', text:L(
       'Por que o ASPD final não é calculado: este servidor mudou as regras de ASPD e não publicou a fórmula nova. Sem saber o ASPD base de cada arma, quanto o AGI soma (e se o DEX conta) e como "ASPD +N" e "ASPD +N%" entram na conta, qualquer número seria chute. Os testes que faltam estão no checklist; quando forem medidos no jogo, o cálculo entra aqui.',
       'Why the final ASPD is not calculated: this server changed the ASPD rules and has not published the new formula. Without each weapon\'s base ASPD, how much AGI adds (and whether DEX counts), and how "ASPD +N" and "ASPD +N%" enter the math, any number would be a guess. The missing tests are in the checklist; once they are measured in game, the calculation goes here.') }));
-    aspdBox.appendChild(el('div', { class:'aspd-line', text:L('O teto base muda por classe (confirmado no jogo), mas o valor de cada classe ainda não foi medido; por enquanto a ferramenta usa 180 para todas. O teto máximo do servidor é 190; skills como Frenzy (Legend) passam disso: use o bônus manual abaixo. Isto mostra só o teto alcançável, não o ASPD real.', 'The base cap differs by class (confirmed in game), but the value for each class has not been measured yet; for now the tool uses 180 for all. The hard cap of the server is 190; skills like Frenzy (Legend) go past it: use the manual bonus below. This only shows the reachable cap, not the actual ASPD.') }));
+    aspdBox.appendChild(el('div', { class:'aspd-line', text:L('O teto base é 180 para todas as classes. Algumas skills sobem esse limite: Jester (Card Mastery e Sleight Mastery no nível máximo) e Legend (Frenzy, +3), já somadas nas passivas, e Dracomancer com espada (Weapon Quicken, +1, use o bônus manual). O teto máximo do servidor é 190; com o Frenzy ativo, o ASPD do Legend fica fixo em 193. Isto mostra só o teto alcançável, não o ASPD real.', 'The base cap is 180 for every class. Some skills raise it: Jester (Card Mastery and Sleight Mastery at max level) and Legend (Frenzy, +3), already added in the passives, and Dracomancer with a sword (Weapon Quicken, +1, use the manual bonus). The hard cap of the server is 190; with Frenzy active, a Legend has ASPD fixed at 193. This only shows the reachable cap, not the actual ASPD.') }));
     aspdBox.appendChild(el('div', { class:'aspd-line' }, [
       document.createTextNode('180 + ' + agiPush + ' (AGI÷40) + ' + s.equipDerived.aspdLimit + L(' (ASPD Limit do equip. e opções extras) + ', ' (gear and extra-option ASPD Limit) + ') +
         s.skillBonus.aspdLimit + L(' (passivas), até 190, + ', ' (passives), up to 190, + ') + manual + L(' (skill manual) = ', ' (manual skill) = '))
@@ -2545,7 +2549,7 @@ input.invalid{ border-color:var(--danger) !important; }
         'The sum is ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' over the hard cap of 190. The excess does nothing; you could swap some ASPD Limit for another option.') }));
     }
     var manualRow = el('div', { class:'aspd-manual' }, [
-      el('span', { text:L('Bônus manual de skill (ex: Frenzy +3):', 'Manual skill bonus (e.g. Frenzy +3):') })
+      el('span', { text:L('Bônus manual de skill (ex.: Weapon Quicken +1):', 'Manual skill bonus (e.g. Weapon Quicken +1):') })
     ]);
     var manualInput = el('input', { type:'number', min:'0', max:'20', value: manual, 'aria-label':L('Bônus manual de ASPD', 'Manual ASPD bonus') });
     clampField(manualInput, 0, 20);

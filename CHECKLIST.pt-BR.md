@@ -6,7 +6,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 23 de 56 itens confirmados.
+**Progresso:** 24 de 56 itens confirmados.
 
 ## Refino
 
@@ -14,12 +14,12 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 **Em aberto (11)**
 
-- [ ] `r1` **ATK por refino: arma nível 1**: Anote o ATK no Status com a arma em +0 e em dois outros refinos (ex.: +4 e +7). Mostra se o ganho é fixo por refino ou muda a partir de algum ponto. Use uma arma sem linhas de refino na descrição (ex.: sem "ATK +1 per refine") e anote o nível dela. Pista a confirmar: +0,5 ATK e MATK por nível da arma a cada refino (arma nível 1 = +1 a cada 2 refinos). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r1` **ATK por refino: arma nível 1**: Anote o ATK no Status com a arma em +0, +1, +2 e +4 (assim dá para ver como o 0,5 é arredondado). Use uma arma sem linhas de refino na descrição (ex.: sem "ATK +1 per refine") e anote o nível dela. Pista a confirmar: +0,5 ATK e MATK por nível da arma a cada refino (arma nível 1 = +1 a cada 2 refinos). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r2` **ATK por refino: arma nível 2**: Mesmo teste com uma arma de nível 2 (o nível aparece no detalhe do item). Pista: +1 por refino. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r3` **ATK por refino: arma nível 3**: Mesmo teste com uma arma de nível 3. Pista: +1,5 por refino. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r4` **ATK por refino: arma nível 4**: Mesmo teste com uma arma de nível 4. Pista: +2 por refino. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r5` **MATK por refino**: Com uma arma mágica (cajado, livro…), veja se o MATK sobe ao refinar, e quanto. Pista: armas com MATK base sobem o MATK no mesmo ritmo do ATK. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r6` **DEF/MDEF por refino: armadura**: Anote DEF e MDEF com a armadura em +0 e em +N. Pista: +1 DEF a cada 2 refinos. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r6` **DEF/MDEF por refino: armadura**: Anote DEF e MDEF com a armadura em +0, +2 e +4. Pista: +1 DEF a cada 2 refinos. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r7` **DEF/MDEF por refino: escudo**: Mesmo teste com um escudo. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r8` **DEF/MDEF por refino: capa**: Mesmo teste com uma capa. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r9` **DEF/MDEF por refino: calçado**: Mesmo teste com um calçado. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
@@ -30,16 +30,16 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 *Prioridade alta* · Hoje a ferramenta só mostra o teto de ASPD, não o valor real. Pistas a confirmar: a AGI dá +1 ASPD a cada 10 pontos, e os bônus de ASPD % são proporcionais à AGI total.
 
-**Em aberto (4)**
+**Em aberto (3)**
 
-- [ ] `a1` **Curva de ASPD pela AGI**: Com a mesma arma e o mesmo DEX, anote o ASPD com AGI em 1, 20, 40, 60, 80 e 99. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `a1` **Curva de ASPD pela AGI**: Personagem resetado e sem itens, sempre com a mesma arma (ou sempre sem arma) e o mesmo DEX: anote o ASPD com AGI em 1, 10, 20, 40, 60, 80 e 99. Diga a classe e a arma usada. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `a2` **Efeito do DEX no ASPD**: Com a mesma arma e a mesma AGI, troque só o DEX (ex.: 1 e 60) e veja se o ASPD muda. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `a3` **Tipo de arma**: Com a mesma AGI, troque o tipo de arma (adaga, espada, arco, cajado…) e anote o ASPD de cada. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `a4` **Classe**: Confirmado: o teto base muda por classe. Falta o valor de cada classe: sem itens e com AGI 1, anote o teto de ASPD de cada classe que vocês jogam. Pista: 180, 182 ou 185 (Legend 185, Judge 182). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmados (1)</summary>
+<summary>Confirmados (2)</summary>
 
+- [x] `a4` **Classe**: Confirmado: o teto base é 180 para todas as classes. Só skills sobem o limite: Jester (Card Mastery e Sleight Mastery no máximo, +1 cada), Legend (Frenzy, +3 passivo; ativo fixa o ASPD em 193) e Dracomancer com espada (Weapon Quicken, +1).
 - [x] `a5` **Teto máximo de ASPD**: Confirmado: o teto máximo do servidor é 190. Skills podem passar disso: o Legend chega a 193 com Frenzy.
 
 </details>
@@ -80,7 +80,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ## Fórmulas que a ferramenta já usa
 
-*Prioridade média* · Vêm do Codex do site, que já errou uma vez (INT/SP). Sem equipamento, compare a janela de Status com a aba Status da ferramenta.
+*Prioridade média* · Vêm do Codex do site, que já errou uma vez (INT/SP). Como testar: sem equipamento, coloque na ferramenta o mesmo level e os mesmos atributos do personagem e compare cada número da janela de Status com a aba Status da ferramenta.
 
 **Em aberto (8)**
 

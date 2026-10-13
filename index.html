@@ -715,7 +715,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
 /* ---- slot tile ---- */
 .dslot{
-  position:relative; display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:4px 10px;
+  position:relative; display:grid; grid-template-columns:52px minmax(0,1fr); gap:4px 10px;
   align-items:start; padding:10px 10px 10px 12px; min-height:84px;
   background:linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
   border:1px solid var(--border); border-radius:12px; cursor:pointer;
@@ -772,13 +772,21 @@ input.invalid{ border-color:var(--danger) !important; }
 .roll{ font-size:10.5px; font-family:var(--font-mono); color:var(--stat-roll); border:1px solid color-mix(in srgb, var(--stat-roll) 40%, transparent); border-radius:5px; padding:0 5px; }
 
 /* stats column on the right of the tile */
-.dstats{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-family:var(--font-mono); font-size:11px; white-space:nowrap; padding-top:1px; max-width:110px; }
-.dstats span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; }
-.dstats .s-item{ color:var(--stat-item); }
-.dstats .s-card{ color:var(--stat-card); }
-.dstats .s-roll{ color:var(--stat-roll); }
-.dstats .s-base{ color:var(--fg-dim); }
-.dstats .s-more{ color:var(--fg-faint); font-size:10px; }
+/* every value of the slot once, in a strip under the card */
+.dstrip{
+  grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; padding-top:8px;
+  border-top:1px solid var(--border-soft); font-family:var(--font-mono); font-size:10.5px;
+}
+.dstrip span{
+  padding:1px 6px; border-radius:5px; white-space:nowrap; line-height:1.45;
+  border:1px solid color-mix(in srgb, currentColor 35%, transparent); background:color-mix(in srgb, currentColor 8%, transparent);
+}
+.dstrip .s-base{ color:var(--fg-dim); }
+.dstrip .s-item{ color:var(--stat-item); }
+.dstrip .s-card{ color:var(--stat-card); }
+.dstrip .s-roll{ color:var(--stat-roll); }
+.dstrip .s-fx{ color:var(--fx); }
+.dstrip .s-more{ color:var(--fg-faint); border:none; background:none; }
 
 /* ---- center showcase ---- */
 .showcase{
@@ -2046,19 +2054,6 @@ input.invalid{ border-color:var(--danger) !important; }
         for (var ci = 0; ci < maxCards; ci++) pips.appendChild(cardPip(group, def, val, ci));
         main.appendChild(pips);
       }
-      if (p.extras.length){
-        var rolls = el('div', { class:'rolls' });
-        p.extras.forEach(function(x){ rolls.appendChild(el('span', { class:'roll', text:x })); });
-        main.appendChild(rolls);
-      }
-      var fxl = effectLines(p.fxOther);
-      if (fxl.length){
-        var fxw = el('div', { class:'fxs' });
-        var FXMAX = 3;
-        fxl.slice(0, FXMAX).forEach(function(t){ fxw.appendChild(shortChip('fx-chip', t)); });
-        if (fxl.length > FXMAX) fxw.appendChild(el('span', { class:'fx-more', text:'+' + (fxl.length - FXMAX) + L(' mais', ' more') }));
-        main.appendChild(fxw);
-      }
     } else {
       name.textContent = L('Vazio', 'Empty');
       main.appendChild(name);
@@ -2066,17 +2061,24 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     tile.appendChild(main);
 
+    // Every value of the slot once, in a strip under the card, in the showcase legend's order:
+    // base, item, cards, rolls (as the player typed them) and other effects.
     if (val){
-      var stats = el('div', { class:'dstats' });
       var lines = [];
       p.base.forEach(function(t){ lines.push(['s-base', t]); });
       statLines(p.own, p.itemFx.stat).forEach(function(t){ lines.push(['s-item', t]); });
       statLines(p.cardB, p.cardFx.stat).forEach(function(t){ lines.push(['s-card', t]); });
-      statLines(p.rollB, p.rollFx.stat).forEach(function(t){ lines.push(['s-roll', t]); });
-      var MAX = 5;
-      lines.slice(0, MAX).forEach(function(l){ stats.appendChild(shortChip(l[0], l[1])); });
-      if (lines.length > MAX) stats.appendChild(el('span', { class:'s-more', text:'+' + (lines.length - MAX) + L(' mais', ' more') }));
-      tile.appendChild(stats);
+      p.extras.forEach(function(t){ lines.push(['s-roll', t]); });
+      var otherFx = {};
+      addEffects(otherFx, p.itemFx.other); addEffects(otherFx, p.cardFx.other);
+      effectLines(otherFx).forEach(function(t){ lines.push(['s-fx', t]); });
+      if (lines.length){
+        var strip = el('div', { class:'dstrip' });
+        var MAX = 8;
+        lines.slice(0, MAX).forEach(function(l){ strip.appendChild(shortChip(l[0], l[1])); });
+        if (lines.length > MAX) strip.appendChild(el('span', { class:'s-more', text:'+' + (lines.length - MAX) + L(' mais', ' more') }));
+        tile.appendChild(strip);
+      }
     }
 
     makePressable(tile, val ? def.label + ': ' + val.itemName : L('Escolher item: ', 'Choose item: ') + def.label, function(){

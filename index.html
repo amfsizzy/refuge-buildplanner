@@ -693,6 +693,272 @@ input.invalid{ border-color:var(--danger) !important; }
   .clear-all-btn, .icon-btn, .ghost-btn, .stage-btn, .tab-btn{ min-height:36px; }
   .extra-form input{ min-height:32px; }
 }
+/* ===== Equipment and Shadow "paper doll" layout ===== */
+#panel-equip, #panel-shadow{ container-type:inline-size; }
+:root{
+  --stat-item:#45d99a;   /* the item's own stats */
+  --stat-card:#c49bff;   /* stats from cards */
+  --stat-roll:#f0b429;   /* rolled extra options */
+}
+:root[data-theme="light"]{ --stat-item:#047857; --stat-card:#6b13b9; --stat-roll:#a16207; }
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --stat-item:#047857; --stat-card:#6b13b9; --stat-roll:#a16207; } }
+
+.doll{
+  display:grid; gap:12px;
+  grid-template-columns:minmax(0,1fr) minmax(280px, 340px) minmax(0,1fr);
+  grid-template-areas:"left center right";
+  align-items:start;
+}
+.doll-col{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+.doll-col.left{ grid-area:left; } .doll-col.right{ grid-area:right; }
+.doll-center{ grid-area:center; position:sticky; top:84px; }
+
+/* ---- slot tile ---- */
+.dslot{
+  position:relative; display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:4px 10px;
+  align-items:start; padding:10px 10px 10px 12px; min-height:84px;
+  background:linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border:1px solid var(--border); border-radius:12px; cursor:pointer;
+  transition:border-color .15s, box-shadow .15s;
+}
+.dslot::before{ /* slot-type rail */
+  content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:0 3px 3px 0;
+  background:var(--border-strong); transition:background .15s;
+}
+.dslot.filled::before{ background:var(--accent); }
+.dslot:hover{ border-color:var(--accent); }
+.dslot.pinned{ border-color:var(--accent); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 10px 30px -14px var(--glow); }
+.dslot.in-set::before{ background:var(--stat-item); }
+.dslot:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+.dslot .slot-tag{ grid-column:1 / -1; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--fg-faint); display:flex; gap:6px; align-items:center; }
+.set-pill{ font-size:9.5px; letter-spacing:.04em; padding:0 6px; border-radius:999px; border:1px solid var(--stat-item); color:var(--stat-item); text-transform:none; }
+
+/* crisp sprite: 24px source at exactly 2x */
+.dicon{
+  width:52px; height:52px; border-radius:10px; display:grid; place-items:center;
+  background:radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, var(--surface-3)) 0%, var(--surface-3) 70%);
+  border:1px solid var(--border-soft);
+}
+.dicon img{ width:48px; height:48px; image-rendering:pixelated; }
+.dicon .q{ color:var(--fg-faint); font-size:18px; }
+.dslot.empty .dicon{ background:transparent; border-style:dashed; }
+.dslot.empty .dicon svg{ width:26px; height:26px; color:var(--fg-faint); opacity:.7; }
+
+.dmain{ min-width:0; display:flex; flex-direction:column; gap:3px; }
+.dname{ font-weight:700; font-size:13.5px; line-height:1.25; overflow-wrap:anywhere; }
+.dname .ref{ color:var(--accent); font-family:var(--font-mono); font-size:12px; margin-right:4px; }
+.dsub{ font-size:11px; color:var(--fg-faint); }
+.dslot.empty .dname{ color:var(--fg-dim); font-weight:600; }
+
+.pips{ display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+.pip{
+  width:22px; height:22px; border-radius:6px; border:1px dashed var(--border-strong); background:var(--surface-2);
+  display:grid; place-items:center; overflow:hidden; cursor:pointer; padding:0;
+}
+.pip.on{ border-style:solid; border-color:color-mix(in srgb, var(--stat-card) 60%, transparent); }
+.pip img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; }
+.pip:hover, .pip:focus-visible{ border-color:var(--stat-card); outline:none; }
+
+.noart{ display:block; width:12px; height:16px; border:1.5px solid var(--stat-card); border-radius:2px; opacity:.8; }
+.sc-card-row .noart{ width:18px; height:24px; margin:4px 3px; }
+.fxs{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
+.fxs .fx-chip{ font-size:10.5px; padding:0 5px; }
+.fx-more{ font-size:10px; color:var(--fg-faint); font-family:var(--font-mono); align-self:center; }
+.sc-lines.fx{ color:var(--fx); }
+.sc-set{ border-left:2px solid var(--stat-item); padding-left:8px; }
+.rolls{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
+.roll{ font-size:10.5px; font-family:var(--font-mono); color:var(--stat-roll); border:1px solid color-mix(in srgb, var(--stat-roll) 40%, transparent); border-radius:5px; padding:0 5px; }
+
+/* stats column on the right of the tile */
+.dstats{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-family:var(--font-mono); font-size:11px; white-space:nowrap; padding-top:1px; }
+.dstats .s-item{ color:var(--stat-item); }
+.dstats .s-card{ color:var(--stat-card); }
+.dstats .s-roll{ color:var(--stat-roll); }
+.dstats .s-base{ color:var(--fg-dim); }
+.dstats .s-more{ color:var(--fg-faint); font-size:10px; }
+
+/* ---- center showcase ---- */
+.showcase{
+  border:1px solid var(--border); border-radius:16px; overflow:hidden;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--surface)) 0%, var(--surface) 55%);
+  box-shadow:0 20px 60px -30px var(--glow);
+}
+.sc-stage{ position:relative; height:228px; display:grid; place-items:center; }
+.sc-stage::before{
+  content:''; position:absolute; width:190px; height:190px; border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, transparent) 0%, transparent 68%);
+  filter:blur(6px); animation:sc-breathe 4s ease-in-out infinite;
+}
+@keyframes sc-breathe{ 0%,100%{ transform:scale(.92); opacity:.75; } 50%{ transform:scale(1.04); opacity:1; } }
+/* The art is the item's illustration on a light card: frame it like an in-game collection card. */
+.sc-art{
+  position:relative; width:150px; height:200px; image-rendering:pixelated; border-radius:10px;
+  /* The frame is drawn outside the image (box-shadow), so the art keeps its exact 2x size. */
+  border:0; background:#fff;
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, #fff), 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent), 0 16px 30px -8px rgba(0,0,0,.6);
+  transform:rotate(-2deg); animation:sc-in .25s ease-out;
+}
+.sc-art.icon-only{ width:96px; height:96px; border:none; background:none; box-shadow:none; transform:none; }
+.sc-sum{ height:auto; padding-block:22px; }
+.sc-none{ grid-column:1 / -1; text-align:center; }
+.sc-jobs{ font-size:11px; color:var(--fg-faint); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ht-head img{ border-radius:5px; background:#fff; }
+/* The tilt softens the pixels a little; kept by choice because the card looks better. */
+@keyframes sc-in{ from{ opacity:0; transform:translateY(6px) rotate(-2deg) scale(.97); } to{ opacity:1; transform:rotate(-2deg); } }
+@media (prefers-reduced-motion: reduce){ .sc-stage::before, .sc-art{ animation:none; } }
+.sc-empty-art{ position:relative; color:var(--fg-faint); font-size:12px; text-align:center; padding:0 24px; }
+.sc-totals-grid{ position:relative; display:grid; grid-template-columns:repeat(3, 1fr); gap:6px 14px; font-family:var(--font-mono); font-size:12px; padding:0 18px; }
+.sc-totals-grid span{ color:var(--fg-faint); }
+.sc-totals-grid b{ color:var(--stat-item); font-weight:600; }
+.sc-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
+.sc-title{ font-family:var(--font-display); font-size:19px; line-height:1.15; }
+.sc-title .ref{ color:var(--accent); font-family:var(--font-mono); font-size:15px; }
+.sc-sub{ font-size:11.5px; color:var(--fg-faint); margin-top:2px; }
+.sc-sec h4{ margin:0 0 4px; font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--fg-faint); font-weight:700; font-family:var(--font-body); }
+/* Every value is its own chip, tinted by its source color, so lists never run together. */
+.sc-lines{ display:flex; flex-wrap:wrap; gap:5px; font-family:var(--font-mono); font-size:11.5px; }
+.sc-lines span{
+  padding:2px 7px; border-radius:6px; line-height:1.4;
+  border:1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background:color-mix(in srgb, currentColor 9%, transparent);
+}
+.sc-lines span.sc-none{ border:none; background:none; color:var(--fg-faint); }
+.sc-lines.total span{ font-weight:700; background:color-mix(in srgb, currentColor 16%, transparent); }
+.sc-lines .c-card{ color:var(--stat-card); }
+.sc-lines .c-fx{ color:var(--fx); }
+.sc-lines .c-locked{ color:var(--fg-faint); border-style:dashed; background:none; }
+.sc-body > .sc-sec + .sc-sec{ border-top:1px solid var(--border-soft); padding-top:10px; }
+.sc-sum-box{ position:relative; width:100%; padding:0 16px; display:flex; flex-direction:column; gap:8px; }
+.sc-sum-head{ margin:0; font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--fg-faint); font-family:var(--font-body); }
+.sc-card-row > div{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.sc-lines.item{ color:var(--stat-item); } .sc-lines.card{ color:var(--stat-card); } .sc-lines.rolled{ color:var(--stat-roll); } .sc-lines.base{ color:var(--fg-dim); }
+.sc-card-row{ display:flex; align-items:center; gap:8px; font-size:12px; }
+.sc-card-row img{ width:24px; height:32px; image-rendering:pixelated; border-radius:3px; }
+.sc-card-row .b{ color:var(--stat-card); font-family:var(--font-mono); font-size:11.5px; }
+.sc-legend{ display:flex; gap:4px 9px; font-size:10px; color:var(--fg-faint); flex-wrap:wrap; border-top:1px solid var(--border-soft); padding-top:8px; }
+.sc-legend i{ display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:4px; }
+.sc-actions{ display:flex; gap:6px; }
+.sc-actions button{ flex:1; background:transparent; border:1px solid var(--border); border-radius:8px; padding:7px; font-size:12px; color:var(--fg-dim); }
+.sc-actions button:hover{ color:var(--accent-strong); border-color:var(--accent); }
+.showcase{ position:relative; }
+/* "+7 ✎" in the showcase title */
+.sc-title{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; padding-right:28px; }
+.ref-edit{ display:inline-flex; align-items:center; gap:3px; }
+.ref-edit .ref{ color:var(--accent); font-family:var(--font-mono); font-size:15px; }
+.ref-pen{
+  width:22px; height:22px; padding:3px; display:grid; place-items:center; background:transparent;
+  border:1px solid var(--border); border-radius:6px; color:var(--fg-faint); cursor:pointer;
+}
+.ref-pen svg{ width:13px; height:13px; }
+.ref-pen:hover, .ref-pen:focus-visible{ color:var(--accent); border-color:var(--accent); }
+.ref-input{
+  width:46px; padding:2px 4px; font:600 15px var(--font-mono); color:var(--fg);
+  background:var(--surface-2); border:1px solid var(--accent); border-radius:6px;
+}
+@media (pointer:coarse){ .ref-pen{ width:32px; height:32px; } .ref-pen svg{ width:16px; height:16px; } }
+
+/* Rolled options: a gold panel of their own */
+.sc-rolls{
+  border:1px solid color-mix(in srgb, var(--stat-roll) 55%, transparent); border-radius:10px; padding:10px 12px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--stat-roll) 13%, transparent) 0%, color-mix(in srgb, var(--stat-roll) 4%, transparent) 100%);
+  display:flex; flex-direction:column; gap:6px;
+}
+.sc-rolls.empty{ border-style:dashed; }
+.sc-rolls-head{ display:flex; align-items:center; gap:7px; color:var(--stat-roll); }
+.sc-rolls-head h4{ margin:0; font-size:11px; letter-spacing:.09em; text-transform:uppercase; font-weight:700; color:var(--stat-roll); }
+.sc-rolls-icon svg{ width:16px; height:16px; display:block; }
+.sc-rolls-count{ margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--fg-faint); }
+.sc-rolls-help{ margin:0; font-size:11.5px; color:var(--fg-dim); }
+.sc-rolls .extra-chip{ color:var(--stat-roll); border-color:color-mix(in srgb, var(--stat-roll) 55%, transparent); background:color-mix(in srgb, var(--stat-roll) 10%, transparent); }
+.sc-rolls .extra-form{ display:flex; gap:6px; align-items:stretch; }
+.sc-rolls .extra-form input{ flex:1; min-width:0; border:1px dashed color-mix(in srgb, var(--stat-roll) 60%, transparent); }
+.sc-rolls .extra-form input:focus{ border-style:solid; border-color:var(--stat-roll); }
+.sc-rolls-add{
+  flex:none; padding:4px 12px; border-radius:7px; font-weight:700; font-size:12px; cursor:pointer;
+  color:#1a1205; background:var(--stat-roll); border:1px solid var(--stat-roll);
+}
+.sc-rolls-add:hover{ filter:brightness(1.08); }
+/* Small bevelled close box, like the "x" on the game's windows; turns red on hover. */
+.sc-close{
+  position:absolute; top:10px; right:10px; z-index:2; width:20px; height:20px; padding:0;
+  display:grid; place-items:center; font:700 15px/1 var(--font-body); color:#3a3346;
+  background:linear-gradient(180deg, #ffffff 0%, #d9d4e2 100%);
+  border:1px solid #8d8699; border-radius:4px;
+  box-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.35);
+  cursor:pointer;
+}
+.sc-close:hover{ color:#fff; background:linear-gradient(180deg, #ff7a8a 0%, #d93a52 100%); border-color:#9e1c31; }
+.sc-close:active{ box-shadow:inset 0 1px 2px rgba(0,0,0,.35); }
+.sc-close:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+@media (pointer:coarse){ .sc-close{ width:32px; height:32px; font-size:20px; } }
+.sc-hint{ font-size:11px; color:var(--fg-faint); }
+
+/* ---- hover tooltip glued to the mouse ---- */
+.hovertip{
+  position:fixed; z-index:1000; pointer-events:none; width:min(340px, calc(100vw - 24px));
+  background:color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter:blur(8px);
+  border:1px solid var(--border-strong); border-radius:12px; padding:10px 12px;
+  box-shadow:0 18px 50px -12px rgba(0,0,0,.6); font-size:12px; line-height:1.45;
+  opacity:0; transition:opacity .12s; left:0; top:0;
+}
+.hovertip.show{ opacity:1; }
+.ht-head{ display:flex; gap:10px; align-items:center; margin-bottom:6px; }
+.ht-head img{ width:48px; height:64px; image-rendering:pixelated; }
+.ht-name{ font-weight:700; font-size:13.5px; }
+.ht-sub{ color:var(--fg-faint); font-size:11px; }
+.ht-block{ border-top:1px solid var(--border-soft); padding-top:5px; margin-top:5px; }
+.ht-block.off{ opacity:.5; }
+.ht-badge{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
+.ht-block .t{ white-space:pre-line; color:var(--fg-dim); }
+.ht-foot{ margin-top:6px; color:var(--fg-faint); font-size:10.5px; }
+
+/* ---- responsive: the panel narrows inside the 3-column page ---- */
+@container (max-width:820px){
+  .doll{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"center center" "left right"; }
+  .doll-center{ position:static; }
+  .sc-stage{ height:180px; } .sc-art{ width:112px; height:150px; }
+}
+@container (max-width:540px){
+  .doll{ grid-template-columns:1fr; grid-template-areas:"center" "left" "right"; }
+}
+@media (pointer:coarse){ .hovertip{ display:none; } }
+
+/* Resumo | Origem tabs inside the showcase */
+.sc-tabs{ display:flex; gap:2px; padding:3px; border-radius:9px; background:var(--surface-2); border:1px solid var(--border-soft); }
+.sc-tab{
+  flex:1; padding:6px 8px; border:0; border-radius:7px; background:transparent; color:var(--fg-dim);
+  font-size:12px; font-weight:700; cursor:pointer;
+}
+.sc-tab:hover{ color:var(--fg); }
+.sc-tab[aria-selected="true"]{ background:var(--surface); color:var(--accent-strong); box-shadow:0 1px 3px rgba(0,0,0,.25); }
+.sc-tab:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+@media (pointer:coarse){ .sc-tab{ min-height:36px; } }
+.sc-pane{ display:flex; flex-direction:column; gap:10px; }
+.sc-pane > .sc-sec + .sc-sec{ border-top:1px solid var(--border-soft); padding-top:10px; }
+.sc-lines.locked{ color:var(--fg-faint); }
+.sc-lines.locked span{ border-style:dashed; background:none; }
+
+/* Slot totals colored by source; several sources show the parts after the total. */
+.tchips .tchip{ display:inline-flex; align-items:baseline; gap:5px; }
+.tchips .tchip.multi{ color:var(--fg); }
+.tchips .tchip b{ font-weight:700; }
+.tchips .tpart{ font-size:10.5px; padding:0; border:0; background:none; }
+.tchips .tpart::before{ content:'·'; color:var(--fg-faint); margin-right:4px; }
+.sc-lines .c-item{ color:var(--stat-item); }
+.sc-lines .c-roll{ color:var(--stat-roll); }
+
+/* Switch between the new layout and the classic grid */
+.panel-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.layout-switch{ display:inline-flex; padding:2px; gap:2px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); }
+.layout-switch button{
+  border:0; background:transparent; color:var(--fg-dim); font-size:12px; font-weight:600;
+  padding:5px 10px; border-radius:calc(var(--radius-sm) - 2px); cursor:pointer;
+}
+.layout-switch button:hover{ color:var(--fg); }
+.layout-switch button[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
+.layout-switch button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+@media (pointer:coarse){ .layout-switch button{ min-height:36px; } }
 </style>
 </head>
 <body>
@@ -773,7 +1039,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
           <div class="stat-strip" id="statStrip"></div>
-          <button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button>
+          <div class="panel-tools"><div class="layout-switch" role="group" aria-label="Layout" data-en-aria-label="Layout"><button type="button" data-layout="doll" data-en="New">Novo</button><button type="button" data-layout="grid" data-en="Classic">Clássico</button></div><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="equip-grid" id="equipGrid"></div>
       </section>
@@ -781,7 +1047,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-shadow" hidden>
         <div class="panel-head">
           <span></span>
-          <button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button>
+          <div class="panel-tools"><div class="layout-switch" role="group" aria-label="Layout" data-en-aria-label="Layout"><button type="button" data-layout="doll" data-en="New">Novo</button><button type="button" data-layout="grid" data-en="Classic">Clássico</button></div><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="equip-grid" id="shadowGrid"></div>
       </section>
@@ -815,7 +1081,7 @@ input.invalid{ border-color:var(--danger) !important; }
     <section class="tab-panel" id="panel-status">
       <details class="status-warning">
         <summary><strong data-en="Note:">Aviso:</strong> <span data-en="what the calculation leaves out">o que fica de fora do cálculo</span></summary>
-        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;), the DEF that refining shields, garments, shoes and headgear gives. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…"), o DEF que o refino de escudo, capa, calçado e chapéu dá. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
+        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine written in other ways than &quot;Set refine N+&quot; and &quot;Per total set refine&quot;, conditional bonuses (&quot;While wearing…&quot;), the DEF that refining shields, garments, shoes and headgear gives. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto escrito de outro jeito que não &quot;Set refine N+&quot; e &quot;Per total set refine&quot;, bônus condicionais ("While wearing…"), o DEF que o refino de escudo, capa, calçado e chapéu dá. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
       </details>
       <div class="stat-calc">
         <h2 data-en="Stat Points Calculator">Calculadora de Pontos</h2>
@@ -1153,6 +1419,12 @@ input.invalid{ border-color:var(--danger) !important; }
   var RE_IF_REFINE = /^if\s+refine\s+(?:is\s+)?\+?(\d+)\+?:$/i;
   var RE_REFINE_OR_HIGHER = /^refine\s+(\d+)\s+or\s+higher:$/i;
   var RE_SET_REFINE = /^(set refine\b|per (?:\d+ )?total set refines?:|per set refines?:)/i;
+  // Shadow sets scale on the refine of all their pieces added up ("total set refine"):
+  // "Set refine 9+: ASPD Limit +1" (threshold, the effect may follow on the same line) and
+  // "Per 2 total set refines:" (steps). Other forms ("Set refine 9+, while poisoned:") stay
+  // uncounted.
+  var RE_SET_REFINE_AT = /^set refine\s+(\d+)\+:\s*(.*)$/i;
+  var RE_SET_REFINE_PER = /^per\s+(?:(\d+)\s+)?(?:total\s+)?set\s+refines?:$/i;
   var RE_NAMED_SET_BONUS = /^(.+?)\s+Set Bonus:$/i;
   var RE_SET_BONUS = /^Set Bonus:$/i;
   var RE_SET_HEADER = /^(.+?\bSet):$/i;
@@ -1200,7 +1472,7 @@ input.invalid{ border-color:var(--danger) !important; }
       EFFECT_RE.lastIndex = 0;
       var m;
       while ((m = EFFECT_RE.exec(line))){
-        var label = m[1].trim().replace(/\s+/g, ' ');
+        var label = m[1].trim().replace(/\s+/g, ' ').replace(/^(?:and|plus) /i, '');
         var unit = m[4] || '';
         if (EFFECT_SKIP_LABEL.test(label)) continue;
         if (!unit && COUNTED_FLAT.test(label)) continue;          // already in the simulator
@@ -1229,8 +1501,42 @@ input.invalid{ border-color:var(--danger) !important; }
       .sort(function(a, b){ return a.label.localeCompare(b.label); })
       .map(function(e){ var n = Math.round(e.n * 100) / 100; return e.label + ' ' + (n > 0 ? '+' : '') + n + e.unit; });
   }
+  // The database wraps long tooltip lines: "Variable Cast Time -2%" / "per refine.", or
+  // "Magic Defense Penetration" / "+10". A line continues the one above (never a header
+  // ending in ":") when it starts with a lowercase word or "(" and the line above doesn't end
+  // a phrase ("," or "."), or when it starts with a signed number and the line above doesn't
+  // end in one ("Weight Limit +500" / "+300 per Refine" are two separate bonuses).
+  function joinContinuations(raw){
+    var out = [];
+    raw.forEach(function(line){
+      var l = line.trim(), prev = out.length ? out[out.length - 1] : '';
+      var continues = !!l && !!prev && !/:$/.test(prev) &&
+        ((/^[a-z(]/.test(l) && !/[,.]$/.test(prev)) || (/^[+\-]\d/.test(l) && !/\d\S*$/.test(prev)));
+      if (!continues){ out.push(l); return; }
+      // "Max SP +3%, Fixed Cast" / "-1% per refine": only the part after the last comma
+      // continues, so "per refine" doesn't spread to the bonus before it.
+      var cut = prev.lastIndexOf(', ');
+      if (cut !== -1 && /\d/.test(prev.slice(0, cut)) && !/\d/.test(prev.slice(cut + 2))){
+        out[out.length - 1] = prev.slice(0, cut + 1);
+        out.push(prev.slice(cut + 2) + ' ' + l);
+      } else out[out.length - 1] = prev + ' ' + l;
+    });
+    return out.reduce(function(acc, l){ return acc.concat(splitScaledLine(l)); }, []);
+  }
+  // "Critical Rate +5, +1 per refine" and "Perfect Hit +1%, plus 1% per 4 base LUK" are a fixed
+  // bonus plus a scaled one: split them so the fixed part counts and only the scaled part
+  // follows the "per" rules. "ATK and MATK +2" gives the value to both.
+  var RE_FIXED_PLUS_SCALED = /^([A-Za-z][A-Za-z .\/-]*?)\s*([+\-]\d+(?:\.\d+)?%?)\s*,\s*(?:plus\s+)?([+\-]?\d+(?:\.\d+)?%?)\s+(per\b.*)$/i;
+  function splitScaledLine(l){
+    var both = /^ATK\s+(?:and|\/)\s+MATK\s*([+\-]\d+)(.*)$/i.exec(l);
+    if (both) return ['ATK ' + both[1] + both[2], 'MATK ' + both[1] + both[2]];
+    var m = RE_FIXED_PLUS_SCALED.exec(l);
+    if (!m) return [l];
+    var label = m[1].trim(), scaled = /^[+\-]/.test(m[3]) ? m[3] : '+' + m[3];
+    return [label + ' ' + m[2], label + ' ' + scaled + ' ' + m[4]];
+  }
   function parseTooltip(desc){
-    var lines = (desc || '').split('\n');
+    var lines = joinContinuations((desc || '').split('\n'));
     var blocks = [];
     var cur = null;
     var pendingSetName = null, awaitingSetName = false;
@@ -1246,7 +1552,11 @@ input.invalid{ border-color:var(--danger) !important; }
       if (awaitingSetName){ cur.setName = l; cur.pieces = l; awaitingSetName = false; continue; }
       if (RE_PIECE_BONUS.test(l)){ open({ kind:'base', header:l }); continue; }
       if (RE_SET_REFINE.test(l) || (cur.kind === 'set' && (RE_PER_REFINE.test(l) || RE_IF_REFINE.test(l) || RE_REFINE_OR_HIGHER.test(l)))){
-        open({ kind:'setRefine', header:l, setName: cur.setName || null });
+        var sb = { kind:'setRefine', header:l, setName: cur.setName || null, mode:null };
+        if ((m = RE_SET_REFINE_AT.exec(l))){ sb.mode = 'at'; sb.min = parseInt(m[1], 10); }
+        else if ((m = RE_SET_REFINE_PER.exec(l))){ sb.mode = 'per'; sb.per = m[1] ? parseInt(m[1], 10) : 1; }
+        open(sb);
+        if (sb.mode === 'at' && m[2]){ sb.header = l.slice(0, l.indexOf(':') + 1); cur.lines.push(m[2]); }
         continue;
       }
       if ((m = RE_PER_REFINE.exec(l))){ open({ kind:'perRefine', per: m[1] ? parseInt(m[1], 10) : 1, header:l }); continue; }
@@ -1275,11 +1585,25 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     blocks = blocks.filter(function(b){ return b.lines.length || b.header; });
     blocks.forEach(function(b){
-      var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'levelAt' || b.kind === 'set';
+      if (b.kind === 'setRefine') b.lines = joinWrapped(b.lines);
+      var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'levelAt' || b.kind === 'set' || (b.kind === 'setRefine' && !!b.mode);
       b.bonus = counted ? parseLines(b.lines, b.kind === 'perRefine') : blankBonus();
       b.effects = counted ? parseEffects(b.lines, b.kind === 'perRefine') : {};
     });
     return blocks;
+  }
+  // Shadow tooltips wrap long lines ("Magic Defense Penetration" / "+10"). A line that starts
+  // with a sign, a lowercase word or "(" continues the one above, as does any line after one
+  // that has no number yet; joined back, each effect reads as one line.
+  function joinWrapped(lines){
+    var out = [];
+    lines.forEach(function(l){
+      var prev = out.length ? out[out.length - 1] : null;
+      var continues = prev !== null && (/^[+\-]\d|^[a-z(]/.test(l) || (!/\d/.test(prev) && !/[:.]$/.test(prev)));
+      if (continues) out[out.length - 1] = prev + ' ' + l;
+      else out.push(l);
+    });
+    return out;
   }
   var SET_EXTRA_MEMBERS = {
     'Metal Set': [15416] // Strange Metal Ring — confirmed by the player 2026-10-05
@@ -1545,6 +1869,624 @@ input.invalid{ border-color:var(--danger) !important; }
     return wrap;
   }
 
+  // ---------- "paper doll" layout for Equipment and Shadow ----------
+  // Slots sit in two columns in the same order as the in-game window, around a center showcase.
+  // Tiles show a crisp 2x sprite, card pips, rolled options and the slot's stats on the right
+  // (green = item, purple = cards, gold = rolled options). Hovering shows the item's tooltip
+  // next to the mouse; clicking shows the item in the showcase (refine/options are edited
+  // there), so the tooltip and the showcase can be read side by side.
+  var DOLL_LAYOUT = {
+    equip: { grid:'equipGrid', defs:function(){ return EQUIP_SLOTS; },
+      left:['headUpper', 'headLower', 'weapon', 'garment', 'accLeft'],
+      right:['headMid', 'armor', 'offhand', 'shoes', 'accRight'] },
+    shadow: { grid:'shadowGrid', defs:function(){ return SHADOW_SLOTS; },
+      left:['shadowGloves', 'shadowAccLeft', 'shadowRune'],
+      right:['shadowArmor', 'shadowShoes', 'shadowAccRight'] }
+  };
+  var ART = function(id){ return 'https://rtm-database.pages.dev/assets/icons/art/' + id + '.png'; };
+  var BONUS_ORDER = ['atk', 'matk', 'str', 'agi', 'vit', 'int', 'dex', 'luk', 'hit', 'flee', 'crit', 'pdodge',
+    'def', 'mdef', 'aspd', 'aspdPct', 'aspdLimit'];
+  var DOLL_LABEL = { atk:'ATK', matk:'MATK', str:'STR', agi:'AGI', vit:'VIT', int:'INT', dex:'DEX', luk:'LUK',
+    hit:'HIT', flee:'FLEE', crit:'Crit', pdodge:'P.Dodge', def:'DEF', mdef:'MDEF', aspd:'ASPD', aspdPct:'ASPD', aspdLimit:'ASPD Lim' };
+  var dollPinned = { equip:null, shadow:null }; // slot key shown in each showcase
+  var showcaseView = { equip:'sum', shadow:'sum' }; // 'sum' (Resumo) or 'src' (Origem)
+  var dollContext = { equip:null, shadow:null };    // loadout + stage each showcase was drawn for
+  var TOUCH = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+
+  function bonusLines(b){
+    return BONUS_ORDER.filter(function(k){ return b[k]; }).map(function(k){
+      var n = b[k];
+      return DOLL_LABEL[k] + ' ' + (n > 0 ? '+' : '') + n + (k === 'aspdPct' ? '%' : '');
+    });
+  }
+  function slotDefByKey(key){ return EQUIP_SLOTS.concat(SHADOW_SLOTS).filter(function(d){ return d.key === key; })[0]; }
+  function slotParts(val){
+    var it = val && !val.manual ? itemById(val.itemId) : null;
+    var refine = (val && val.refine) || 0;
+    var own = it ? itemOwnBonuses(it, refine) : blankBonus();
+    var cards = ((val && val.cards) || []).map(function(c){ return c && !c.manual ? itemById(c.itemId) : null; });
+    var cardB = blankBonus();
+    cards.forEach(function(ci){ if (ci) addBonus(cardB, itemOwnBonuses(ci, 0)); });
+    var extras = val && Array.isArray(val.extras) ? val.extras : [];
+    var rollB = extras.length ? parseLines(extras, false) : blankBonus();
+    // Effects beyond the simulator's flat stats, kept per source. Stat-like ones ("ATK +5%",
+    // "Max HP +3%") are shown in green with the stats; the rest ("DMG vs Earth +3%") in blue.
+    var itemFx = splitFx(it ? itemOwnEffects(it, refine) : {});
+    var cardFxAll = {};
+    cards.forEach(function(ci){ if (ci) addEffects(cardFxAll, itemOwnEffects(ci, 0)); });
+    var cardFx = splitFx(cardFxAll);
+    var rollFx = splitFx(extras.length ? parseEffects(extras, false) : {});
+    var fxOther = {};
+    addEffects(fxOther, itemFx.other); addEffects(fxOther, cardFx.other); addEffects(fxOther, rollFx.other);
+    var fxStat = {};
+    addEffects(fxStat, itemFx.stat); addEffects(fxStat, cardFx.stat); addEffects(fxStat, rollFx.stat);
+    var base = [];
+    if (it){
+      if (it.atk) base.push('ATK ' + it.atk);
+      if (it.matk) base.push('MATK ' + it.matk);
+      if (it.def) base.push('DEF ' + it.def);
+      if (it.mdef) base.push('MDEF ' + it.mdef);
+    }
+    return { it:it, refine:refine, own:own, cards:cards, cardB:cardB, rollB:rollB, extras:extras, base:base,
+      itemFx:itemFx, cardFx:cardFx, rollFx:rollFx, fxStat:fxStat, fxOther:fxOther };
+  }
+  // Effects on the character's own stats (green) vs everything else (blue).
+  var STAT_FX = /^(STR|AGI|VIT|INT|DEX|LUK|All Stats|ATK|MATK|ATK\/MATK|HIT|FLEE|Total Flee|Critical(?: Rate)?|Total Critical Rate|Perfect Dodge|Perfect Hit|DEF|MDEF|Total DEF|Total MDEF|Max HP|Max SP|HP\/SP|ASPD|ASPD Limit)$/i;
+  function splitFx(map){
+    var out = { stat:{}, other:{} };
+    Object.keys(map).forEach(function(k){ (STAT_FX.test(map[k].label) ? out.stat : out.other)[k] = map[k]; });
+    return out;
+  }
+  // Stat lines for one source: flat bonuses first, then stat-like percentages.
+  function statLines(bonus, statFx){ return bonusLines(bonus).concat(effectLines(statFx || {})); }
+  // Bonuses that unlock at a base level this stage hasn't reached ("Base Level 130 or higher"),
+  // shown dimmed so the player sees what's coming.
+  function lockedLines(item){
+    var level = shownLevel(), out = [];
+    item.blocks.forEach(function(b){
+      if (b.kind !== 'levelAt' || level >= b.min) return;
+      var fx = splitFx(b.effects || {});
+      statLines(b.bonus, fx.stat).concat(effectLines(fx.other)).forEach(function(t){
+        out.push(t + L(' · nível ', ' · level ') + b.min + '+');
+      });
+    });
+    return out;
+  }
+  function completeSetNames(lo){
+    var names = {};
+    computeActiveSets(lo).complete.forEach(function(s){ names[s.name] = true; });
+    return names;
+  }
+  function itemSetsIn(it, names){
+    return !it ? [] : it.blocks.filter(function(b){ return b.kind === 'set' && b.setName && names[b.setName]; })
+      .map(function(b){ return b.setName; });
+  }
+  function noArt(){ return el('span', { class:'noart', 'aria-hidden':'true' }); }
+  function crispIcon(it, size){
+    var img = document.createElement('img');
+    img.src = it.isCard ? ART(it.id) : ICON(it.id);
+    img.alt = ''; img.loading = 'lazy';
+    if (size) { img.width = size; img.height = size; }
+    // Some cards have no image in the database: use its generic card picture, then an outline.
+    img.addEventListener('error', function(){
+      if (it.isCard && !img.dataset.fallback){ img.dataset.fallback = '1'; img.src = ART('card'); return; }
+      img.replaceWith(noArt());
+    });
+    return img;
+  }
+  var PLUS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+
+  function renderPaperDoll(lo, group){
+    var layout = DOLL_LAYOUT[group];
+    var grid = document.getElementById(layout.grid);
+    grid.className = 'doll';
+    clear(grid);
+    var sd = activeStageData(lo);
+    var setNames = completeSetNames(lo);
+    var ctx = lo.id + '|' + lo.activeStage;
+    if (dollContext[group] !== ctx){ dollContext[group] = ctx; dollPinned[group] = null; showcaseView[group] = 'sum'; }
+    if (dollPinned[group] && !sd.slots[dollPinned[group]]) dollPinned[group] = null;
+    function col(keys, cls){
+      var c = el('div', { class:'doll-col ' + cls });
+      keys.forEach(function(k){ c.appendChild(dollTile(lo, group, slotDefByKey(k), sd.slots[k], setNames)); });
+      return c;
+    }
+    grid.appendChild(col(layout.left, 'left'));
+    grid.appendChild(el('div', { class:'doll-center', id:'dollCenter-' + group }));
+    grid.appendChild(col(layout.right, 'right'));
+    renderShowcase(lo, group);
+  }
+
+  function dollTile(lo, group, def, val, setNames){
+    var p = slotParts(val);
+    var inSet = itemSetsIn(p.it, setNames).length > 0;
+    var tile = el('div', { class:'dslot ' + (val ? 'filled' : 'empty') + (dollPinned[group] === def.key ? ' pinned' : '') + (inSet ? ' in-set' : '') });
+    tile.dataset.key = def.key;
+    var tag = el('div', { class:'slot-tag', text: def.label });
+    if (inSet) tag.appendChild(el('span', { class:'set-pill', text:L('conjunto ativo', 'set active') }));
+    tile.appendChild(tag);
+
+    var icon = el('div', { class:'dicon' });
+    if (p.it) icon.appendChild(crispIcon(p.it, 48));
+    else if (val) icon.appendChild(el('span', { class:'q', text:'?' }));
+    else icon.innerHTML = PLUS_SVG; // static markup, no data
+    tile.appendChild(icon);
+
+    var main = el('div', { class:'dmain' });
+    var name = el('div', { class:'dname' });
+    if (val){
+      if (p.it && p.it.refinable && p.refine) name.appendChild(el('span', { class:'ref', text:'+' + p.refine }));
+      name.appendChild(document.createTextNode(val.itemName));
+      main.appendChild(name);
+      if (p.it) main.appendChild(el('div', { class:'dsub', text: [p.it.cat, 'Lv ' + (p.it.lv || '?')].filter(Boolean).join(' · ') }));
+      var maxCards = p.it ? p.it.slots : 0;
+      if (maxCards){
+        var pips = el('div', { class:'pips' });
+        for (var ci = 0; ci < maxCards; ci++) pips.appendChild(cardPip(group, def, val, ci));
+        main.appendChild(pips);
+      }
+      if (p.extras.length){
+        var rolls = el('div', { class:'rolls' });
+        p.extras.forEach(function(x){ rolls.appendChild(el('span', { class:'roll', text:x })); });
+        main.appendChild(rolls);
+      }
+      var fxl = effectLines(p.fxOther);
+      if (fxl.length){
+        var fxw = el('div', { class:'fxs' });
+        var FXMAX = 3;
+        fxl.slice(0, FXMAX).forEach(function(t){ fxw.appendChild(el('span', { class:'fx-chip', text:t })); });
+        if (fxl.length > FXMAX) fxw.appendChild(el('span', { class:'fx-more', text:'+' + (fxl.length - FXMAX) + L(' mais', ' more') }));
+        main.appendChild(fxw);
+      }
+    } else {
+      name.textContent = L('Vazio', 'Empty');
+      main.appendChild(name);
+      main.appendChild(el('div', { class:'dsub', text: TOUCH ? L('Toque para escolher', 'Tap to choose') : L('Clique para escolher', 'Click to choose') }));
+    }
+    tile.appendChild(main);
+
+    if (val){
+      var stats = el('div', { class:'dstats' });
+      var lines = [];
+      p.base.forEach(function(t){ lines.push(['s-base', t]); });
+      statLines(p.own, p.itemFx.stat).forEach(function(t){ lines.push(['s-item', t]); });
+      statLines(p.cardB, p.cardFx.stat).forEach(function(t){ lines.push(['s-card', t]); });
+      statLines(p.rollB, p.rollFx.stat).forEach(function(t){ lines.push(['s-roll', t]); });
+      var MAX = 5;
+      lines.slice(0, MAX).forEach(function(l){ stats.appendChild(el('span', { class:l[0], text:l[1] })); });
+      if (lines.length > MAX) stats.appendChild(el('span', { class:'s-more', text:'+' + (lines.length - MAX) + L(' mais', ' more') }));
+      tile.appendChild(stats);
+    }
+
+    makePressable(tile, val ? def.label + ': ' + val.itemName : L('Escolher item: ', 'Choose item: ') + def.label, function(){
+      if (!val){ openModal(group, def, null); return; }
+      dollPinned[group] = dollPinned[group] === def.key ? null : def.key;
+      markPinned(group); renderShowcase(lo, group);
+    });
+    if (p.it) attachTip(tile, p.it, function(){ return p.refine; });
+    return tile;
+  }
+
+  function cardPip(group, def, val, ci){
+    var c = (val.cards || [])[ci];
+    var cardIt = c && !c.manual ? itemById(c.itemId) : null;
+    var pip = el('button', { type:'button', class:'pip' + (c ? ' on' : ''),
+      'aria-label': c ? L('Carta: ', 'Card: ') + c.itemName : L('Adicionar carta', 'Add card') });
+    if (cardIt) pip.appendChild(crispIcon(cardIt));
+    else if (c) pip.appendChild(el('span', { text:'?' }));
+    pip.addEventListener('click', function(ev){ ev.stopPropagation(); hideTip(); openModal(group, def, ci); });
+    pip.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
+    if (cardIt) attachTip(pip, cardIt, function(){ return 0; });
+    return pip;
+  }
+
+  function markPinned(group){
+    document.querySelectorAll('#' + DOLL_LAYOUT[group].grid + ' .dslot').forEach(function(t){
+      t.classList.toggle('pinned', t.dataset.key === dollPinned[group]);
+    });
+  }
+
+  function renderShowcase(lo, group){
+    var center = document.getElementById('dollCenter-' + group); if (!center) return;
+    clear(center);
+    var sd = activeStageData(lo);
+    var key = dollPinned[group];
+    var val = key ? sd.slots[key] : null;
+    var box = el('div', { class:'showcase' });
+    center.appendChild(box);
+    if (!val){ box.appendChild(showcaseSummary(lo, group, sd)); return; }
+
+    var def = slotDefByKey(key);
+    var p = slotParts(val);
+    var stage = el('div', { class:'sc-stage' });
+    if (p.it){
+      var art = document.createElement('img');
+      art.className = 'sc-art'; art.alt = ''; art.src = ART(p.it.id);
+      crispSize(art, 75, 100, 2);
+      art.addEventListener('error', function(){ art.className = 'sc-art icon-only'; art.src = ICON(p.it.id); crispSize(art, 24, 24, 4); });
+      stage.appendChild(art);
+    } else {
+      stage.appendChild(el('div', { class:'sc-empty-art', text:L('Item antigo digitado à mão (sem imagem).', 'Old hand-typed item (no image).') }));
+    }
+    box.appendChild(stage);
+
+    var body = el('div', { class:'sc-body' });
+    var title = el('div', { class:'sc-title' });
+    title.appendChild(el('span', { text: val.itemName }));
+    if (p.it && p.it.refinable) title.appendChild(refineControl(val, p.refine));
+    var head = el('div', {}, [title]);
+    if (p.it){
+      head.appendChild(el('div', { class:'sc-sub', text: [def.label, p.it.cat, 'Lv ' + (p.it.lv || '?'), p.it.slots ? p.it.slots + '-slot' : ''].filter(Boolean).join(' · ') }));
+      if (p.it.jobsText) head.appendChild(el('div', { class:'sc-jobs', title:p.it.jobsText, text:L('Classes: ', 'Classes: ') + p.it.jobsText }));
+    }
+    body.appendChild(head);
+
+    function sec(target, heading, lines, cls){
+      if (!lines.length) return false;
+      var s = el('div', { class:'sc-sec' }, [ el('h4', { text:heading }) ]);
+      var w = el('div', { class:'sc-lines ' + cls });
+      lines.forEach(function(t){ w.appendChild(el('span', { text:t })); });
+      s.appendChild(w); target.appendChild(s);
+      return true;
+    }
+    // Always visible: the item's base values and its rolls (what the player edits most).
+    sec(body, L('Base', 'Base'), p.base, 'base');
+    body.appendChild(rollsPanel(val, p.extras));
+
+    // The numbers, two ways: the slot total first, the breakdown by source on demand.
+    var view = showcaseView[group];
+    var tabs = el('div', { class:'sc-tabs', role:'tablist', 'aria-label':L('Valores do slot', 'Slot values') });
+    [['sum', L('Resumo', 'Summary')], ['src', L('Origem', 'Sources')]].forEach(function(t){
+      var b = el('button', { type:'button', role:'tab', class:'sc-tab', 'aria-selected': String(view === t[0]), text:t[1] });
+      b.addEventListener('click', function(){ showcaseView[group] = t[0]; renderShowcase(lo, group); });
+      tabs.appendChild(b);
+    });
+    body.appendChild(tabs);
+    var pane = el('div', { class:'sc-pane', role:'tabpanel' });
+    body.appendChild(pane);
+    var setNames = itemSetsIn(p.it, completeSetNames(lo));
+    if (view === 'sum'){
+      var any = totalSec(pane, L('Total deste slot', 'This slot in total'), [
+        ['c-item', bySource(p.own, p.itemFx.stat)], ['c-card', bySource(p.cardB, p.cardFx.stat)], ['c-roll', bySource(p.rollB, p.rollFx.stat)]
+      ]);
+      any = totalSec(pane, L('Outros efeitos', 'Other effects'), [
+        ['c-fx', bySource(null, p.itemFx.other)], ['c-card', bySource(null, p.cardFx.other)], ['c-roll', bySource(null, p.rollFx.other)]
+      ]) || any;
+      any = sec(pane, L('Faz parte do conjunto', 'Part of the set'), setNames, 'item') || any;
+      if (!any) pane.appendChild(el('div', { class:'sc-hint', text:L('Este slot não dá bônus que o planner calcula. Veja a descrição no tooltip.', "This slot gives no bonus the planner calculates. See the description in the tooltip.") }));
+    } else {
+      sourcesPane(pane, sec, lo, val, p, setNames);
+    }
+
+    var actions = el('div', { class:'sc-actions' });
+    var swap = el('button', { type:'button', text:L('Trocar', 'Change') });
+    swap.addEventListener('click', function(){ openModal(group, def, null); });
+    var det = el('button', { type:'button', text:L('Onde dropa', 'Where to get') });
+    det.addEventListener('click', function(){ if (p.it) openDetail(p.it.id, { refine:p.refine }); });
+    var clr = el('button', { type:'button', text:L('Limpar', 'Clear') });
+    clr.addEventListener('click', function(){ sd.slots[key] = null; dollPinned[group] = null; saveLoadouts(); render(); });
+    actions.appendChild(swap); if (p.it) actions.appendChild(det); actions.appendChild(clr);
+    // Close box in the corner, like the "x" on the game's own windows.
+    var close = el('button', { type:'button', class:'sc-close', title:L('Fechar', 'Close'), 'aria-label':L('Fechar detalhe', 'Close detail'), text:'×' });
+    close.addEventListener('click', function(){ dollPinned[group] = null; markPinned(group); renderShowcase(lo, group); });
+    box.appendChild(close);
+    body.appendChild(actions);
+    body.appendChild(legend());
+    box.appendChild(body);
+  }
+
+  // Show pixel art at a whole number of *device* pixels per source pixel, so phones with a
+  // fractional pixel ratio (e.g. 2.6) don't duplicate some pixels and not others.
+  function crispSize(img, w, h, cssScale){
+    var dpr = window.devicePixelRatio || 1;
+    var k = Math.max(1, Math.round(cssScale * dpr));
+    img.style.width = (w * k / dpr) + 'px';
+    img.style.height = (h * k / dpr) + 'px';
+  }
+  // One source's numbers keyed by label+unit, so the same stat from item, cards and rolls adds up.
+  function bySource(bonus, fx){
+    var out = {};
+    if (bonus) BONUS_ORDER.forEach(function(k){
+      if (!bonus[k]) return;
+      var unit = k === 'aspdPct' ? '%' : '', label = DOLL_LABEL[k];
+      out[label.toLowerCase() + '|' + unit] = { label:label, unit:unit, n:bonus[k], order:BONUS_ORDER.indexOf(k) };
+    });
+    Object.keys(fx || {}).forEach(function(key){
+      var e = fx[key], k2 = e.label.toLowerCase() + '|' + e.unit;
+      out[k2] = { label:e.label, unit:e.unit, n:(out[k2] ? out[k2].n : 0) + e.n, order:(out[k2] ? out[k2].order : 100) };
+    });
+    return out;
+  }
+  function fmtN(n, unit){ n = Math.round(n * 100) / 100; return (n > 0 ? '+' : '') + n + unit; }
+  // Total chips colored by where they come from: one source → the whole chip in its color;
+  // several → the total, then each part in its own color (e.g. "ATK +12 · 7 · 2 · 3").
+  function totalSec(target, heading, sources){
+    var keys = {}, rows = [];
+    sources.forEach(function(s){ Object.keys(s[1]).forEach(function(k){ keys[k] = true; }); });
+    Object.keys(keys).forEach(function(k){
+      var parts = sources.filter(function(s){ return s[1][k] && Math.round(s[1][k].n * 100); })
+        .map(function(s){ return { cls:s[0], e:s[1][k] }; });
+      if (!parts.length) return;
+      var sum = parts.reduce(function(t, x){ return t + x.e.n; }, 0);
+      rows.push({ label:parts[0].e.label, unit:parts[0].e.unit, order:parts[0].e.order, sum:sum, parts:parts });
+    });
+    rows = rows.filter(function(r){ return Math.round(r.sum * 100) !== 0; })
+      .sort(function(a, b){ return a.order - b.order || a.label.localeCompare(b.label); });
+    if (!rows.length) return false;
+    var s = el('div', { class:'sc-sec' }, [ el('h4', { text:heading }) ]);
+    var w = el('div', { class:'sc-lines tchips' });
+    rows.forEach(function(r){
+      var chip = el('span', { class:'tchip ' + (r.parts.length === 1 ? r.parts[0].cls : 'multi') });
+      chip.appendChild(el('b', { text: r.label + ' ' + fmtN(r.sum, r.unit) }));
+      if (r.parts.length > 1) r.parts.forEach(function(x){
+        chip.appendChild(el('span', { class:'tpart ' + x.cls, text: fmtN(x.e.n, '').replace(/^\+/, '') }));
+      });
+      w.appendChild(chip);
+    });
+    s.appendChild(w); target.appendChild(s);
+    return true;
+  }
+
+  // "Origem" tab: where each number of the slot comes from.
+  function sourcesPane(pane, sec, lo, val, p, setNames){
+    sec(pane, L('Do item', 'From the item') + (p.refine ? ' (+' + p.refine + ')' : ''), statLines(p.own, p.itemFx.stat), 'item');
+    sec(pane, L('Outros efeitos do item', 'Other effects of the item'), effectLines(p.itemFx.other), 'fx');
+    if (p.it){
+      var locked = lockedLines(p.it);
+      if (locked.length) sec(pane, L('Ainda bloqueado pelo level', 'Still locked by level'), locked, 'locked');
+    }
+    if ((val.cards || []).some(Boolean)){
+      var cs = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Cartas', 'Cards') }) ]);
+      (val.cards || []).forEach(function(c){
+        if (!c) return;
+        var ci = !c.manual ? itemById(c.itemId) : null;
+        var row = el('div', { class:'sc-card-row' });
+        if (ci){
+          var im = document.createElement('img'); im.src = ART(ci.id); im.alt = '';
+          im.addEventListener('error', function(){
+            if (!im.dataset.fallback){ im.dataset.fallback = '1'; im.src = ART('card'); return; }
+            im.replaceWith(noArt());
+          });
+          row.appendChild(im);
+        }
+        var t = el('div', {}, [ el('div', { text:c.itemName }) ]);
+        if (ci){
+          var cfx = splitFx(itemOwnEffects(ci, 0));
+          var cl = el('div', { class:'sc-lines' });
+          statLines(itemOwnBonuses(ci, 0), cfx.stat).forEach(function(x){ cl.appendChild(el('span', { class:'c-card', text:x })); });
+          effectLines(cfx.other).forEach(function(x){ cl.appendChild(el('span', { class:'c-fx', text:x })); });
+          lockedLines(ci).forEach(function(x){ cl.appendChild(el('span', { class:'c-locked', title:L('Ainda não ativo no level desta fase', 'Not active yet at this stage\'s level'), text:x })); });
+          if (cl.childNodes.length) t.appendChild(cl);
+        }
+        row.appendChild(t);
+        cs.appendChild(row);
+      });
+      pane.appendChild(cs);
+    }
+    // Detail of each complete set this piece belongs to.
+    computeActiveSets(lo).complete.forEach(function(s){
+      if (setNames.indexOf(s.name) === -1) return;
+      var ss = el('div', { class:'sc-sec sc-set' }, [ el('h4', { text:L('Conjunto completo: ', 'Complete set: ') + s.name }) ]);
+      var sfx = splitFx(s.effects || {});
+      var bl = statLines(s.bonus || blankBonus(), sfx.stat), fl = effectLines(sfx.other);
+      if (bl.length){ var w1 = el('div', { class:'sc-lines item' }); bl.forEach(function(t){ w1.appendChild(el('span', { text:t })); }); ss.appendChild(w1); }
+      if (fl.length){ var w2 = el('div', { class:'sc-lines fx' }); fl.forEach(function(t){ w2.appendChild(el('span', { text:t })); }); ss.appendChild(w2); }
+      if (!bl.length && !fl.length && s.bonusText) ss.appendChild(el('div', { class:'sc-hint', text:s.bonusText }));
+      pane.appendChild(ss);
+    });
+  }
+
+  // "+7 ✎" next to the item name: the pencil turns the number into a 0–10 field.
+  // Enter or leaving the field saves; Esc cancels.
+  var PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  function refineControl(val, refine){
+    var wrap = el('span', { class:'ref-edit' });
+    function show(){
+      clear(wrap);
+      wrap.appendChild(el('span', { class:'ref', text:'+' + refine }));
+      var pen = el('button', { type:'button', class:'ref-pen', title:L('Editar refino', 'Edit refine'),
+        'aria-label':L('Editar refino (0 a ' + LIMITS.refine + ')', 'Edit refine (0 to ' + LIMITS.refine + ')') });
+      pen.innerHTML = PENCIL_SVG; // static markup, no data
+      pen.addEventListener('click', edit);
+      wrap.appendChild(pen);
+    }
+    function edit(){
+      clear(wrap);
+      wrap.appendChild(el('span', { class:'ref', text:'+' }));
+      var input = el('input', { type:'number', class:'ref-input', min:'0', max:String(LIMITS.refine), value:String(refine),
+        'aria-label':L('Refino (0 a ' + LIMITS.refine + ')', 'Refine (0 to ' + LIMITS.refine + ')') });
+      clampField(input, 0, LIMITS.refine);
+      var done = false;
+      function commit(){
+        if (done) return;
+        done = true;
+        val.refine = Math.max(0, Math.min(LIMITS.refine, parseInt(input.value, 10) || 0));
+        saveLoadouts(); render();
+      }
+      input.addEventListener('keydown', function(e){
+        if (e.key === 'Enter'){ e.preventDefault(); commit(); }
+        else if (e.key === 'Escape'){ e.stopPropagation(); done = true; show(); }
+      });
+      input.addEventListener('blur', commit);
+      wrap.appendChild(input);
+      input.focus(); input.select();
+    }
+    show();
+    return wrap;
+  }
+
+  // Rolled options get their own gold panel so they're easy to spot and fill in.
+  var DICE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>';
+  function rollsPanel(val, extras){
+    var panel = el('div', { class:'sc-rolls' + (extras.length ? '' : ' empty') });
+    var icon = el('span', { class:'sc-rolls-icon', 'aria-hidden':'true' });
+    icon.innerHTML = DICE_SVG; // static markup, no data
+    panel.appendChild(el('div', { class:'sc-rolls-head' }, [
+      icon,
+      el('h4', { text:'Rolls' }),
+      el('span', { class:'sc-rolls-count', text: extras.length + '/' + LIMITS.extras })
+    ]));
+    if (!extras.length) panel.appendChild(el('p', { class:'sc-rolls-help',
+      text: L('Seu item veio com bônus aleatórios? Adicione aqui (ex.: ATK +3, Max HP +2%).', 'Did your item roll random bonuses? Add them here (e.g. ATK +3, Max HP +2%).') }));
+    var ex = renderExtras(val);
+    var form = ex.querySelector('form');
+    if (form) form.appendChild(el('button', { type:'submit', class:'sc-rolls-add', text:L('Adicionar', 'Add') }));
+    panel.appendChild(ex);
+    return panel;
+  }
+
+  function showcaseSummary(lo, group, sd){
+    var defs = DOLL_LAYOUT[group].defs();
+    var frag = document.createDocumentFragment();
+    var total = blankBonus(), fxStat = {}, fxOther = {}, count = 0;
+    var names = completeSetNames(lo), activeSets = {};
+    defs.forEach(function(d){
+      var v = sd.slots[d.key]; if (!v) return;
+      count++;
+      var p = slotParts(v);
+      addBonus(total, p.own); addBonus(total, p.cardB); addBonus(total, p.rollB);
+      addEffects(fxStat, p.fxStat); addEffects(fxOther, p.fxOther);
+      itemSetsIn(p.it, names).forEach(function(n){ activeSets[n] = true; });
+    });
+    // Complete sets with a piece in this tab count once here (their detail is on each piece).
+    computeActiveSets(lo).complete.forEach(function(s){
+      if (!activeSets[s.name]) return;
+      if (s.bonus) addBonus(total, s.bonus);
+      var sfx = splitFx(s.effects || {});
+      addEffects(fxStat, sfx.stat); addEffects(fxOther, sfx.other);
+    });
+    var stage = el('div', { class:'sc-stage sc-sum' });
+    var head = el('h4', { class:'sc-sum-head', text:L('Atributos e stats', 'Stats') });
+    var g = el('div', { class:'sc-lines item' });
+    var shown = statLines(total, fxStat);
+    if (!shown.length) g.appendChild(el('span', { class:'sc-none', text:L('Nenhum bônus ainda.', 'No bonuses yet.') }));
+    shown.forEach(function(t){ g.appendChild(el('span', { text:t })); });
+    stage.appendChild(el('div', { class:'sc-sum-box' }, [head, g]));
+    frag.appendChild(stage);
+    var fx = fxOther;
+    var body = el('div', { class:'sc-body' });
+    var setList = Object.keys(activeSets);
+    body.appendChild(el('div', {}, [
+      el('div', { class:'sc-title', text: group === 'shadow' ? 'Shadow' : L('Equipamento', 'Equipment') }),
+      el('div', { class:'sc-sub', text: count + L(' de ', ' of ') + defs.length + L(' slots · ', ' slots · ') + setList.length + L(' conjunto(s) ativo(s)', ' active set(s)') })
+    ]));
+    body.appendChild(el('div', { class:'sc-hint', text:L('Total de itens, cartas, rolls e conjuntos completos. Clique numa peça para ver o detalhe.', 'Total of items, cards, rolls and complete sets. Click a piece to see the detail.') }));
+    var fxl = effectLines(fx);
+    if (fxl.length){
+      var fs = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Outros efeitos', 'Other effects') }) ]);
+      var fw = el('div', { class:'sc-lines fx' });
+      fxl.forEach(function(t){ fw.appendChild(el('span', { text:t })); });
+      fs.appendChild(fw);
+      body.appendChild(fs);
+    }
+    if (setList.length){
+      var s = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Conjuntos ativos', 'Active sets') }) ]);
+      var sw = el('div', { class:'sc-lines item' });
+      setList.forEach(function(n){ sw.appendChild(el('span', { text:n })); });
+      s.appendChild(sw);
+      body.appendChild(s);
+    }
+    body.appendChild(el('div', { class:'sc-hint', text: TOUCH
+      ? L('Toque num item para ver a arte e os detalhes aqui.', 'Tap an item to see its art and details here.')
+      : L('Passe o mouse para ler a descrição. Clique num item para ver a arte e os detalhes aqui.', 'Hover to read the description. Click an item to see its art and details here.') }));
+    body.appendChild(legend());
+    frag.appendChild(body);
+    return frag;
+  }
+  function legend(){
+    function dot(color, text){ return el('span', {}, [ el('i', { style:'background:' + color }), document.createTextNode(text) ]); }
+    // Same order the values appear in the showcase: base, rolls, then the totals by source.
+    return el('div', { class:'sc-legend' }, [
+      dot('var(--fg-dim)', L('base', 'base')), dot('var(--stat-roll)', 'rolls'),
+      dot('var(--stat-item)', L('item', 'item')), dot('var(--stat-card)', L('cartas', 'cards')),
+      dot('var(--fx)', L('outros efeitos', 'other effects'))
+    ]);
+  }
+
+  // ---------- tooltip glued to the mouse ----------
+  var tipEl = null, tipTimer = null, tipX = 0, tipY = 0, tipRaf = 0;
+  function ensureTip(){
+    if (!tipEl){ tipEl = el('div', { class:'hovertip', role:'tooltip', 'aria-hidden':'true' }); document.body.appendChild(tipEl); }
+    return tipEl;
+  }
+  function placeTip(){
+    tipRaf = 0;
+    if (!tipEl) return;
+    var w = tipEl.offsetWidth, h = tipEl.offsetHeight, pad = 12;
+    var x = tipX + 18, y = tipY + 20;
+    if (x + w > window.innerWidth - pad) x = tipX - w - 14;
+    if (y + h > window.innerHeight - pad) y = Math.max(pad, window.innerHeight - h - pad);
+    tipEl.style.transform = 'translate(' + Math.max(pad, x) + 'px,' + y + 'px)';
+  }
+  function fillTip(it, refine){
+    var t = ensureTip();
+    clear(t);
+    var lo = activeLoadout();
+    var setStatus = {};
+    if (lo) computeActiveSets(lo).complete.forEach(function(s){ setStatus[s.name] = { complete:true, refine:s.refineTotal }; });
+    var head = el('div', { class:'ht-head' });
+    var src = ART(it.id);
+    if (src){
+      var img = document.createElement('img'); img.src = src; img.alt = '';
+      img.addEventListener('error', function(){ img.remove(); });
+      head.appendChild(img);
+    }
+    head.appendChild(el('div', {}, [
+      el('div', { class:'ht-name', text:(it.refinable && refine ? '+' + refine + ' ' : '') + it.name }),
+      el('div', { class:'ht-sub', text:[it.cat, 'Lv ' + (it.lv || '?'), it.slots ? it.slots + '-slot' : ''].filter(Boolean).join(' · ') })
+    ]));
+    t.appendChild(head);
+    var blocks = 0;
+    it.blocks.forEach(function(b){
+      if (b.kind === 'setHead' || blocks >= 8) return;
+      var badge = blockBadge(b, refine, setStatus);
+      var text = (b.pieces && b.kind === 'set' ? b.pieces + '\n' : '') + b.lines.join('\n');
+      if (!text && !badge) return;
+      blocks++;
+      var blk = el('div', { class:'ht-block' + (badge && badge[1] === 'off' ? ' off' : '') });
+      var label = [b.header && !b.inline ? b.header : '', badge ? badge[0] : ''].filter(Boolean).join(' · ');
+      if (label) blk.appendChild(el('div', { class:'ht-badge', text:label }));
+      if (text) blk.appendChild(el('div', { class:'t', text:text }));
+      t.appendChild(blk);
+    });
+  }
+  function attachTip(node, it, getRefine){
+    if (TOUCH) return;
+    node.addEventListener('mouseenter', function(e){
+      tipX = e.clientX; tipY = e.clientY;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(function(){
+        fillTip(it, getRefine()); placeTip(); tipEl.classList.add('show');
+      }, 220);
+    });
+    node.addEventListener('mousemove', function(e){
+      tipX = e.clientX; tipY = e.clientY;
+      if (!tipRaf) tipRaf = requestAnimationFrame(placeTip);
+    });
+    node.addEventListener('mouseleave', function(){ hideTip(); });
+  }
+  function hideTip(){
+    clearTimeout(tipTimer);
+    if (tipEl) tipEl.classList.remove('show');
+  }
+  window.addEventListener('scroll', hideTip, { passive:true });
+
+
+  // The classic grid stays one click away while players get used to the new layout.
+  var LAYOUT_KEY = 'rtm-hud-layout-v1';
+  var slotLayout = (function(){ try { return localStorage.getItem(LAYOUT_KEY) === 'grid' ? 'grid' : 'doll'; } catch(e){ return 'doll'; } })();
+  function renderSlotGroup(lo, group){
+    hideTip();
+    if (slotLayout === 'doll'){ renderPaperDoll(lo, group); return; }
+    if (group === 'equip') renderSlotGrid('equipGrid', EQUIP_SLOTS, lo, 'equip');
+    else renderSlotGrid('shadowGrid', SHADOW_SLOTS, lo, 'shadow');
+  }
+  function syncLayoutSwitch(){
+    document.querySelectorAll('.layout-switch button').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.layout === slotLayout));
+    });
+  }
+
   // ---------- rendering ----------
   // Clickable boxes that aren't <button>s (empty slots, card slots, loadout rows) still need to
   // be reachable with Tab and usable with Enter/Space.
@@ -1693,6 +2635,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
   function renderSlotGrid(containerId, slotDefs, lo, groupName){
     var grid = document.getElementById(containerId);
+    grid.className = 'equip-grid'; // the new layout swaps it for 'doll'
     clear(grid);
     var sd = activeStageData(lo);
     slotDefs.forEach(function(def){
@@ -1799,7 +2742,8 @@ input.invalid{ border-color:var(--danger) !important; }
   // site's own Arsenal page uses, because neither can know the player's refines.
   function parseStatBonus(desc, statLabel){
     if (!desc) return 0;
-    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)(?![\\d.])(?!\\s*%)', 'gi');
+    // "(?!\.?\d)" skips decimals ("+1.5") but keeps a value that ends a sentence ("+1.").
+    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)(?!\\.?\\d)(?!\\s*%)', 'gi');
     var total = 0, m;
     while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
     return total;
@@ -2014,8 +2958,8 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     renderHeadForm(lo);
     renderStatStrip(lo);
-    renderSlotGrid('equipGrid', EQUIP_SLOTS, lo, 'equip');
-    renderSlotGrid('shadowGrid', SHADOW_SLOTS, lo, 'shadow');
+    renderSlotGroup(lo, 'equip');
+    renderSlotGroup(lo, 'shadow');
     renderStatCalc(lo);
     renderStatusPanel(lo);
     renderCompare(lo);
@@ -2038,6 +2982,7 @@ input.invalid{ border-color:var(--danger) !important; }
     document.getElementById('searchInput').focus();
   }
   function closeModal(){
+    hideTip();
     if (stopResultsPaging){ stopResultsPaging(); stopResultsPaging = null; }
     document.getElementById('modalBackdrop').hidden = true;
     state.modal = null;
@@ -2146,6 +3091,7 @@ input.invalid{ border-color:var(--danger) !important; }
     info.appendChild(el('div', { class:'item-sub', text: 'Lv ' + (it.lv||'?') + (it.slots ? ' · ' + it.slots + '-slot' : '') }));
     row.appendChild(info);
     row.addEventListener('click', function(){ applySelection(it); });
+    attachTip(row, it, function(){ return 0; });
     return row;
   }
 
@@ -2154,7 +3100,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // and survival" sections), confirmed 2026-10 against this server — EXCEPT the Codex's claim
   // that INT raises max SP, which the player confirmed is wrong in the live game, so SP/HP
   // (which need unpublished per-class base tables anyway) are intentionally left out.
-  var RANGED_ATK_CATS = ['bow','revolver','whip','instrument','book','deck'];
+  var RANGED_ATK_CATS = ['bow','heavy bow','revolver']; // other weapon types: see the checklist
   var DERIVED_LABELS = [
     { key:'hit', pattern:'HIT' }, { key:'flee', pattern:'FLEE' },
     { key:'crit', pattern:'Critical(?: Rate)?' }, { key:'pdodge', pattern:'Perfect Dodge' },
@@ -2432,6 +3378,8 @@ input.invalid{ border-color:var(--danger) !important; }
     if (!state.db) return result;
     var equippedIds = getEquippedItemIds(lo);
     var equippedSet = {}; equippedIds.forEach(function(id){ equippedSet[id] = true; });
+    var refineById = {};
+    forEachEquipped(lo, function(it, refine, val, isCard){ if (!isCard) refineById[it.id] = (refineById[it.id] || 0) + refine; });
     var seenSetNames = {};
     equippedIds.forEach(function(id){
       var it = itemById(id);
@@ -2441,9 +3389,18 @@ input.invalid{ border-color:var(--danger) !important; }
         seenSetNames[b.setName] = true;
         var st = evalSetPieces(state.db.setMembership[b.setName] || [], equippedSet, b.pieces);
         if (st.complete){
-          result.complete.push({ name: b.setName, bonusText: blockText(b), bonus: b.bonus, effects: b.effects });
-          addBonus(result.bonus, b.bonus);
-          addEffects(result.effects, b.effects);
+          var members = state.db.setMembership[b.setName] || [];
+          var refineTotal = members.reduce(function(t, mid){ return t + (refineById[mid] || 0); }, 0);
+          var bonus = blankBonus(), effects = {};
+          addBonus(bonus, b.bonus); addEffects(effects, b.effects);
+          it.blocks.forEach(function(rb){
+            if (rb.kind !== 'setRefine' || rb.setName !== b.setName) return;
+            var k = setRefineSteps(rb, refineTotal);
+            if (k){ addBonus(bonus, rb.bonus, k); addEffects(effects, rb.effects, k); }
+          });
+          result.complete.push({ name: b.setName, bonusText: blockText(b), bonus: bonus, effects: effects, refineTotal: refineTotal });
+          addBonus(result.bonus, bonus);
+          addEffects(result.effects, effects);
         } else {
           result.partial.push({
             name: b.setName, bonusText: blockText(b), have: st.have, total: st.total,
@@ -2454,6 +3411,12 @@ input.invalid{ border-color:var(--danger) !important; }
       });
     });
     return result;
+  }
+  // How many times a set-refine block applies for the pieces' refines added up.
+  function setRefineSteps(b, total){
+    if (b.mode === 'at') return total >= b.min ? 1 : 0;
+    if (b.mode === 'per') return Math.floor(total / b.per);
+    return 0;
   }
   function getEquippedWeaponCat(lo){
     var w = activeStageData(lo).slots.weapon;
@@ -2476,9 +3439,12 @@ input.invalid{ border-color:var(--danger) !important; }
     var activeSets = computeActiveSets(lo);
     var weaponCat = (getEquippedWeaponCat(lo) || '').toLowerCase();
     var isRanged = RANGED_ATK_CATS.indexOf(weaponCat) !== -1;
-    var strAtk = isRanged ? S*0.2 : (S + Math.floor(S/10));
-    var dexAtkBase = Math.floor(D/5) + Math.floor(D/20);
-    var dexAtkSpecial = isRanged ? D : 0;
+    // Melee: STR is the main stat (+1 ATK each, +1 more every 10) and DEX adds D/5 + D/20.
+    // Bows and revolvers swap the two (the player confirmed ranged weapons scale on DEX;
+    // the exact numbers still need a print with a bow, see the checklist).
+    var mainStat = isRanged ? D : S, sideStat = isRanged ? S : D;
+    var mainAtk = mainStat + Math.floor(mainStat/10);
+    var sideAtk = Math.floor(sideStat/5) + Math.floor(sideStat/20);
     var lukAtk = Math.floor(L/3);
     var agiPush = Math.floor(A/40);
     var manual = sd.manualAspdBonus || 0;
@@ -2496,7 +3462,7 @@ input.invalid{ border-color:var(--danger) !important; }
       flee: level + A + Math.floor(A/10) + Math.floor(L/5) + 100 + derived.flee,
       crit: 1 + Math.floor(L/3) + 2*Math.floor(L/10) + derived.crit,
       pdodge: Math.min(100, 1 + Math.floor((A+L)/10) + derived.pdodge),
-      atk: Math.floor(level/4) + Math.round(strAtk + dexAtkBase + dexAtkSpecial + lukAtk) + derived.atk,
+      atk: Math.floor(level/4) + Math.round(mainAtk + sideAtk + lukAtk) + derived.atk,
       matkMin: Math.floor(level/4) + Math.floor(I*1.5) + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(D/10) + Math.floor(L/3) + derived.matk,
       // The in-game INT tooltip says "10 total INT: +1 MATK", so MATK is a single value.
       matkMax: Math.floor(level/4) + Math.floor(I*1.5) + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(D/10) + Math.floor(L/3) + derived.matk,
@@ -2537,7 +3503,7 @@ input.invalid{ border-color:var(--danger) !important; }
       c.appendChild(valWrap);
       grid.appendChild(c);
     }
-    cell('ATK', s.atk, 'atk');
+    cell(s.isRanged ? L('ATK (pelo DEX)', 'ATK (from DEX)') : 'ATK', s.atk, 'atk');
     cell(s.matkMin === s.matkMax ? 'MATK' : 'MATK ' + s.matkMin + '–' + s.matkMax, s.matkMax, 'matk');
     cell('HIT', s.hit, 'hit');
     cell('FLEE', s.flee, 'flee');
@@ -2721,9 +3687,17 @@ input.invalid{ border-color:var(--danger) !important; }
     if (b.kind === 'refineAt') return [L('Refino +', 'Refine +') + b.min + ((refine || 0) >= b.min ? L(' · ativo', ' · active') : L(' · inativo', ' · inactive')), (refine || 0) >= b.min ? 'on' : 'off'];
     if (b.kind === 'set'){
       var st = setStatus[b.setName];
-      return st === 'complete' ? [L('Conjunto completo', 'Set complete'), 'on'] : [L('Conjunto incompleto', 'Set incomplete'), 'off'];
+      return st && st.complete ? [L('Conjunto completo', 'Set complete'), 'on'] : [L('Conjunto incompleto', 'Set incomplete'), 'off'];
     }
-    if (b.kind === 'setRefine') return [L('Refino do conjunto · não calculado', 'Set refine · not calculated'), 'info'];
+    if (b.kind === 'setRefine'){
+      if (!b.mode) return [L('Refino do conjunto · não calculado', 'Set refine · not calculated'), 'info'];
+      var ss = setStatus[b.setName];
+      if (!ss || !ss.complete) return [L('Refino do conjunto · precisa do conjunto completo', 'Set refine · needs the complete set'), 'off'];
+      var k = setRefineSteps(b, ss.refine);
+      var total = L(' (soma dos refinos: ', ' (refines added up: ') + ss.refine + ')';
+      if (b.mode === 'per') return [L('Refino do conjunto', 'Set refine') + ' · ×' + k + total, k ? 'on' : 'off'];
+      return [L('Refino do conjunto ', 'Set refine ') + b.min + '+' + (k ? L(' · ativo', ' · active') : L(' · inativo', ' · inactive')) + total, k ? 'on' : 'off'];
+    }
     if (b.kind === 'levelAt'){
       var on = shownLevel() >= b.min;
       return [L('Nível base ', 'Base level ') + b.min + '+' + (on ? L(' · ativo', ' · active') : L(' · inativo', ' · inactive')), on ? 'on' : 'off'];
@@ -2739,7 +3713,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var setStatus = {};
     if (lo){
       var sets = computeActiveSets(lo);
-      sets.complete.forEach(function(s){ setStatus[s.name] = 'complete'; });
+      sets.complete.forEach(function(s){ setStatus[s.name] = { complete:true, refine:s.refineTotal }; });
     }
     var title = document.getElementById('detailTitle');
     clear(title);
@@ -3371,6 +4345,16 @@ input.invalid{ border-color:var(--danger) !important; }
     renderStatusPanel(lo);
     renderCompare(lo);
     renderSummary(lo);
+  });
+  syncLayoutSwitch();
+  document.querySelectorAll('.layout-switch button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (slotLayout === btn.dataset.layout) return;
+      slotLayout = btn.dataset.layout;
+      try { localStorage.setItem(LAYOUT_KEY, slotLayout); } catch(e){}
+      syncLayoutSwitch();
+      render();
+    });
   });
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;

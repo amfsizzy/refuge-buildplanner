@@ -6,30 +6,30 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 38 of 58 items confirmed.
+**Progress:** 40 of 58 items confirmed.
 
 ## Refine
 
 *High priority* · The tool already adds weapon refine (level 4 by the rule, still to be measured) and body armor refine. Still to test: shield, garment, shoes and headgear.
 
-**Open (6)**
+**Open (4)**
 
-- [ ] `r4` **ATK per refine: level 4 weapon**: Same test with a level 4 weapon. Lead: +2 per refine. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-  - Result: Aplicado na ferramenta pela regra dos níveis 1 a 3 (0,5 × nível = +2 por refino). Falta confirmar com uma arma nível 4 no jogo.
 - [ ] `r7` **DEF/MDEF per refine: shield**: Same test with a shield (DEF at +0, +1, +2 and +4). Body armor gave +1 DEF every 2 refines, rounded up. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Result: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **DEF/MDEF per refine: garment**: Same test with a garment. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r9` **DEF/MDEF per refine: shoes**: Same test with shoes. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r10` **DEF/MDEF per refine: headgear**: Same test with an upper headgear. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r11` **Set refine ("Per total set refine")**: With a full shadow set, change one piece's refine and check whether the set bonus adds up the refine of all pieces. Lead: some shadow refine bonuses only apply with the full set. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmed (5)</summary>
+<summary>Confirmed (7)</summary>
 
 - [x] `r1` **ATK per refine: level 1 weapon**: Confirmado: Knife (arma nível 1) dá +0,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 5, +1: 5, +2: 6, +4: 7; MATK 0, 0, 1, 2).
 - [x] `r2` **ATK per refine: level 2 weapon**: Confirmado: Gemstone Knife (arma nível 2) dá +1 ATK e +1 MATK por refino (+0: 4/16, +1: 5/17, +2: 6/18, +4: 8/20). Bate com a pista de 0,5 × nível da arma por refino.
 - [x] `r3` **ATK per refine: level 3 weapon**: Confirmado: Cowardice Blade (arma nível 3) dá +1,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 13, +1: 14, +2: 16, +4: 19).
+- [x] `r4` **ATK per refine: level 4 weapon**: Decidido pelo jogador: arma nível 4 dá +2 ATK e MATK por refino (0,5 × nível, a mesma regra confirmada nos níveis 1 a 3).
 - [x] `r5` **MATK per refine**: Confirmado: o refino sobe o MATK no mesmo ritmo do ATK (0,5 × nível da arma), inclusive em armas sem MATK base (Knife e Cowardice Blade).
 - [x] `r6` **DEF/MDEF per refine: armor**: Confirmado: Padded Armor (DEF base 22) ficou com 23 em +1, 23 em +2 e 24 em +4. Ou seja, +1 DEF a cada 2 refinos, arredondado para cima, e nenhum MDEF.
+- [x] `r11` **Set refine ("Per total set refine")**: Resolvido pelo texto das peças: o refino do conjunto é a soma dos refinos das peças equipadas. A ferramenta já calcula "Set refine N+:" e "Per (N) total set refine(s):" com o conjunto completo. Formas condicionais ("Set refine 9+, while poisoned:") ficam de fora.
 
 </details>
 
@@ -59,6 +59,7 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (2)**
 
 - [ ] `h1` **Base HP and SP by class and level**: For each class you play, note max HP and SP with VIT and INT at 1, at a few levels (e.g. 1, 30, 60, 99). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Result: Nenhuma das duas bases tem tabela de HP/SP por classe. Caminho: prints da janela de status (HP/SP máximos) sem equipamento, por classe, em alguns níveis (ex.: 1, 50, 99, 120, 150).
 - [ ] `h2` **VIT on HP**: Change only VIT (e.g. 1 → 50) and note how much HP goes up. The Codex says +1% of base HP per point. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
@@ -93,7 +94,8 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (3)**
 
 - [ ] `f3` **Critical**: Formula used: 1 + LUK÷3 + 2 per 10 LUK. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `f7` **STR → DEX swap with ranged weapons**: With a bow or revolver, check whether ATK comes from DEX instead of STR. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `f7` **STR → DEX swap with ranged weapons**: With a bow equipped, note the status ATK (the number before the "+") in 4 combinations: STR 1/DEX 1, STR 1/DEX 50, STR 50/DEX 1 and STR 50/DEX 50. If you can, repeat with a whip or a deck to see whether they also count as ranged. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Result: Confirmado pelo jogador: arco e revólver usam DEX. Aplicado como espelho do corpo a corpo: DEX vira o atributo principal (+1 ATK cada, +1 a cada 10) e STR o secundário (STR÷5 + STR÷20). Falta um print com arco para conferir os números, e saber se chicote, deck, kunai e shuriken também contam como à distância.
 - [ ] `f10` **Damage reduction from DEF and MDEF**: The Defenses tooltip says: 100 DEF reduces about 18%, 275 reduces 1/3 and 500 reduces 50%; 50 MDEF reduces about 30% and 100 MDEF about 55%. The classic formula matches DEF and 50 MDEF, but would give 45% for 100 MDEF. If anyone can test it (damage taken from the same attack at different MDEF), please confirm. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>

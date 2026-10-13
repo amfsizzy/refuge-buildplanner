@@ -6,30 +6,30 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 38 de 58 itens confirmados.
+**Progresso:** 40 de 58 itens confirmados.
 
 ## Refino
 
 *Prioridade alta* · A ferramenta já soma o refino de armas (nível 4 pela regra, falta medir) e da armadura de corpo. Falta testar escudo, capa, calçado e chapéu.
 
-**Em aberto (6)**
+**Em aberto (4)**
 
-- [ ] `r4` **ATK por refino: arma nível 4**: Mesmo teste com uma arma de nível 4. Pista: +2 por refino. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-  - Resultado: Aplicado na ferramenta pela regra dos níveis 1 a 3 (0,5 × nível = +2 por refino). Falta confirmar com uma arma nível 4 no jogo.
 - [ ] `r7` **DEF/MDEF por refino: escudo**: Mesmo teste com um escudo (DEF em +0, +1, +2 e +4). Na armadura de corpo deu +1 DEF a cada 2 refinos, arredondado para cima. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Resultado: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **DEF/MDEF por refino: capa**: Mesmo teste com uma capa. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r9` **DEF/MDEF por refino: calçado**: Mesmo teste com um calçado. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r10` **DEF/MDEF por refino: chapéu**: Mesmo teste com um chapéu de cima. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r11` **Refino de conjunto ("Per total set refine")**: Com um shadow set completo, mude o refino de uma peça e veja se o bônus do conjunto soma o refino de todas as peças. Pista: alguns bônus de refino de shadow só valem com o conjunto completo. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmados (5)</summary>
+<summary>Confirmados (7)</summary>
 
 - [x] `r1` **ATK por refino: arma nível 1**: Confirmado: Knife (arma nível 1) dá +0,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 5, +1: 5, +2: 6, +4: 7; MATK 0, 0, 1, 2).
 - [x] `r2` **ATK por refino: arma nível 2**: Confirmado: Gemstone Knife (arma nível 2) dá +1 ATK e +1 MATK por refino (+0: 4/16, +1: 5/17, +2: 6/18, +4: 8/20). Bate com a pista de 0,5 × nível da arma por refino.
 - [x] `r3` **ATK por refino: arma nível 3**: Confirmado: Cowardice Blade (arma nível 3) dá +1,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 13, +1: 14, +2: 16, +4: 19).
+- [x] `r4` **ATK por refino: arma nível 4**: Decidido pelo jogador: arma nível 4 dá +2 ATK e MATK por refino (0,5 × nível, a mesma regra confirmada nos níveis 1 a 3).
 - [x] `r5` **MATK por refino**: Confirmado: o refino sobe o MATK no mesmo ritmo do ATK (0,5 × nível da arma), inclusive em armas sem MATK base (Knife e Cowardice Blade).
 - [x] `r6` **DEF/MDEF por refino: armadura**: Confirmado: Padded Armor (DEF base 22) ficou com 23 em +1, 23 em +2 e 24 em +4. Ou seja, +1 DEF a cada 2 refinos, arredondado para cima, e nenhum MDEF.
+- [x] `r11` **Refino de conjunto ("Per total set refine")**: Resolvido pelo texto das peças: o refino do conjunto é a soma dos refinos das peças equipadas. A ferramenta já calcula "Set refine N+:" e "Per (N) total set refine(s):" com o conjunto completo. Formas condicionais ("Set refine 9+, while poisoned:") ficam de fora.
 
 </details>
 
@@ -59,6 +59,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 **Em aberto (2)**
 
 - [ ] `h1` **HP e SP base por classe e level**: Para cada classe que vocês jogam, anote HP e SP máximos com VIT e INT em 1, em alguns levels (ex.: 1, 30, 60, 99). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Resultado: Nenhuma das duas bases tem tabela de HP/SP por classe. Caminho: prints da janela de status (HP/SP máximos) sem equipamento, por classe, em alguns níveis (ex.: 1, 50, 99, 120, 150).
 - [ ] `h2` **VIT no HP**: Mude só o VIT (ex.: 1 → 50) e anote quanto o HP sobe. O Codex diz que é +1% do HP base por ponto. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
@@ -93,7 +94,8 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 **Em aberto (3)**
 
 - [ ] `f3` **Crítico**: Fórmula usada: 1 + LUK÷3 + 2 a cada 10 de LUK. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `f7` **Troca STR → DEX com arma à distância**: Com arco ou revólver, veja se o ATK passa a vir do DEX em vez do STR. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `f7` **Troca STR → DEX com arma à distância**: Com um arco equipado, anote o ATK de status (o número antes do "+") em 4 combinações: STR 1/DEX 1, STR 1/DEX 50, STR 50/DEX 1 e STR 50/DEX 50. Se puder, repita com chicote ou deck para saber se também contam como à distância. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Resultado: Confirmado pelo jogador: arco e revólver usam DEX. Aplicado como espelho do corpo a corpo: DEX vira o atributo principal (+1 ATK cada, +1 a cada 10) e STR o secundário (STR÷5 + STR÷20). Falta um print com arco para conferir os números, e saber se chicote, deck, kunai e shuriken também contam como à distância.
 - [ ] `f10` **Redução de dano pela DEF e MDEF**: O tooltip de Defenses diz: 100 de DEF reduz cerca de 18%, 275 reduz 1/3 e 500 reduz 50%; 50 de MDEF reduz cerca de 30% e 100 de MDEF cerca de 55%. A fórmula clássica bate com a DEF e com 50 de MDEF, mas daria 45% para 100 de MDEF. Se alguém souber testar (dano recebido de um mesmo ataque com MDEF diferente), confirme. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>

@@ -1016,6 +1016,42 @@ input.invalid{ border-color:var(--danger) !important; }
 .st-req-badge{ color:var(--mid); }
 .st-req-line{ color:var(--mid); }
 .st-dmg-line{ color:var(--stat-card); }
+
+/* ---- farm plan (v2) ---- */
+.farm-views{ display:inline-flex; gap:2px; padding:3px; border-radius:9px; background:var(--surface); border:1px solid var(--border-soft); margin-bottom:12px; }
+.farm-view{ border:0; background:transparent; color:var(--fg-dim); font-size:12px; font-weight:700; padding:6px 14px; border-radius:7px; cursor:pointer; }
+.farm-view:hover{ color:var(--fg); }
+.farm-view[aria-selected="true"]{ background:var(--surface-3); color:var(--accent-strong); }
+.farm-view:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+.farm-stop{ border:1px solid var(--border); border-radius:12px; padding:10px 12px 8px; margin-bottom:12px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)) 0%, var(--surface) 70%); }
+.farm-stop.other{ background:var(--surface); }
+.farm-stop-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+.farm-stop-head h4{ margin:0; font-family:var(--font-display); font-size:15px; font-weight:400; color:var(--fg); }
+.farm-stop-n{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 11px var(--font-mono); color:var(--accent-strong); border:1px solid var(--accent); }
+.farm-stop-count{ font-size:11.5px; color:var(--fg-faint); }
+.farm-lv{ margin-left:auto; font:600 11px var(--font-mono); padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+.farm-lv.ok{ color:var(--stat-item); } .farm-lv.warn{ color:var(--mid); } .farm-lv.hard{ color:var(--danger); }
+.farm-route{ font-size:11.5px; color:var(--fg-dim); margin:0 0 8px; overflow-wrap:anywhere; }
+.farm-route.muted{ color:var(--fg-faint); }
+.farm-route-k{ color:var(--fg-faint); }
+.farm-route-tag{ margin-left:6px; font-size:10px; color:var(--fg-faint); border:1px dashed var(--border-strong); border-radius:999px; padding:0 6px; }
+.farm-route-tag.ok{ color:var(--stat-item); border:1px solid color-mix(in srgb, var(--stat-item) 50%, transparent); }
+.farm-star, .farm-skip{ width:24px; height:24px; flex:0 0 auto; padding:0; border:0; border-radius:6px; background:transparent; color:var(--fg-faint); font-size:15px; line-height:1; cursor:pointer; }
+.farm-star:hover, .farm-star.on{ color:var(--mid); }
+.farm-skip:hover{ color:var(--danger); }
+.farm-skip.on{ color:var(--accent-strong); }
+.farm-item.prio{ border-color:color-mix(in srgb, var(--mid) 45%, transparent); }
+.farm-item.skipped .item-link, .farm-item.skipped .fi-src{ opacity:.5; }
+.farm-done{ margin-top:6px; }
+.farm-done summary{ cursor:pointer; font-size:12px; color:var(--fg-faint); padding:6px 2px; }
+.farm-filters{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.farm-filter{ font-size:12px; padding:4px 11px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--fg-dim); cursor:pointer; }
+.farm-filter.on{ color:var(--accent-strong); border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+.farm-mats-head{ font-size:12px; color:var(--fg-faint); margin-bottom:8px; }
+.farm-mat{ cursor:pointer; }
+.farm-qty{ font-family:var(--font-mono); color:var(--accent-strong); }
+@media (pointer:coarse){ .farm-star, .farm-skip{ width:34px; height:34px; } }
 </style>
 </head>
 <body>
@@ -1121,7 +1157,7 @@ input.invalid{ border-color:var(--danger) !important; }
             <div class="farm-progress" id="farmProgress"></div>
           </div>
         </div>
-        <p class="panel-intro" data-en="Everything equipped in this stage, plus the missing pieces of incomplete sets, grouped by the map where it drops with the best chance. Tick what you already have.">Tudo o que está equipado nesta fase, mais as peças que faltam nos conjuntos incompletos, agrupado pelo mapa onde dropa com a maior chance. Marque o que você já tem.</p>
+        <p class="panel-intro" data-en="Everything equipped in this stage, plus the missing pieces of incomplete sets. Route puts first the maps where the most of it drops together. ✓ = I have it (counts for every stage), ★ = priority, ⊘ = won&#39;t farm.">Tudo o que está equipado nesta fase, mais as peças que faltam nos conjuntos incompletos. A Rota mostra primeiro os mapas onde mais coisas dropam juntas. ✓ = já tenho (vale para todas as fases), ★ = prioridade, ⊘ = não vou farmar.</p>
         <div id="farmList"></div>
       </section>
 
@@ -1383,6 +1419,14 @@ input.invalid{ border-color:var(--danger) !important; }
     lo.charClass = cleanStr(raw.charClass, LIMITS.charClass);
     lo.notes = cleanStr(raw.notes, LIMITS.notes);
     if (raw.dualWield === true) lo.dualWield = true;
+    if (isObj(raw.farm)){
+      lo.farm = {};
+      ['prio', 'skip', 'mats'].forEach(function(k){
+        var src = isObj(raw.farm[k]) ? raw.farm[k] : {}, out = {};
+        Object.keys(src).slice(0, LIMITS.owned).forEach(function(id){ if (/^\d{1,9}$/.test(id) && src[id] === true) out[id] = true; });
+        lo.farm[k] = out;
+      });
+    }
     lo.updatedAt = cleanNum(raw.updatedAt, 0, 9e15, Date.now());
     if (isObj(raw.stages)){
       STAGE_KEYS.forEach(function(k){ if (own(raw.stages, k)) lo.stages[k] = cleanStage(raw.stages[k]); });
@@ -4535,8 +4579,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var filled = 0, slots = activeStageData(lo).slots;
     EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){ if (slots[d.key]) filled++; });
     var targets = Object.keys(computeFarmTargets(lo));
-    var owned = activeStageData(lo).owned;
-    var got = targets.filter(function(id){ return owned[id]; }).length;
+    var got = targets.filter(function(id){ return isOwned(lo, id); }).length;
 
     function line(k, v){
       return el('div', { class:'los-line' }, [ el('span', { class:'los-k', text:k }), el('span', { class:'los-v', text:v }) ]);
@@ -4560,97 +4603,282 @@ input.invalid{ border-color:var(--danger) !important; }
     box.appendChild(stats);
   }
 
+  // ---------- farm plan: Route (by map) · Items · Materials ----------
+  // "Already have" counts for the whole loadout (ticking it in one stage ticks all three),
+  // stars and "won't farm" are per loadout. The Route view groups what is still missing by the
+  // map where most of it drops together, best first, with the way to get there.
+  var FARM_VIEW_KEY = 'rtm-hud-farmview-v1';
+  var farmView = (function(){ try { var v = localStorage.getItem(FARM_VIEW_KEY); return v === 'items' || v === 'mats' ? v : 'route'; } catch(e){ return 'route'; } })();
+  var farmFilter = 'pending';
+
+  function farmData(lo){
+    if (!isObj(lo.farm)) lo.farm = {};
+    ['prio', 'skip', 'mats'].forEach(function(k){ if (!isObj(lo.farm[k])) lo.farm[k] = {}; });
+    return lo.farm;
+  }
+  function isOwned(lo, id){ return STAGE_KEYS.some(function(k){ return lo.stages[k] && lo.stages[k].owned && lo.stages[k].owned[id]; }); }
+  function setOwned(lo, id, on){
+    STAGE_KEYS.forEach(function(k){
+      var o = lo.stages[k].owned = lo.stages[k].owned || {};
+      if (on) o[id] = true; else delete o[id];
+    });
+  }
+  function farmChanged(lo){ saveLoadouts(); renderFarm(lo); renderSummary(lo); }
+
   function renderFarm(lo){
     var list = document.getElementById('farmList');
     var prog = document.getElementById('farmProgress');
     var titleEl = document.getElementById('farmTitle');
     if (!list) return;
     clear(list); clear(prog);
-    titleEl.textContent = L('Lista de farm — ', 'Farm list — ') + stageLabel(lo.activeStage);
+    titleEl.textContent = L('Plano de farm — ', 'Farm plan — ') + stageLabel(lo.activeStage);
     if (!state.db){ list.appendChild(el('div', { class:'empty-note', text:L('Esperando a base de itens carregar…', 'Waiting for the item database to load…') })); return; }
-    var sd = activeStageData(lo);
     var targets = computeFarmTargets(lo);
     var ids = Object.keys(targets);
+    var fd = farmData(lo);
+    var got = ids.filter(function(id){ return isOwned(lo, id); }).length;
+    prog.appendChild(el('strong', { text: got + '/' + ids.length }));
+    prog.appendChild(document.createTextNode(L(' itens obtidos', ' items obtained')));
+
+    var tabs = el('div', { class:'farm-views', role:'tablist', 'aria-label':L('Visão', 'View') });
+    [['route', L('Rota', 'Route')], ['items', L('Itens', 'Items')], ['mats', L('Materiais', 'Materials')]].forEach(function(v){
+      var b = el('button', { type:'button', role:'tab', class:'farm-view', 'aria-selected': String(farmView === v[0]), text: v[1] });
+      b.addEventListener('click', function(){
+        farmView = v[0];
+        try { localStorage.setItem(FARM_VIEW_KEY, farmView); } catch(e){}
+        renderFarm(lo);
+      });
+      tabs.appendChild(b);
+    });
+    list.appendChild(tabs);
+
     if (!ids.length){
       list.appendChild(el('div', { class:'empty-note', text:L('Nada equipado nesta fase ainda. Equipe itens nas abas Equipamento/Shadow e eles aparecem aqui.', 'Nothing equipped in this stage yet. Equip items in the Equipment/Shadow tabs and they show up here.') }));
       return;
     }
-    var groups = {};
-    var QUEST_GROUP = L('Quest / Craft / Loja', 'Quest / Craft / Shop');
-    ids.forEach(function(id){
-      var t = targets[id], it = t.item;
-      var key = it.sources.length ? it.sources[0].zone : QUEST_GROUP;
-      (groups[key] = groups[key] || []).push(t);
-    });
-    var ownedCount = ids.filter(function(id){ return sd.owned[id]; }).length;
-    prog.appendChild(el('strong', { text: ownedCount + '/' + ids.length }));
-    prog.appendChild(document.createTextNode(L(' itens obtidos', ' items obtained')));
-    Object.keys(groups).sort(function(a, b){
-      if (a === QUEST_GROUP) return 1;
-      if (b === QUEST_GROUP) return -1;
-      return a.localeCompare(b);
-    }).forEach(function(zone){
-      var g = el('div', { class:'farm-group' });
-      var pending = groups[zone].filter(function(t){ return !sd.owned[t.item.id]; }).length;
-      g.appendChild(el('h4', {}, [ document.createTextNode(zone), el('span', { text: pending ? pending + L(' faltando', ' missing') : L('tudo obtido', 'all obtained') }) ]));
-      groups[zone].sort(function(a, b){ return a.item.name.localeCompare(b.item.name); }).forEach(function(t){
-        var it = t.item;
-        var owned = !!sd.owned[it.id];
-        var isOpen = !!state.farmOpen[it.id];
-        var entry = el('div', { class:'farm-entry' + (isOpen ? ' open' : '') });
-        var row = el('div', { class:'farm-item' + (owned ? ' owned' : '') });
-        var cb = el('input', { type:'checkbox', 'aria-label':L('Já tenho ', 'I have ') + it.name });
-        cb.checked = owned;
-        cb.addEventListener('change', function(){
-          if (cb.checked) sd.owned[it.id] = true; else delete sd.owned[it.id];
-          saveLoadouts();
-          renderFarm(lo);
-          renderSummary(lo);
+    if (farmView === 'route') renderFarmRoute(lo, list, targets, fd);
+    else if (farmView === 'items') renderFarmItems(lo, list, targets, fd);
+    else renderFarmMats(lo, list, targets, fd);
+  }
+
+  // One item row: star, "already have", sprite, name (opens the detail), where it comes from,
+  // "won't farm", and the full list of sources on demand.
+  function farmRow(lo, t, fd, srcText){
+    var it = t.item;
+    var owned = isOwned(lo, it.id), skipped = !!fd.skip[it.id], prio = !!fd.prio[it.id];
+    var isOpen = !!state.farmOpen[it.id];
+    var entry = el('div', { class:'farm-entry' + (isOpen ? ' open' : '') });
+    var row = el('div', { class:'farm-item' + (owned ? ' owned' : '') + (skipped ? ' skipped' : '') + (prio ? ' prio' : '') });
+    var star = el('button', { type:'button', class:'farm-star' + (prio ? ' on' : ''), 'aria-pressed': String(prio),
+      title: L('Prioridade: sobe na rota', 'Priority: moves up in the route'), 'aria-label':L('Prioridade para ', 'Priority for ') + it.name, text: prio ? '★' : '☆' });
+    star.addEventListener('click', function(e){ e.stopPropagation(); if (prio) delete fd.prio[it.id]; else fd.prio[it.id] = true; farmChanged(lo); });
+    row.appendChild(star);
+    var cb = el('input', { type:'checkbox', 'aria-label':L('Já tenho ', 'I have ') + it.name });
+    cb.checked = owned;
+    cb.addEventListener('change', function(){ setOwned(lo, it.id, cb.checked); farmChanged(lo); });
+    row.appendChild(cb);
+    row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
+    var main = el('div', { class:'fi-main' });
+    var nameBtn = el('button', { type:'button', class:'item-name item-link', text: it.name });
+    nameBtn.addEventListener('click', function(e){ e.stopPropagation(); openDetail(it.id); });
+    main.appendChild(nameBtn);
+    if (t.tag) nameBtn.appendChild(el('span', { class:'farm-tag', text: t.tag }));
+    main.appendChild(el('div', { class:'fi-src', text: srcText || farmSourceText(it) }));
+    row.appendChild(main);
+    var skip = el('button', { type:'button', class:'farm-skip' + (skipped ? ' on' : ''), 'aria-pressed': String(skipped),
+      title: skipped ? L('Voltar a farmar', 'Farm it again') : L('Não vou farmar (compro ou troco)', "Won't farm it (buying or trading)"), text: skipped ? '↺' : '⊘',
+      'aria-label': (skipped ? L('Voltar a farmar ', 'Farm again ') : L('Não vou farmar ', "Won't farm ")) + it.name });
+    skip.addEventListener('click', function(e){ e.stopPropagation(); if (skipped) delete fd.skip[it.id]; else fd.skip[it.id] = true; farmChanged(lo); });
+    row.appendChild(skip);
+    var toggle = el('button', { type:'button', class:'farm-toggle', 'aria-expanded': String(isOpen),
+      'aria-label': (isOpen ? L('Recolher', 'Collapse') : L('Expandir', 'Expand')) + L(' detalhes de ', ' details of ') + it.name, text:'▾' });
+    row.appendChild(toggle);
+    var panel = el('div', { class:'farm-detail' });
+    panel.hidden = !isOpen;
+    if (isOpen) panel.appendChild(buildAcquireInfo(it));
+    function flip(){
+      var nowOpen = !state.farmOpen[it.id];
+      if (nowOpen) state.farmOpen[it.id] = true; else delete state.farmOpen[it.id];
+      entry.classList.toggle('open', nowOpen);
+      toggle.setAttribute('aria-expanded', String(nowOpen));
+      if (nowOpen && !panel.firstChild) panel.appendChild(buildAcquireInfo(it));
+      panel.hidden = !nowOpen;
+    }
+    toggle.addEventListener('click', function(e){ e.stopPropagation(); flip(); });
+    row.addEventListener('click', function(e){ if (e.target === cb) return; flip(); });
+    entry.appendChild(row);
+    entry.appendChild(panel);
+    return entry;
+  }
+  function farmSourceText(it){
+    if (it.sources.length){
+      var s = it.sources[0];
+      return s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '') + (it.sources.length > 1 ? ' · +' + (it.sources.length - 1) + L(' fontes', ' sources') : '');
+    }
+    if (it.how) return 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
+    if (it.shop) return L('Loja (NPC)', 'Shop (NPC)');
+    return L('Origem não listada na base', 'Source not listed in the database');
+  }
+
+  // ---- Route: maps where the most missing items drop together come first ----
+  function renderFarmRoute(lo, list, targets, fd){
+    var pending = Object.keys(targets).filter(function(id){ return !isOwned(lo, id) && !fd.skip[id]; });
+    var withDrops = pending.filter(function(id){ return targets[id].item.sources.length; });
+    var other = pending.filter(function(id){ return !targets[id].item.sources.length; });
+    var left = withDrops.slice(), stops = [];
+    while (left.length){
+      var byZone = {};
+      left.forEach(function(id){
+        targets[id].item.sources.forEach(function(s){
+          var z = byZone[s.zone] = byZone[s.zone] || { ids: {}, prio: 0 };
+          if (!z.ids[id]){ z.ids[id] = true; if (fd.prio[id]) z.prio++; }
         });
-        row.appendChild(cb);
-        row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
-        var main = el('div', { class:'fi-main' });
-        var nameBtn = el('button', { type:'button', class:'item-name item-link', text: it.name });
-        nameBtn.addEventListener('click', function(){ openDetail(it.id); });
-        main.appendChild(nameBtn);
-        if (t.tag) main.lastChild.appendChild(el('span', { class:'farm-tag', text: t.tag }));
-        var srcLine;
-        if (it.sources.length){
-          var s = it.sources[0];
-          srcLine = s.mob + ' · Lv' + s.mobLv + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '') + (it.sources.length > 1 ? ' · +' + (it.sources.length - 1) + L(' fontes', ' sources') : '');
-        } else if (it.how){
-          srcLine = 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
-        } else if (it.shop){
-          srcLine = L('Loja (NPC)', 'Shop (NPC)');
-        } else {
-          srcLine = L('Origem não listada na base', 'Source not listed in the database');
-        }
-        main.appendChild(el('div', { class:'fi-src', text: srcLine }));
-        row.appendChild(main);
-        var toggle = el('button', { type:'button', class:'farm-toggle', 'aria-expanded': String(isOpen),
-          'aria-label': (isOpen ? L('Recolher', 'Collapse') : L('Expandir', 'Expand')) + L(' detalhes de ', ' details of ') + it.name, text:'▾' });
-        row.appendChild(toggle);
-        var panel = el('div', { class:'farm-detail' });
-        panel.hidden = !isOpen;
-        if (isOpen) panel.appendChild(buildAcquireInfo(it));
-        function flip(){
-          var nowOpen = !state.farmOpen[it.id];
-          if (nowOpen) state.farmOpen[it.id] = true; else delete state.farmOpen[it.id];
-          entry.classList.toggle('open', nowOpen);
-          toggle.setAttribute('aria-expanded', String(nowOpen));
-          if (nowOpen && !panel.firstChild) panel.appendChild(buildAcquireInfo(it));
-          panel.hidden = !nowOpen;
-        }
-        toggle.addEventListener('click', flip);
-        row.addEventListener('click', function(e){
-          if (e.target === cb || e.target.closest('.item-link') || e.target === toggle) return;
-          flip();
-        });
-        entry.appendChild(row);
-        entry.appendChild(panel);
-        g.appendChild(entry);
       });
-      list.appendChild(g);
+      var best = Object.keys(byZone).sort(function(a, b){
+        var A = byZone[a], B = byZone[b];
+        return Object.keys(B.ids).length - Object.keys(A.ids).length || B.prio - A.prio || a.localeCompare(b);
+      })[0];
+      var taken = Object.keys(byZone[best].ids);
+      stops.push({ zone: best, ids: taken, prio: byZone[best].prio });
+      left = left.filter(function(id){ return taken.indexOf(id) === -1; });
+    }
+    // Stops with a starred item go first; inside each group, the bigger stop first.
+    stops.sort(function(a, b){ return (b.prio > 0) - (a.prio > 0) || b.ids.length - a.ids.length; });
+    var level = activeStageData(lo).level || 1;
+    if (!pending.length){
+      list.appendChild(el('div', { class:'empty-note', text:L('Nada pendente: tudo obtido ou marcado para não farmar.', "Nothing pending: everything is obtained or marked as won't farm.") }));
+    }
+    stops.forEach(function(stop, i){
+      var card = el('section', { class:'farm-stop' });
+      var rows = stop.ids.map(function(id){
+        var it = targets[id].item;
+        var here = it.sources.filter(function(s){ return s.zone === stop.zone; }).sort(function(a, b){ return b.rate - a.rate; })[0];
+        return { t: targets[id], s: here };
+      }).sort(function(a, b){ return (fd.prio[b.t.item.id] ? 1 : 0) - (fd.prio[a.t.item.id] ? 1 : 0) || a.t.item.name.localeCompare(b.t.item.name); });
+      var lvs = rows.map(function(r){ return r.s.mobLv || 0; }).filter(Boolean);
+      var head = el('div', { class:'farm-stop-head' });
+      head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
+      head.appendChild(el('h4', { text: stop.zone }));
+      head.appendChild(el('span', { class:'farm-stop-count', text: rows.length + (rows.length === 1 ? L(' item', ' item') : L(' itens', ' items')) }));
+      if (lvs.length){
+        var lo1 = Math.min.apply(null, lvs), hi1 = Math.max.apply(null, lvs);
+        var diff = hi1 - level;
+        var cls = diff <= 0 ? 'ok' : diff <= 15 ? 'warn' : 'hard';
+        head.appendChild(el('span', { class:'farm-lv ' + cls,
+          title: L('Level dos mobs comparado com o level desta fase (', "Mob level compared with this stage's level (") + level + ')',
+          text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
+      }
+      card.appendChild(head);
+      card.appendChild(farmRouteLine(stop.zone));
+      rows.forEach(function(r){
+        var s = r.s;
+        card.appendChild(farmRow(lo, r.t, fd, s.mob + ' · Lv' + s.mobLv + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '')));
+      });
+      list.appendChild(card);
+    });
+    if (other.length){
+      var oc = el('section', { class:'farm-stop other' });
+      oc.appendChild(el('div', { class:'farm-stop-head' }, [ el('h4', { text:L('Quest / Craft / Loja', 'Quest / Craft / Shop') }),
+        el('span', { class:'farm-stop-count', text: other.length + (other.length === 1 ? L(' item', ' item') : L(' itens', ' items')) }) ]));
+      oc.appendChild(el('div', { class:'farm-route muted', text:L('Os materiais destes itens estão na visão Materiais.', 'The materials for these items are in the Materials view.') }));
+      other.sort(function(a, b){ return targets[a].item.name.localeCompare(targets[b].item.name); })
+        .forEach(function(id){ oc.appendChild(farmRow(lo, targets[id], fd)); });
+      list.appendChild(oc);
+    }
+    farmDoneList(lo, list, targets, fd);
+  }
+  // "How to get there" in one line: the route players confirmed, else the one from the site.
+  function farmRouteLine(zone){
+    var line = el('div', { class:'farm-route' });
+    var P = state.places;
+    var place = P && !P.failed && P.byName ? P.byName[zone] : null;
+    if (!place || !place.ride){
+      line.textContent = P && !P.failed ? L('Sem rota na base do site.', 'No route in the site database.') : L('Carregando rotas…', 'Loading routes…');
+      return line;
+    }
+    var played = PLAYER_ROUTES[place.ride[1]];
+    var text;
+    if (played) text = played.text.split('\n')[0];
+    else {
+      // Same names the confirmed routes use: Kafra Allysia = "Kafra Orfanato", Skia Nerius = "Dungeon Caravan".
+      var npc = place.ride[0] === 1 ? 'Dungeon Caravan' : L('Kafra Orfanato', 'Orphanage Kafra');
+      text = [npc, place.ride[1]].concat(place.route.map(function(m){ return P.maps[m] || '?'; })).join(' > ');
+    }
+    line.appendChild(el('span', { class:'farm-route-k', text:L('Como chegar: ', 'How to get there: ') }));
+    line.appendChild(document.createTextNode(text));
+    line.appendChild(el('span', { class:'farm-route-tag' + (played && played.confirmed ? ' ok' : ''),
+      text: played && played.confirmed ? L('confirmada', 'confirmed') : L('da base, não confirmada', 'from the database, not confirmed') }));
+    return line;
+  }
+  function farmDoneList(lo, list, targets, fd){
+    var done = Object.keys(targets).filter(function(id){ return isOwned(lo, id) || fd.skip[id]; });
+    if (!done.length) return;
+    var det = el('details', { class:'farm-done' });
+    var nOwned = done.filter(function(id){ return isOwned(lo, id); }).length;
+    det.appendChild(el('summary', { text: L('Obtidos (' + nOwned + ') e não vou farmar (' + (done.length - nOwned) + ')', 'Obtained (' + nOwned + ") and won't farm (" + (done.length - nOwned) + ')') }));
+    done.sort(function(a, b){ return targets[a].item.name.localeCompare(targets[b].item.name); })
+      .forEach(function(id){ det.appendChild(farmRow(lo, targets[id], fd)); });
+    list.appendChild(det);
+  }
+
+  // ---- Items: the plain list, filtered ----
+  function renderFarmItems(lo, list, targets, fd){
+    var FILTERS = [['pending', L('Pendentes', 'Pending')], ['prio', L('Prioridade', 'Priority')], ['owned', L('Obtidos', 'Obtained')],
+      ['skip', L('Não vou farmar', "Won't farm")], ['all', L('Todos', 'All')]];
+    var bar = el('div', { class:'farm-filters' });
+    FILTERS.forEach(function(f){
+      var b = el('button', { type:'button', class:'farm-filter' + (farmFilter === f[0] ? ' on' : ''), 'aria-pressed': String(farmFilter === f[0]), text: f[1] });
+      b.addEventListener('click', function(){ farmFilter = f[0]; renderFarm(lo); });
+      bar.appendChild(b);
+    });
+    list.appendChild(bar);
+    var ids = Object.keys(targets).filter(function(id){
+      var o = isOwned(lo, id), s = !!fd.skip[id];
+      if (farmFilter === 'pending') return !o && !s;
+      if (farmFilter === 'prio') return !!fd.prio[id];
+      if (farmFilter === 'owned') return o;
+      if (farmFilter === 'skip') return s;
+      return true;
+    }).sort(function(a, b){ return targets[a].item.name.localeCompare(targets[b].item.name); });
+    if (!ids.length) list.appendChild(el('div', { class:'empty-note', text:L('Nenhum item neste filtro.', 'No items in this filter.') }));
+    ids.forEach(function(id){ list.appendChild(farmRow(lo, targets[id], fd)); });
+  }
+
+  // ---- Materials: one shopping list for every quest/craft item still missing ----
+  function renderFarmMats(lo, list, targets, fd){
+    var mats = {};
+    Object.keys(targets).forEach(function(id){
+      if (isOwned(lo, id) || fd.skip[id]) return;
+      var it = targets[id].item;
+      if (!it.how || !it.how.mats.length) return;
+      it.how.mats.forEach(function(m){
+        if (!Array.isArray(m) || m.length < 3) return;
+        var k = String(m[2]);
+        var cur = mats[k] = mats[k] || { id: m[2], name: String(m[1]), qty: 0, for: [] };
+        cur.qty += Math.max(0, m[0] | 0);
+        if (cur.for.indexOf(it.name) === -1) cur.for.push(it.name);
+      });
+    });
+    var keys = Object.keys(mats).sort(function(a, b){ return mats[a].name.localeCompare(mats[b].name); });
+    if (!keys.length){
+      list.appendChild(el('div', { class:'empty-note', text:L('Nenhum item pendente de quest ou craft com materiais listados na base.', 'No pending quest or craft item with materials listed in the database.') }));
+      return;
+    }
+    var have = keys.filter(function(k){ return fd.mats[k]; }).length;
+    list.appendChild(el('div', { class:'farm-mats-head', text: have + '/' + keys.length + L(' materiais separados', ' materials gathered') }));
+    keys.forEach(function(k){
+      var m = mats[k], mi = itemById(m.id), on = !!fd.mats[k];
+      var row = el('label', { class:'farm-item farm-mat' + (on ? ' owned' : '') });
+      var cb = el('input', { type:'checkbox', 'aria-label':L('Já separei ', 'I have ') + m.name });
+      cb.checked = on;
+      cb.addEventListener('change', function(){ if (cb.checked) fd.mats[k] = true; else delete fd.mats[k]; farmChanged(lo); });
+      row.appendChild(cb);
+      row.appendChild(spriteEl(ICON(m.id)));
+      var main = el('div', { class:'fi-main' });
+      main.appendChild(el('div', { class:'item-name' }, [ el('span', { class:'farm-qty', text: m.qty + '× ' }), document.createTextNode(m.name) ]));
+      main.appendChild(el('div', { class:'fi-src', text: L('Para: ', 'For: ') + m.for.join(', ') + (mi && mi.sources.length ? ' · ' + bestSourceText(mi) : '') }));
+      row.appendChild(main);
+      list.appendChild(row);
     });
   }
 

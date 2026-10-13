@@ -6,7 +6,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 18 de 54 itens confirmados.
+**Progresso:** 19 de 54 itens confirmados.
 
 ## Refino
 
@@ -91,11 +91,17 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 *Prioridade baixa* · Casos que a ferramenta deixa de fora por não ter certeza.
 
-**Em aberto (3)**
+**Em aberto (2)**
 
 - [ ] `e1` **Conjunto da Grand Peco Card**: Junto com a carta parceira (Peco Peco), o DEF+5 do conjunto aplica? A ferramenta não soma porque não achou a parceira na base. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `e2` **Bônus de escolha (Metal Boots)**: "STR, INT or DEX +2": qual atributo recebe o bônus? ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `e3` **"Piece Bonus" de shadow em +0**: Uma peça de shadow sozinha, sem o conjunto: o "Piece Bonus" aplica? ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+
+<details>
+<summary>Confirmados (1)</summary>
+
+- [x] `e3` **"Piece Bonus" de shadow em +0**: Confirmado: o Piece Bonus vale com a peça sozinha, sem o conjunto completo.
+
+</details>
 
 ## Habilidades passivas
 

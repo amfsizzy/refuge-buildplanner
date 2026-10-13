@@ -35,6 +35,7 @@
   --accent-strong: #9127f0;
   --accent-ink: #06040a;
   --danger: #ff6b7d;
+  --fx: #5cc8ff; /* "other effects" (damage vs element, HP %, casting…) */
   --early: #45d99a;
   --mid: #f0b429;
   --late: #ff7a59;
@@ -65,6 +66,7 @@
     --accent: #6b13b9;
     --accent-strong: #4d0d86;
     --accent-ink: #f3e6ff;
+  --fx: #0369a1;
     --glow: rgba(145, 39, 240, 0.18);
     --shadow-glow: 0 0 0 1px rgba(145,39,240,.22), 0 14px 40px -14px var(--glow);
     --aurora-op: .22;
@@ -86,6 +88,7 @@
   --accent: #6b13b9;
   --accent-strong: #4d0d86;
   --accent-ink: #f3e6ff;
+  --fx: #0369a1;
   --glow: rgba(145, 39, 240, 0.18);
   --shadow-glow: 0 0 0 1px rgba(145,39,240,.22), 0 14px 40px -14px var(--glow);
   --aurora-op: .22;
@@ -466,6 +469,11 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .aspd-manual input{ width:56px; background:var(--surface-2); border:1px solid var(--border); border-radius:5px; padding:4px 6px; color:var(--fg); font-family:var(--font-mono); text-align:center; }
 .sets-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:16px; }
 .set-row{ padding:9px 0; border-bottom:1px solid var(--border-soft); }
+.fx-list{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.fx-chip{
+  font-family:var(--font-mono); font-size:11px; color:var(--fx); border-radius:5px; padding:1px 6px;
+  border:1px solid color-mix(in srgb, var(--fx) 40%, transparent); background:color-mix(in srgb, var(--fx) 8%, transparent);
+}
 .set-row:last-child{ border-bottom:none; }
 .set-row .st-name{ font-weight:700; font-size:13px; }
 .set-row.complete .st-name{ color:var(--early); }
@@ -819,6 +827,7 @@ input.invalid{ border-color:var(--danger) !important; }
         <div class="aspd-box" id="aspdBox"></div>
       </div>
 
+      <div class="sets-box" id="effectsBox"></div>
       <div class="sets-box" id="setsBox"></div>
       <div class="sets-box skills-box" id="skillsBox"></div>
     </section>
@@ -965,7 +974,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // whitelist: known fields only, right types, clamped numbers, capped string lengths. A crafted
   // code can't crash rendering, pollute prototypes, bloat storage or break saving.
   var LIMITS = { loadouts:100, name:80, charClass:40, notes:20000, itemName:120, spriteUrl:300,
-    cards:4, extras:10, extraLen:60, owned:500, codeChars:300000, decodedBytes:2000000, fileBytes:5000000 };
+    cards:4, extras:10, refine:10, extraLen:60, owned:500, codeChars:300000, decodedBytes:2000000, fileBytes:5000000 };
   var STAGE_KEYS = ['early', 'mid', 'late'];
   function own(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
   function isObj(v){ return !!v && typeof v === 'object' && !Array.isArray(v); }
@@ -993,7 +1002,7 @@ input.invalid{ border-color:var(--danger) !important; }
   function cleanSlot(v){
     var o = cleanItemRef(v);
     if (!o) return null;
-    if (own(v, 'refine')) o.refine = cleanNum(v.refine, 0, 20, 0);
+    if (own(v, 'refine')) o.refine = cleanNum(v.refine, 0, LIMITS.refine, 0);
     if (Array.isArray(v.cards)) o.cards = v.cards.slice(0, LIMITS.cards).map(cleanItemRef);
     if (Array.isArray(v.extras)){
       var ex = v.extras.filter(function(x){ return typeof x === 'string'; }).slice(0, LIMITS.extras)
@@ -1168,6 +1177,51 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     return out;
   }
+  // ---------- other effects (everything beyond the stats the simulator computes) ----------
+  // "DMG vs Earth +3%", "Max HP +3%", "Cast Time -10%"... are summed per label so the player
+  // sees totals; they don't change the simulated numbers. Same conservative rules as
+  // parseLines, plus: a colon inside the line ("Refine 6: …", "Innate : …") marks a condition
+  // and "/ Upgrade" scales on something unknown, so those lines are left out.
+  var EFFECT_RE = /([A-Za-z][A-Za-z0-9 .'\/&-]*?)\s*([+-])\s*(\d+(?:\.\d+)?)\s*(%|s\b)?(?!\.?\d)/g;
+  var EFFECT_SKIP_LABEL = /^(to|by|and|from|up|extra|of)$/i;
+  var COUNTED_FLAT = /^(STR|AGI|VIT|INT|DEX|LUK|All Stats|ATK|MATK|HIT|FLEE|Critical(?: Rate)?|Perfect Dodge|DEF|MDEF|ASPD|ASPD Limit)$/i;
+  function parseEffects(lines, isRefineScaled){
+    var out = {};
+    lines.forEach(function(l){
+      var line = isRefineScaled ? l.replace(RE_INLINE_REFINE, '') : l;
+      if (/\bper\b/i.test(line) || /\bor\b/i.test(line) || /:/.test(line) || /\/\s*upgrade/i.test(line)) return;
+      EFFECT_RE.lastIndex = 0;
+      var m;
+      while ((m = EFFECT_RE.exec(line))){
+        var label = m[1].trim().replace(/\s+/g, ' ');
+        var unit = m[4] || '';
+        if (EFFECT_SKIP_LABEL.test(label)) continue;
+        if (!unit && COUNTED_FLAT.test(label)) continue;          // already in the simulator
+        if (unit === '%' && /^ASPD$/i.test(label)) continue;      // already summed as ASPD %
+        if (/^HP$/i.test(label)) label = 'Max HP';
+        if (/^SP$/i.test(label)) label = 'Max SP';
+        var n = parseFloat(m[3]) * (m[2] === '-' ? -1 : 1);
+        var key = label.toLowerCase() + '|' + unit;
+        out[key] = { label: out[key] ? out[key].label : label, unit: unit, n: (out[key] ? out[key].n : 0) + n };
+      }
+    });
+    return out;
+  }
+  function addEffects(into, from, mult){
+    var k = (mult === undefined) ? 1 : mult;
+    if (!k) return;
+    for (var key in from){
+      var cur = into[key];
+      into[key] = { label: cur ? cur.label : from[key].label, unit: from[key].unit, n: (cur ? cur.n : 0) + from[key].n * k };
+    }
+  }
+  // Sorted display lines ("DMG vs Earth +6%"), dropping effects that cancel out to zero.
+  function effectLines(map){
+    return Object.keys(map).map(function(k){ return map[k]; })
+      .filter(function(e){ return Math.round(e.n * 100) !== 0; })
+      .sort(function(a, b){ return a.label.localeCompare(b.label); })
+      .map(function(e){ var n = Math.round(e.n * 100) / 100; return e.label + ' ' + (n > 0 ? '+' : '') + n + e.unit; });
+  }
   function parseTooltip(desc){
     var lines = (desc || '').split('\n');
     var blocks = [];
@@ -1213,8 +1267,9 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     blocks = blocks.filter(function(b){ return b.lines.length || b.header; });
     blocks.forEach(function(b){
-      b.bonus = (b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'set')
-        ? parseLines(b.lines, b.kind === 'perRefine') : blankBonus();
+      var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'set';
+      b.bonus = counted ? parseLines(b.lines, b.kind === 'perRefine') : blankBonus();
+      b.effects = counted ? parseEffects(b.lines, b.kind === 'perRefine') : {};
     });
     return blocks;
   }
@@ -1288,6 +1343,17 @@ input.invalid{ border-color:var(--danger) !important; }
       if (b.kind === 'base') addBonus(out, b.bonus);
       else if (b.kind === 'perRefine') addBonus(out, b.bonus, Math.floor(r / b.per));
       else if (b.kind === 'refineAt' && r >= b.min) addBonus(out, b.bonus);
+    });
+    return out;
+  }
+  // Same blocks and refine rules as itemOwnBonuses, for the other effects.
+  function itemOwnEffects(item, refine){
+    var out = {};
+    var r = refine || 0;
+    item.blocks.forEach(function(b){
+      if (b.kind === 'base') addEffects(out, b.effects);
+      else if (b.kind === 'perRefine') addEffects(out, b.effects, Math.floor(r / b.per));
+      else if (b.kind === 'refineAt' && r >= b.min) addEffects(out, b.effects);
     });
     return out;
   }
@@ -1633,11 +1699,11 @@ input.invalid{ border-color:var(--danger) !important; }
           if (matchedItem.refinable){
             var refWrap = el('label', { class:'refine-input', title:L('Nível de refino', 'Refine level') });
             refWrap.appendChild(document.createTextNode('+'));
-            var refIn = el('input', { type:'number', min:'0', max:'20', value: String(val.refine || 0), 'aria-label':L('Refino de ', 'Refine of ') + val.itemName });
+            var refIn = el('input', { type:'number', min:'0', max:String(LIMITS.refine), value: String(val.refine || 0), 'aria-label':L('Refino de ', 'Refine of ') + val.itemName });
             refIn.addEventListener('click', function(ev){ ev.stopPropagation(); });
-            clampField(refIn, 0, 20);
+            clampField(refIn, 0, LIMITS.refine);
             refIn.addEventListener('change', function(){
-              val.refine = Math.max(0, Math.min(20, parseInt(refIn.value, 10) || 0));
+              val.refine = Math.max(0, Math.min(LIMITS.refine, parseInt(refIn.value, 10) || 0));
               saveLoadouts();
               render();
             });
@@ -1761,7 +1827,20 @@ input.invalid{ border-color:var(--danger) !important; }
   function extraIsCounted(line){
     var b = parseLines([line], false);
     for (var k in b) if (b[k]) return true;
-    return false;
+    return Object.keys(parseEffects([line], false)).length > 0;
+  }
+  // Every other effect for the active stage: items (refine-aware), cards, complete sets and
+  // rolled options, summed per label.
+  function computeAllEffects(lo){
+    var out = {};
+    forEachEquipped(lo, function(it, refine){ addEffects(out, itemOwnEffects(it, refine)); });
+    addEffects(out, computeActiveSets(lo).effects);
+    var slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(def){
+      var val = slots[def.key];
+      if (val && Array.isArray(val.extras)) addEffects(out, parseEffects(val.extras.filter(function(x){ return typeof x === 'string'; }), false));
+    });
+    return out;
   }
   function computeStatBonuses(lo){
     var all = computeAllBonuses(lo), sk = computeSkillBonuses(lo), out = {};
@@ -2267,7 +2346,7 @@ input.invalid{ border-color:var(--danger) !important; }
     });
   }
   function computeActiveSets(lo){
-    var result = { complete: [], partial: [], bonus: blankBonus() };
+    var result = { complete: [], partial: [], bonus: blankBonus(), effects: {} };
     if (!state.db) return result;
     var equippedIds = getEquippedItemIds(lo);
     var equippedSet = {}; equippedIds.forEach(function(id){ equippedSet[id] = true; });
@@ -2280,8 +2359,9 @@ input.invalid{ border-color:var(--danger) !important; }
         seenSetNames[b.setName] = true;
         var st = evalSetPieces(state.db.setMembership[b.setName] || [], equippedSet, b.pieces);
         if (st.complete){
-          result.complete.push({ name: b.setName, bonusText: blockText(b) });
+          result.complete.push({ name: b.setName, bonusText: blockText(b), bonus: b.bonus, effects: b.effects });
           addBonus(result.bonus, b.bonus);
+          addEffects(result.effects, b.effects);
         } else {
           result.partial.push({
             name: b.setName, bonusText: blockText(b), have: st.have, total: st.total,
@@ -2416,8 +2496,25 @@ input.invalid{ border-color:var(--danger) !important; }
     manualRow.appendChild(manualInput);
     aspdBox.appendChild(manualRow);
 
+    renderEffectsBox(lo);
     renderSetsBox(setsBox, activeSets);
     renderSkillsBox(lo);
+  }
+
+  function renderEffectsBox(lo){
+    var box = document.getElementById('effectsBox');
+    if (!box) return;
+    clear(box);
+    box.appendChild(el('h2', { text:L('Outros efeitos', 'Other effects') }));
+    var lines = effectLines(computeAllEffects(lo));
+    if (!lines.length){
+      box.appendChild(el('div', { class:'empty-note', text:L('Nenhum efeito extra no equipamento desta fase (dano contra elemento, HP %, conjuração…).', 'No extra effects on this stage\'s gear (damage vs element, HP %, casting…).') }));
+      return;
+    }
+    box.appendChild(el('div', { class:'empty-note', text:L('Somados de itens, cartas, conjuntos e opções roladas. Ainda não mudam os números do simulador acima.', 'Summed from items, cards, sets and rolled options. They don\'t change the simulator numbers above yet.') }));
+    var list = el('div', { class:'fx-list' });
+    lines.forEach(function(t){ list.appendChild(el('span', { class:'fx-chip', text:t })); });
+    box.appendChild(list);
   }
 
   function renderSkillsBox(lo){

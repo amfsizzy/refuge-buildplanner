@@ -6,7 +6,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 18 of 54 items confirmed.
+**Progress:** 19 of 54 items confirmed.
 
 ## Refine
 
@@ -91,11 +91,17 @@ We don't have access to the game files: the planner only knows what the server's
 
 *Low priority* · Cases the tool leaves out because it isn't sure.
 
-**Open (3)**
+**Open (2)**
 
 - [ ] `e1` **Grand Peco Card set**: With the partner card (Peco Peco), does the set's DEF+5 apply? The tool doesn't add it because it didn't find the partner in the database. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `e2` **Choice bonus (Metal Boots)**: "STR, INT or DEX +2": which stat gets the bonus? ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `e3` **Shadow "Piece Bonus" at +0**: A single shadow piece, without the set: does the "Piece Bonus" apply? ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+
+<details>
+<summary>Confirmed (1)</summary>
+
+- [x] `e3` **Shadow "Piece Bonus" at +0**: Confirmado: o Piece Bonus vale com a peça sozinha, sem o conjunto completo.
+
+</details>
 
 ## Passive skills
 

@@ -763,7 +763,8 @@ input.invalid{ border-color:var(--danger) !important; }
 .noart{ display:block; width:12px; height:16px; border:1.5px solid var(--stat-card); border-radius:2px; opacity:.8; }
 .sc-card-row .noart{ width:18px; height:24px; margin:4px 3px; }
 .fxs{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
-.fxs .fx-chip{ font-size:10.5px; padding:0 5px; }
+.fxs .fx-chip{ font-size:10px; padding:0 5px; white-space:nowrap; }
+.dslot .abbr{ cursor:help; text-decoration:underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset:2px; }
 .fx-more{ font-size:10px; color:var(--fg-faint); font-family:var(--font-mono); align-self:center; }
 .sc-lines.fx{ color:var(--fx); }
 .sc-set{ border-left:2px solid var(--stat-item); padding-left:8px; }
@@ -771,7 +772,8 @@ input.invalid{ border-color:var(--danger) !important; }
 .roll{ font-size:10.5px; font-family:var(--font-mono); color:var(--stat-roll); border:1px solid color-mix(in srgb, var(--stat-roll) 40%, transparent); border-radius:5px; padding:0 5px; }
 
 /* stats column on the right of the tile */
-.dstats{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-family:var(--font-mono); font-size:11px; white-space:nowrap; padding-top:1px; }
+.dstats{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-family:var(--font-mono); font-size:11px; white-space:nowrap; padding-top:1px; max-width:110px; }
+.dstats span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .dstats .s-item{ color:var(--stat-item); }
 .dstats .s-card{ color:var(--stat-card); }
 .dstats .s-roll{ color:var(--stat-roll); }
@@ -1931,7 +1933,7 @@ input.invalid{ border-color:var(--danger) !important; }
       itemFx:itemFx, cardFx:cardFx, rollFx:rollFx, fxStat:fxStat, fxOther:fxOther };
   }
   // Effects on the character's own stats (green) vs everything else (blue).
-  var STAT_FX = /^(STR|AGI|VIT|INT|DEX|LUK|All Stats|ATK|MATK|ATK\/MATK|HIT|FLEE|Total Flee|Critical(?: Rate)?|Total Critical Rate|Perfect Dodge|Perfect Hit|DEF|MDEF|Total DEF|Total MDEF|Max HP|Max SP|HP\/SP|ASPD|ASPD Limit)$/i;
+  var STAT_FX = /^(STR|AGI|VIT|INT|DEX|LUK|All Stats|ATK|MATK|ATK\/MATK|HIT|FLEE|Total Flee|Critical(?: Rate)?|Total Critical Rate|Critical Damage|Perfect Dodge|Perfect Hit|DEF|MDEF|Total DEF|Total MDEF|Max HP|Max SP|HP\/SP|ASPD|ASPD Limit)$/i;
   function splitFx(map){
     var out = { stat:{}, other:{} };
     Object.keys(map).forEach(function(k){ (STAT_FX.test(map[k].label) ? out.stat : out.other)[k] = map[k]; });
@@ -1997,6 +1999,25 @@ input.invalid{ border-color:var(--danger) !important; }
     renderShowcase(lo, group);
   }
 
+  // Slot tiles are narrow, so long effect names are shortened there ("Crit Dmg +10%"); the
+  // full name shows on hover, and the showcase always uses full names.
+  var SHORT_NAMES = [
+    [/\bTotal Critical Rate\b/g, 'Crit'], [/\bCritical Rate\b/g, 'Crit'], [/\bCritical Damage\b/gi, 'Crit Dmg'],
+    [/\bMagic Defense Penetration\b/g, 'MDEF Pen'], [/\bDefense Penetration\b/g, 'DEF Pen'],
+    [/\bVariable Cast(?: Time)?\b/g, 'Var Cast'], [/\bFixed Cast(?: Time)?\b/g, 'Fix Cast'],
+    [/\bAfter Cast Delay\b/g, 'ACD'], [/\bPerfect Dodge\b/g, 'P.Dodge'], [/\bPerfect Hit\b/g, 'P.Hit'],
+    [/\bMove(?:ment)? Speed\b/g, 'Move Spd'], [/\bTotal /g, ''],
+    [/\bDamage\b|\bDMG\b/g, 'Dmg'], [/\bResistance\b/g, 'Res'], [/\bRegeneration\b/g, 'Regen'],
+    [/\bRecovery\b/g, 'Recov'], [/\bPhysical\b/g, 'Phys'], [/\bMagic(?:al)?\b/g, 'Mag'],
+    [/\bagainst\b/g, 'vs'], [/\bElement(?:al)?\b/gi, 'Ele'], [/\bCooldown\b/gi, 'CD'], [/\bHealing\b/g, 'Heal']
+  ];
+  function shortName(t){ return SHORT_NAMES.reduce(function(acc, r){ return acc.replace(r[0], r[1]); }, t); }
+  function shortChip(cls, t){
+    var s = shortName(t);
+    var chip = el('span', { class: cls + (s !== t ? ' abbr' : ''), text: s });
+    if (s !== t) chip.title = t;
+    return chip;
+  }
   function dollTile(lo, group, def, val, setNames){
     var p = slotParts(val);
     var inSet = itemSetsIn(p.it, setNames).length > 0;
@@ -2034,7 +2055,7 @@ input.invalid{ border-color:var(--danger) !important; }
       if (fxl.length){
         var fxw = el('div', { class:'fxs' });
         var FXMAX = 3;
-        fxl.slice(0, FXMAX).forEach(function(t){ fxw.appendChild(el('span', { class:'fx-chip', text:t })); });
+        fxl.slice(0, FXMAX).forEach(function(t){ fxw.appendChild(shortChip('fx-chip', t)); });
         if (fxl.length > FXMAX) fxw.appendChild(el('span', { class:'fx-more', text:'+' + (fxl.length - FXMAX) + L(' mais', ' more') }));
         main.appendChild(fxw);
       }
@@ -2053,7 +2074,7 @@ input.invalid{ border-color:var(--danger) !important; }
       statLines(p.cardB, p.cardFx.stat).forEach(function(t){ lines.push(['s-card', t]); });
       statLines(p.rollB, p.rollFx.stat).forEach(function(t){ lines.push(['s-roll', t]); });
       var MAX = 5;
-      lines.slice(0, MAX).forEach(function(l){ stats.appendChild(el('span', { class:l[0], text:l[1] })); });
+      lines.slice(0, MAX).forEach(function(l){ stats.appendChild(shortChip(l[0], l[1])); });
       if (lines.length > MAX) stats.appendChild(el('span', { class:'s-more', text:'+' + (lines.length - MAX) + L(' mais', ' more') }));
       tile.appendChild(stats);
     }
@@ -3523,7 +3544,11 @@ input.invalid{ border-color:var(--danger) !important; }
       grid.appendChild(c);
     }
     var lukT = s.totals.luk, dexT = s.totals.dex, intT = s.totals.int;
-    plainCell(L('Dano crítico', 'Critical damage'), (120 + Math.floor(lukT/10)) + '%', L('base 120% + LUK', 'base 120% + LUK'));
+    // "Critical Damage +N%" from gear is shown next to it, not added: how it stacks with the
+    // base 120% hasn't been checked in game yet.
+    var gearCrit = (computeAllEffects(lo)['critical damage|%'] || {}).n || 0;
+    plainCell(L('Dano crítico', 'Critical damage'), (120 + Math.floor(lukT/10)) + '%',
+      L('base 120% + LUK', 'base 120% + LUK') + (gearCrit ? L(' · equip ', ' · gear ') + (gearCrit > 0 ? '+' : '') + Math.round(gearCrit * 100) / 100 + '%' : ''));
     var castScore = dexT*2 + intT;
     plainCell(L('Conjuração variável', 'Variable cast'), '−' + Math.min(100, Math.round((dexT*0.25 + intT*0.125)*10)/10) + '%',
       L('DEX×2+INT = ', 'DEX×2+INT = ') + castScore + ' / 400');

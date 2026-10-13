@@ -1157,6 +1157,7 @@ input.invalid{ border-color:var(--danger) !important; }
   var RE_SET_BONUS = /^Set Bonus:$/i;
   var RE_SET_HEADER = /^(.+?\bSet):$/i;
   var RE_PIECE_BONUS = /^Piece Bonus:$/i;
+  var RE_BASE_LEVEL = /^base level\s+(\d+)\s+or higher:$/i;
   var RE_INLINE_REFINE = /\bper\s+(?:(\d+)\s+)?refines?\b\.?/i;
 
   function blankBonus(){
@@ -1264,6 +1265,7 @@ input.invalid{ border-color:var(--danger) !important; }
         continue;
       }
       if ((m = RE_SET_HEADER.exec(l))){ pendingSetName = m[1].trim(); open({ kind:'setHead', header:l }); continue; }
+      if ((m = RE_BASE_LEVEL.exec(l))){ open({ kind:'levelAt', min: parseInt(m[1], 10), header:l }); continue; }
       if (/:$/.test(l)){ open({ kind:'cond', header:l }); continue; }
       if (cur.kind === 'base' && (m = RE_INLINE_REFINE.exec(l))){
         blocks.push({ kind:'perRefine', per: m[1] ? parseInt(m[1], 10) : 1, inline:true, lines:[l] });
@@ -1273,7 +1275,7 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     blocks = blocks.filter(function(b){ return b.lines.length || b.header; });
     blocks.forEach(function(b){
-      var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'set';
+      var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'levelAt' || b.kind === 'set';
       b.bonus = counted ? parseLines(b.lines, b.kind === 'perRefine') : blankBonus();
       b.effects = counted ? parseEffects(b.lines, b.kind === 'perRefine') : {};
     });
@@ -1341,26 +1343,29 @@ input.invalid{ border-color:var(--danger) !important; }
     return { items: items, byId: byId, classes: classes, setMembership: setMembership };
   }
   function itemById(id){ return state.db ? state.db.byId[id] || null : null; }
-  // Item's own bonuses at a given refine level (sets are handled by computeActiveSets).
-  function itemOwnBonuses(item, refine){
+  // Base level of the stage being shown (the compare tab overrides the stage), for
+  // "Base Level 130 or higher:" blocks.
+  function shownLevel(){
+    var lo = activeLoadout();
+    return lo ? (activeStageData(lo).level || 1) : 1;
+  }
+  function blockActive(b, refine, level){
+    if (b.kind === 'base') return 1;
+    if (b.kind === 'perRefine') return Math.floor((refine || 0) / b.per);
+    if (b.kind === 'refineAt') return (refine || 0) >= b.min ? 1 : 0;
+    if (b.kind === 'levelAt') return (level === undefined ? shownLevel() : level) >= b.min ? 1 : 0;
+    return 0;
+  }
+  // Item's own bonuses at a given refine (and base level) — sets are handled by computeActiveSets.
+  function itemOwnBonuses(item, refine, level){
     var out = blankBonus();
-    var r = refine || 0;
-    item.blocks.forEach(function(b){
-      if (b.kind === 'base') addBonus(out, b.bonus);
-      else if (b.kind === 'perRefine') addBonus(out, b.bonus, Math.floor(r / b.per));
-      else if (b.kind === 'refineAt' && r >= b.min) addBonus(out, b.bonus);
-    });
+    item.blocks.forEach(function(b){ var k = blockActive(b, refine, level); if (k) addBonus(out, b.bonus, k); });
     return out;
   }
-  // Same blocks and refine rules as itemOwnBonuses, for the other effects.
-  function itemOwnEffects(item, refine){
+  // Same blocks and rules as itemOwnBonuses, for the other effects.
+  function itemOwnEffects(item, refine, level){
     var out = {};
-    var r = refine || 0;
-    item.blocks.forEach(function(b){
-      if (b.kind === 'base') addEffects(out, b.effects);
-      else if (b.kind === 'perRefine') addEffects(out, b.effects, Math.floor(r / b.per));
-      else if (b.kind === 'refineAt' && r >= b.min) addEffects(out, b.effects);
-    });
+    item.blocks.forEach(function(b){ var k = blockActive(b, refine, level); if (k) addEffects(out, b.effects, k); });
     return out;
   }
 
@@ -2470,8 +2475,10 @@ input.invalid{ border-color:var(--danger) !important; }
       softDef: V + Math.floor(V/10)*5 + derived.def,
       softMdef: Math.floor(V/10)*5 + Math.floor(V/5)*1 + Math.floor(D/5) + derived.mdef,
       agiPush: agiPush, manualAspd: manual,
-      aspdCap: Math.min(190, 180 + agiPush + derived.aspdLimit + manual),
-      aspdCapRaw: 180 + agiPush + derived.aspdLimit + manual,
+      // 190 is the server's hard cap for gear and passives; skills like Legend's Frenzy go
+      // past it (a Legend reaches 193), so the manual skill bonus is added after the clamp.
+      aspdCap: Math.min(190, 180 + agiPush + derived.aspdLimit) + manual,
+      aspdCapRaw: 180 + agiPush + derived.aspdLimit,
       itemAtk: items.atk, itemMatk: items.matk, itemDef: items.def, itemMdef: items.mdef, weight: items.weight,
       equippedCount: equippedCount, completeSets: activeSets.complete.length
     };
@@ -2526,16 +2533,16 @@ input.invalid{ border-color:var(--danger) !important; }
     aspdBox.appendChild(el('div', { class:'aspd-line', text:L(
       'Por que o ASPD final não é calculado: este servidor mudou as regras de ASPD e não publicou a fórmula nova. Sem saber o ASPD base de cada arma, quanto o AGI soma (e se o DEX conta) e como "ASPD +N" e "ASPD +N%" entram na conta, qualquer número seria chute. Os testes que faltam estão no checklist; quando forem medidos no jogo, o cálculo entra aqui.',
       'Why the final ASPD is not calculated: this server changed the ASPD rules and has not published the new formula. Without each weapon\'s base ASPD, how much AGI adds (and whether DEX counts), and how "ASPD +N" and "ASPD +N%" enter the math, any number would be a guess. The missing tests are in the checklist; once they are measured in game, the calculation goes here.') }));
-    aspdBox.appendChild(el('div', { class:'aspd-line', text:L('Teto é 180 igual pra toda classe aqui (não depende mais de tabela por job). A fórmula exata de ASPD abaixo do teto com base em AGI não está documentada publicamente — isto mostra só o cálculo do teto alcançável.', 'The cap is 180 for every class here (no per-job table). The exact ASPD formula below the cap from AGI is not publicly documented — this only shows the reachable cap.') }));
+    aspdBox.appendChild(el('div', { class:'aspd-line', text:L('O teto base muda por classe (confirmado no jogo), mas o valor de cada classe ainda não foi medido; por enquanto a ferramenta usa 180 para todas. O teto máximo do servidor é 190; skills como Frenzy (Legend) passam disso: use o bônus manual abaixo. Isto mostra só o teto alcançável, não o ASPD real.', 'The base cap differs by class (confirmed in game), but the value for each class has not been measured yet; for now the tool uses 180 for all. The hard cap of the server is 190; skills like Frenzy (Legend) go past it: use the manual bonus below. This only shows the reachable cap, not the actual ASPD.') }));
     aspdBox.appendChild(el('div', { class:'aspd-line' }, [
       document.createTextNode('180 + ' + agiPush + ' (AGI÷40) + ' + s.equipDerived.aspdLimit + L(' (ASPD Limit do equip. e opções extras) + ', ' (gear and extra-option ASPD Limit) + ') +
-        s.skillBonus.aspdLimit + L(' (passivas) + ', ' (passives) + ') + manual + ' (manual) = ')
+        s.skillBonus.aspdLimit + L(' (passivas), até 190, + ', ' (passives), up to 190, + ') + manual + L(' (skill manual) = ', ' (manual skill) = '))
     ]));
-    var capEl = el('span', { class:'aspd-total', text: String(cap) + ' / 190' });
+    var capEl = el('span', { class:'aspd-total', text: String(cap) + (manual ? '' : ' / 190') });
     aspdBox.appendChild(capEl);
     if (s.aspdCapRaw > 190){
-      aspdBox.appendChild(el('div', { class:'aspd-line aspd-over', text:L('A soma dá ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' acima do teto máximo de 190 do Codex. Esse excedente não entra; dá para trocar ASPD Limit por outra opção.',
-        'The sum is ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' over the Codex hard cap of 190. The excess does nothing; you could swap some ASPD Limit for another option.') }));
+      aspdBox.appendChild(el('div', { class:'aspd-line aspd-over', text:L('A soma dá ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' acima do teto máximo de 190. Esse excedente não entra; dá para trocar ASPD Limit por outra opção.',
+        'The sum is ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' over the hard cap of 190. The excess does nothing; you could swap some ASPD Limit for another option.') }));
     }
     var manualRow = el('div', { class:'aspd-manual' }, [
       el('span', { text:L('Bônus manual de skill (ex: Frenzy +3):', 'Manual skill bonus (e.g. Frenzy +3):') })
@@ -2673,6 +2680,10 @@ input.invalid{ border-color:var(--danger) !important; }
       return st === 'complete' ? [L('Conjunto completo', 'Set complete'), 'on'] : [L('Conjunto incompleto', 'Set incomplete'), 'off'];
     }
     if (b.kind === 'setRefine') return [L('Refino do conjunto · não calculado', 'Set refine · not calculated'), 'info'];
+    if (b.kind === 'levelAt'){
+      var on = shownLevel() >= b.min;
+      return [L('Nível base ', 'Base level ') + b.min + '+' + (on ? L(' · ativo', ' · active') : L(' · inativo', ' · inactive')), on ? 'on' : 'off'];
+    }
     if (b.kind === 'cond') return [L('Condicional · não calculado', 'Conditional · not calculated'), 'info'];
     return null;
   }

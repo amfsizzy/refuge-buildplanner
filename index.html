@@ -1015,6 +1015,7 @@ input.invalid{ border-color:var(--danger) !important; }
 .st-req-block{ border-top-color:color-mix(in srgb, var(--mid) 45%, transparent); }
 .st-req-badge{ color:var(--mid); }
 .st-req-line{ color:var(--mid); }
+.st-dmg-line{ color:var(--stat-card); }
 </style>
 </head>
 <body>
@@ -2928,6 +2929,8 @@ input.invalid{ border-color:var(--danger) !important; }
   // Lines of a description that set a condition ("Requires 3 Bullets", "Must be chained after…")
   // get their own color, so the player sees first what the skill needs.
   var RE_REQUIREMENT = /\b(requires?|required|requirement|must|needs?|only (?:usable|works|available)|can only)\b/i;
+  // Lines about damage ("Damage is 55+10% per level") in purple; a requirement line stays yellow.
+  var RE_DAMAGE = /\b(damage|dmg)\b/i;
   function fillSkillTip(model, s){
     var t = ensureTip();
     clear(t);

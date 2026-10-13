@@ -815,7 +815,7 @@ input.invalid{ border-color:var(--danger) !important; }
     <section class="tab-panel" id="panel-status">
       <details class="status-warning">
         <summary><strong data-en="Note:">Aviso:</strong> <span data-en="what the calculation leaves out">o que fica de fora do cálculo</span></summary>
-        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;), the DEF that refining armor gives and the refine ATK/MATK of level 4 weapons. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…"), o DEF que o refino de armadura dá e o ATK/MATK de refino de armas nível 4. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
+        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;), the DEF that refining shields, garments, shoes and headgear gives. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…"), o DEF que o refino de escudo, capa, calçado e chapéu dá. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
       </details>
       <div class="stat-calc">
         <h2 data-en="Stat Points Calculator">Calculadora de Pontos</h2>
@@ -1612,13 +1612,17 @@ input.invalid{ border-color:var(--danger) !important; }
   }
 
   // Refining the main weapon adds 0.5 × weapon level ATK and MATK per refine, rounded down,
-  // even on weapons with no base MATK. Confirmed in game for weapon levels 1, 2 and 3
-  // (2026-10-13); level 4 is not counted until it is measured.
-  var REFINE_CONFIRMED_WLV = [1, 2, 3];
+  // even on weapons with no base MATK. Measured in game for weapon levels 1, 2 and 3
+  // (2026-10-13); level 4 follows the same rule (applied at the player's request, still to
+  // be measured).
+  var REFINE_WLV = [1, 2, 3, 4];
   function weaponRefineBonus(it, refine){
-    if (!it.wlv || REFINE_CONFIRMED_WLV.indexOf(it.wlv) === -1) return 0;
+    if (!it.wlv || REFINE_WLV.indexOf(it.wlv) === -1) return 0;
     return Math.floor(0.5 * it.wlv * (refine || 0));
   }
+  // Refining body armor adds +1 DEF every 2 refines, rounded up (+1 → 1, +2 → 1, +4 → 2), and
+  // no MDEF. Measured on a Padded Armor (2026-10-13); other armor slots aren't counted yet.
+  function armorRefineBonus(refine){ return Math.ceil((refine || 0) / 2); }
   function computeTotals(lo){
     var t = { atk:0, matk:0, def:0, mdef:0, weight:0 };
     if (!state.db) return t;
@@ -1630,6 +1634,7 @@ input.invalid{ border-color:var(--danger) !important; }
       if (!it) return;
       t.atk += it.atk||0; t.matk += it.matk||0; t.def += it.def||0; t.mdef += it.mdef||0; t.weight += it.weight||0;
       if (s.key === 'weapon'){ var rb = weaponRefineBonus(it, v.refine); t.atk += rb; t.matk += rb; }
+      if (s.key === 'armor') t.def += armorRefineBonus(v.refine);
     });
     return t;
   }

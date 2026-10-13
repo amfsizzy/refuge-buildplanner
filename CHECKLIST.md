@@ -6,29 +6,30 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 36 of 58 items confirmed.
+**Progress:** 38 of 58 items confirmed.
 
 ## Refine
 
-*High priority* · The tool already adds the refine ATK/MATK of level 1 to 3 weapons. Still missing: level 4 weapons and armor refine.
+*High priority* · The tool already adds weapon refine (level 4 by the rule, still to be measured) and body armor refine. Still to test: shield, garment, shoes and headgear.
 
-**Open (7)**
+**Open (6)**
 
 - [ ] `r4` **ATK per refine: level 4 weapon**: Same test with a level 4 weapon. Lead: +2 per refine. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r6` **DEF/MDEF per refine: armor**: Note DEF and MDEF with the armor at +0, +2 and +4. Lead: +1 DEF every 2 refines. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r7` **DEF/MDEF per refine: shield**: Same test with a shield. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+  - Result: Aplicado na ferramenta pela regra dos níveis 1 a 3 (0,5 × nível = +2 por refino). Falta confirmar com uma arma nível 4 no jogo.
+- [ ] `r7` **DEF/MDEF per refine: shield**: Same test with a shield (DEF at +0, +1, +2 and +4). Body armor gave +1 DEF every 2 refines, rounded up. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r8` **DEF/MDEF per refine: garment**: Same test with a garment. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r9` **DEF/MDEF per refine: shoes**: Same test with shoes. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r10` **DEF/MDEF per refine: headgear**: Same test with an upper headgear. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `r11` **Set refine ("Per total set refine")**: With a full shadow set, change one piece's refine and check whether the set bonus adds up the refine of all pieces. Lead: some shadow refine bonuses only apply with the full set. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmed (4)</summary>
+<summary>Confirmed (5)</summary>
 
 - [x] `r1` **ATK per refine: level 1 weapon**: Confirmado: Knife (arma nível 1) dá +0,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 5, +1: 5, +2: 6, +4: 7; MATK 0, 0, 1, 2).
 - [x] `r2` **ATK per refine: level 2 weapon**: Confirmado: Gemstone Knife (arma nível 2) dá +1 ATK e +1 MATK por refino (+0: 4/16, +1: 5/17, +2: 6/18, +4: 8/20). Bate com a pista de 0,5 × nível da arma por refino.
 - [x] `r3` **ATK per refine: level 3 weapon**: Confirmado: Cowardice Blade (arma nível 3) dá +1,5 ATK e MATK por refino, arredondado para baixo (ATK +0: 13, +1: 14, +2: 16, +4: 19).
 - [x] `r5` **MATK per refine**: Confirmado: o refino sobe o MATK no mesmo ritmo do ATK (0,5 × nível da arma), inclusive em armas sem MATK base (Knife e Cowardice Blade).
+- [x] `r6` **DEF/MDEF per refine: armor**: Confirmado: Padded Armor (DEF base 22) ficou com 23 em +1, 23 em +2 e 24 em +4. Ou seja, +1 DEF a cada 2 refinos, arredondado para cima, e nenhum MDEF.
 
 </details>
 
@@ -44,7 +45,7 @@ We don't have access to the game files: the planner only knows what the server's
 <details>
 <summary>Confirmed (4)</summary>
 
-- [x] `a1` **ASPD curve from AGI**: Legend nível 105, sem itens, DEX 1, com Shadow Mastery 10 e Blade Mastery 10 (passivas de ASPD %). AGI 1/10/20/40/60/80/99 → sem arma: 148, 151, 155, 162, 169, 176, 182; com Gemstone Knife (adaga): 142, 146, 150, 158, 166, 175, 182. A curva inclui as passivas desse personagem.
+- [x] `a1` **ASPD curve from AGI**: Legend nível 105, sem itens, DEX 1, com Shadow Mastery 10 e Blade Mastery 10 (passivas de ASPD %). AGI 1/10/20/40/60/80/99 → sem arma: 148, 151, 155, 162, 169, 176, 182; com Gemstone Knife (adaga): 142, 146, 150, 158, 166, 175, 182. A curva inclui as passivas desse personagem. Extra: com AGI 101 (99 + 2 de bônus) o ASPD foi a 184.
 - [x] `a2` **DEX effect on ASPD**: Confirmado: o DEX não mexe no ASPD. Com AGI 99 e a adaga, DEX 1 e DEX 50 deram 182 (abaixo do teto de 185 desse Legend). O tooltip do DEX no jogo só fala em ATK/MATK.
 - [x] `a4` **Class**: Confirmado: o teto base é 180 para todas as classes. Só skills sobem o limite: Jester (Card Mastery e Sleight Mastery no máximo, +1 cada), Legend (Frenzy, +3 passivo; ativo fixa o ASPD em 193) e Dracomancer com espada (Weapon Quicken, +1).
 - [x] `a5` **Hard ASPD cap**: Confirmado: o teto máximo do servidor é 190. Skills podem passar disso: o Legend chega a 193 com Frenzy.
@@ -89,21 +90,20 @@ We don't have access to the game files: the planner only knows what the server's
 
 *Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). How to test: with no gear, enter the same level and stats as the character in the tool and compare each number in the Status window with the tool's Status tab.
 
-**Open (4)**
+**Open (3)**
 
 - [ ] `f3` **Critical**: Formula used: 1 + LUK÷3 + 2 per 10 LUK. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `f6` **Soft DEF and MDEF**: It is the number after the "+" in DEF and MDEF in the Status window. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-  - Result: Corrigido: DEF suave = nível + VIT (+5 a cada 10 de VIT) e MDEF suave = nível÷4 + INT + DEX÷5 + VIT÷5; os dois bateram em dois prints. Falta um print com VIT diferente de 1 para confirmar a parte do VIT.
 - [ ] `f7` **STR → DEX swap with ranged weapons**: With a bow or revolver, check whether ATK comes from DEX instead of STR. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 - [ ] `f10` **Damage reduction from DEF and MDEF**: The Defenses tooltip says: 100 DEF reduces about 18%, 275 reduces 1/3 and 500 reduces 50%; 50 MDEF reduces about 30% and 100 MDEF about 55%. The classic formula matches DEF and 50 MDEF, but would give 45% for 100 MDEF. If anyone can test it (damage taken from the same attack at different MDEF), please confirm. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
 
 <details>
-<summary>Confirmed (6)</summary>
+<summary>Confirmed (7)</summary>
 
 - [x] `f1` **HIT**: Corrigido: HIT = Level + 2×DEX + LUK÷5 + 200 (a ferramenta usava 175). Bateu em dois prints (307 e 405).
 - [x] `f2` **FLEE**: Confirmado: a fórmula bate. Os +70 que sobravam eram Improve Dodge 10 (+40) e Shadow Mastery 10 (+30).
 - [x] `f4` **Perfect Dodge**: Confirmado: 1 + (AGI + LUK)÷10 (1 com tudo em 1; 11 com AGI 99). É o número depois do "+" no FLEE.
 - [x] `f5` **Status ATK and MATK**: Corrigido: ATK e MATK de status somam o nível base ÷ 4, e cada 10 de DEX dá +1 MATK. ATK = nível÷4 + STR + DEX÷5 + DEX÷20 + LUK÷3; MATK = nível÷4 + INT×1,5 + DEX÷5 + DEX÷10 + LUK÷3. Bateu em dois prints (27/27 e 39/45).
+- [x] `f6` **Soft DEF and MDEF**: Confirmado: DEF suave = nível + VIT (+5 a cada 10 de VIT, pelo tooltip) e MDEF suave = nível÷4 + INT + DEX÷5 + VIT÷5. Bateu com VIT 1 (106/27 e 106/39) e VIT 2 (107/37).
 - [x] `f8` **Bonus every 10 stat points**: Confirmado pelos tooltips do jogo (a cada 10 do total do atributo): STR +1 ATK; AGI +1 FLEE e +1 ASPD; VIT +5 DEF e MDEF (fixos); INT +1 MATK; DEX +1 ATK e MATK; LUK +2 Critical e +1% de dano crítico.
 - [x] `f9` **Casting and critical damage**: Confirmado pelos tooltips do jogo: o crítico dá 1,2× de dano (+1% a cada 10 de LUK) e ignora FLEE. Cada DEX reduz 0,25% do cast variável e cada INT 0,125%; DEX×2 + INT = 400 zera o cast variável. O cast fixo só cai com equipamento. A ferramenta mostra os dois no Status.
 

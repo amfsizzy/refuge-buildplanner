@@ -815,7 +815,7 @@ input.invalid{ border-color:var(--danger) !important; }
     <section class="tab-panel" id="panel-status">
       <details class="status-warning">
         <summary><strong data-en="Note:">Aviso:</strong> <span data-en="what the calculation leaves out">o que fica de fora do cálculo</span></summary>
-        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;) and the extra ATK/DEF that refining itself gives. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…") e o ATK/DEF extra que o próprio refino dá. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
+        <p data-en="We don&#39;t have access to the game files: the planner only knows what the server&#39;s public item database makes available, plus what players confirm in game. So anything that isn&#39;t published there is left out until someone measures it: max HP/SP (they need per-class tables that aren&#39;t published; the database&#39;s glossary is also wrong about INT raising max SP, confirmed in game), percentage bonuses, set refine, conditional bonuses (&quot;While wearing…&quot;), the DEF that refining armor gives and the refine ATK/MATK of level 4 weapons. Numbers stay on the low side on purpose. If a formula doesn&#39;t match the game, send us your result and we&#39;ll fix it.">Não temos acesso aos arquivos do jogo: o planner só conhece o que a base de itens pública do servidor disponibiliza, mais o que os jogadores confirmam no jogo. Por isso, o que não está publicado lá fica de fora até alguém medir: SP/HP máximos (dependem de tabelas por classe que não são publicadas; o glossário da base também erra ao dizer que INT aumenta o SP máximo, confirmado no jogo), bônus percentual, refino de conjunto, bônus condicionais ("While wearing…"), o DEF que o refino de armadura dá e o ATK/MATK de refino de armas nível 4. Os números ficam propositalmente para menos. Se alguma fórmula não bater com o jogo, mande o seu resultado que a gente corrige.</p>
       </details>
       <div class="stat-calc">
         <h2 data-en="Stat Points Calculator">Calculadora de Pontos</h2>
@@ -1317,6 +1317,7 @@ input.invalid{ border-color:var(--danger) !important; }
         lv: r[idx.lv],
         atk: r[idx.atk], matk: r[idx.matk], def: r[idx.def], mdef: r[idx.mdef], weight: r[idx.weight],
         slots: Math.max(0, Math.min(4, r[idx.slots] | 0)),
+        wlv: Math.max(0, Math.min(5, r[idx.wlv] | 0)), // weapon level (0 = not a weapon)
         refinable: r[idx.refine] === 1,
         jobsText: jobs[r[idx.jobs]] || '',
         shop: r[idx.shop] === 1,
@@ -1610,6 +1611,14 @@ input.invalid{ border-color:var(--danger) !important; }
     document.getElementById('fClass').value = lo.charClass || '';
   }
 
+  // Refining the main weapon adds 0.5 × weapon level ATK and MATK per refine, rounded down,
+  // even on weapons with no base MATK. Confirmed in game for weapon levels 1, 2 and 3
+  // (2026-10-13); level 4 is not counted until it is measured.
+  var REFINE_CONFIRMED_WLV = [1, 2, 3];
+  function weaponRefineBonus(it, refine){
+    if (!it.wlv || REFINE_CONFIRMED_WLV.indexOf(it.wlv) === -1) return 0;
+    return Math.floor(0.5 * it.wlv * (refine || 0));
+  }
   function computeTotals(lo){
     var t = { atk:0, matk:0, def:0, mdef:0, weight:0 };
     if (!state.db) return t;
@@ -1620,6 +1629,7 @@ input.invalid{ border-color:var(--danger) !important; }
       var it = itemById(v.itemId);
       if (!it) return;
       t.atk += it.atk||0; t.matk += it.matk||0; t.def += it.def||0; t.mdef += it.mdef||0; t.weight += it.weight||0;
+      if (s.key === 'weapon'){ var rb = weaponRefineBonus(it, v.refine); t.atk += rb; t.matk += rb; }
     });
     return t;
   }
@@ -2158,7 +2168,7 @@ input.invalid{ border-color:var(--danger) !important; }
   }
   // ---------- class passive skills ----------
   // Hand-verified 2026-10-05 against every Passive/Permanent row of db-skills.json (126 rows):
-  // only these 23 skills give a flat bonus the simulator models (plus Frenzy's passive part, below). Where the site's "numbers"
+  // only these 23 skills give a flat bonus the simulator models (plus Frenzy's passive part and Blade Dominion, added 2026-10-13). Where the site's "numbers"
   // field disagreed with the description, the skill's patch history ("moved"/"said") showed the
   // description is the current text (Perfection Mastery's crit was later confirmed against the
   // in-game tooltip by the player). `h` is a hash of the description at verification
@@ -2185,11 +2195,15 @@ input.invalid{ border-color:var(--danger) !important; }
       parts:[{ need:['dagger', 'sword'], per:{ atk:3, hit:5 } }] },
     { id:'advanced-katar-mastery', name:'Advanced Katar Mastery', max:5, h:'mu9b2m', cls:['Gravekeeper'],
       parts:[{ need:['katar'], per:{ atk:3 } }] },
-    { id:'advanced-scythe-mastery', name:'Advanced Scythe Mastery', max:10, h:'h1fdlx', cls:['Revenant'],
-      parts:[{ need:['scythe'], per:{ atk:5, crit:1, flee:2 } }] },
+    { id:'advanced-scythe-mastery', name:'Advanced Scythe Mastery', max:10, h:'y62o1p', cls:['Revenant'],
+      parts:[{ need:['scythe'], per:{ atk:5, crit:1, flee:2 } }], skipped:L('dano crítico +5% com foice no nível 10', 'critical damage +5% with scythes at level 10') },
     { id:'axe-mastery', name:'Axe Mastery', max:10, h:'l5m3dj', cls:['Assassin'],
       parts:[{ need:['axe'], per:{ atk:3 } }], skipped:L('+35 HP por nível', '+35 HP per level') },
-    { id:'blade-mastery', name:'Blade Mastery', max:10, h:'1gxkpq6', cls:['Assassin', 'Dark Knight', 'Rogue', 'Unchained Thief', 'Vagabond'],
+    { id:'blade-dominion', name:'Blade Dominion', max:10, h:'xkxsrf', cls:['Dark Knight'],
+      parts:[{ need:['sword1h'], per:{ atk:3 } }],
+      skipped:L('abaixo de 40% de HP: +4 ATK e +1 de penetração de DEF por nível; chance de Vengeance e de bloqueio com espada de duas mãos', 'below 40% HP: +4 ATK and +1 DEF penetration per level; Vengeance and block chance with two-handed swords') },
+    // Re-checked 2026-10-13: Dark Knights now use Blade Dominion instead (per the site).
+    { id:'blade-mastery', name:'Blade Mastery', max:10, h:'17oj4cz', cls:['Assassin', 'Rogue', 'Unchained Thief', 'Vagabond'],
       parts:[{ need:['dagger', 'sword'], per:{ atk:3 } }], skipped:L('+1% de ASPD por nível', '+1% ASPD per level') },
     { id:'bow-mastery', name:'Bow Mastery', max:10, h:'noznr0', cls:['Rogue', 'Unchained Thief'],
       parts:[{ need:['bow'], per:{ dex:1 } }] },
@@ -2469,15 +2483,20 @@ input.invalid{ border-color:var(--danger) !important; }
     return {
       level: level, totals: totals, bonuses: bonuses, derived: derived, equipDerived: equipDerived, skillBonus: skillBonus,
       activeSets: activeSets, isRanged: isRanged,
-      hit: level + 2*D + Math.floor(L/5) + 175 + derived.hit,
+      // HIT, ATK, MATK and soft DEF/MDEF checked against two in-game Status windows of a
+      // level 105 character with no gear (all stats 1; AGI 99/DEX 50/INT 1+2), 2026-10-13:
+      // base level counts (÷4 for ATK/MATK/MDEF, in full for DEF), HIT has +200 (not 175),
+      // and every 10 DEX adds +1 MATK. FLEE and Perfect Dodge matched as they were.
+      hit: level + 2*D + Math.floor(L/5) + 200 + derived.hit,
       flee: level + A + Math.floor(A/10) + Math.floor(L/5) + 100 + derived.flee,
       crit: 1 + Math.floor(L/3) + 2*Math.floor(L/10) + derived.crit,
       pdodge: Math.min(100, 1 + Math.floor((A+L)/10) + derived.pdodge),
-      atk: Math.round(strAtk + dexAtkBase + dexAtkSpecial + lukAtk) + derived.atk,
-      matkMin: Math.round(I*1.5 + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(L/3)) + derived.matk,
-      matkMax: Math.round(I*1.5 + Math.floor(I/10)*4 + Math.floor(D/5) + Math.floor(L/3)) + derived.matk,
-      softDef: V + Math.floor(V/10)*5 + derived.def,
-      softMdef: Math.floor(V/10)*5 + Math.floor(V/5)*1 + Math.floor(D/5) + derived.mdef,
+      atk: Math.floor(level/4) + Math.round(strAtk + dexAtkBase + dexAtkSpecial + lukAtk) + derived.atk,
+      matkMin: Math.floor(level/4) + Math.floor(I*1.5) + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(D/10) + Math.floor(L/3) + derived.matk,
+      // The in-game INT tooltip says "10 total INT: +1 MATK", so MATK is a single value.
+      matkMax: Math.floor(level/4) + Math.floor(I*1.5) + Math.floor(I/10)*1 + Math.floor(D/5) + Math.floor(D/10) + Math.floor(L/3) + derived.matk,
+      softDef: level + V + Math.floor(V/10)*5 + derived.def,
+      softMdef: Math.floor(level/4) + I + Math.floor(V/10)*5 + Math.floor(V/5)*1 + Math.floor(D/5) + derived.mdef,
       agiPush: agiPush, manualAspd: manual,
       // 190 is the server's hard cap for gear and passives; buffs typed in as the manual skill
       // bonus are added after the clamp (active Frenzy, which fixes ASPD at 193, is only noted).
@@ -2521,6 +2540,22 @@ input.invalid{ border-color:var(--danger) !important; }
     cell('Perfect Dodge', s.pdodge, 'pdodge');
     cell(L('DEF suave', 'Soft DEF'), s.softDef, 'def');
     cell(L('MDEF suave', 'Soft MDEF'), s.softMdef, 'mdef');
+    // From the in-game tooltips: critical hits deal 1.2x, +1% every 10 LUK; each DEX cuts
+    // variable cast time by 0.25% and each INT by 0.125% (DEX×2 + INT = 400 removes it).
+    function plainCell(label, value, note){
+      var c = el('div', { class:'sim-cell' });
+      c.appendChild(el('div', { class:'sc-label', text:label }));
+      var w = el('div');
+      w.appendChild(el('span', { class:'sc-value', text:value }));
+      if (note) w.appendChild(el('span', { class:'sc-bonus', text:note }));
+      c.appendChild(w);
+      grid.appendChild(c);
+    }
+    var lukT = s.totals.luk, dexT = s.totals.dex, intT = s.totals.int;
+    plainCell(L('Dano crítico', 'Critical damage'), (120 + Math.floor(lukT/10)) + '%', L('base 120% + LUK', 'base 120% + LUK'));
+    var castScore = dexT*2 + intT;
+    plainCell(L('Conjuração variável', 'Variable cast'), '−' + Math.min(100, Math.round((dexT*0.25 + intT*0.125)*10)/10) + '%',
+      L('DEX×2+INT = ', 'DEX×2+INT = ') + castScore + ' / 400');
 
     var agiPush = s.agiPush;
     var manual = s.manualAspd;

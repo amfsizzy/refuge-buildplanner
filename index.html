@@ -2585,9 +2585,22 @@ input.invalid{ border-color:var(--danger) !important; }
     'Unchained Rogue':'Rogue', 'Duelist':'Rogue', 'Mystic':'Rogue', 'Saboteur':'Rogue', 'Deadeye':'Rogue',
     'Kingslayer':'Duelist', 'Arcane Master':'Mystic', 'Blast Juggler':'Saboteur', 'Sinner':'Deadeye'
   };
-  // Points per class by its place in the line (Orphan = 0). Beyond that, and for Merchant (a
-  // class of its own), the number isn't confirmed yet: the tree counts points with no cap.
-  var CLASS_POINTS_BY_DEPTH = [9, 49, 69, 69];
+  // Skill points per class = its max job level - 1, from each class's own note on the site
+  // ("Maximum job level is 50", "Job Change can be done at Job Level 70"). Orphan goes to job 10.
+  // Specializations "increase the max job level from 50 to 70": 20 more points of their own.
+  // Classes with no number on the site count points with no cap until it's confirmed.
+  var CLASS_POINTS = {
+    'Orphan':9,
+    'Thief':49, 'Assassin':49, 'Rogue':49, 'Unchained Thief':49, 'Phantom Thief':49, 'Prowler':49, 'Shadowseer':49,
+    'Ronin':49, 'Illusionist':49, 'Mimic':49, 'Raider':49,
+    'Blade Dancer':20, 'Shinobi':20, 'Scoundrel':20, 'Executioner':20, 'Duelist':20, 'Mystic':20, 'Saboteur':20, 'Deadeye':20,
+    'Vagabond':69, 'Legend':69, 'Jester':69, 'Dark Knight':69, 'Peacekeeper':69, 'Dracomancer':69, 'Trickster':69,
+    'Night Raven':69, 'Satsujin':69, 'Black Plague':69, 'Gravekeeper':69, 'Kingslayer':69, 'Arcane Master':69,
+    'Blast Juggler':69, 'Sinner':69,
+    'Judge':99
+  };
+  // Merchant never levels up, so it has no tree.
+  var NO_TREE = ['Merchant'];
   var TREE_COLS = 7;
   var skillDb = null;       // { byClass:{cls:[skill]}, byKey:{key:skill} } once the site's skill list loads
   var skillDbFailed = false;
@@ -2622,9 +2635,8 @@ input.invalid{ border-color:var(--danger) !important; }
     while (CLASS_PARENT[line[0]] && guard++ < 10) line.unshift(CLASS_PARENT[line[0]]);
     return line;
   }
-  function classCap(cls, depth){
-    if (cls === 'Merchant') return null;
-    return depth < CLASS_POINTS_BY_DEPTH.length ? CLASS_POINTS_BY_DEPTH[depth] : null;
+  function classCap(cls){
+    return CLASS_POINTS[cls] !== undefined ? CLASS_POINTS[cls] : null;
   }
   function stageTree(lo){
     var sd = activeStageData(lo);
@@ -2641,7 +2653,7 @@ input.invalid{ border-color:var(--danger) !important; }
       var used = skills.reduce(function(t, s){ return t + treeLv(tree, s); }, 0);
       // Some classes' skills add up to fewer levels than their job gives (Blade Dancer: 40 of
       // 69); maxing every skill then counts as a full class, so the next one can open.
-      var jobCap = classCap(cls, i), room = skills.reduce(function(t, s){ return t + s.max; }, 0);
+      var jobCap = classCap(cls), room = skills.reduce(function(t, s){ return t + s.max; }, 0);
       var cap = jobCap === null ? null : Math.min(jobCap, room);
       return { cls: cls, depth: i, skills: skills, cap: cap, jobCap: jobCap, used: used };
     });
@@ -2774,6 +2786,10 @@ input.invalid{ border-color:var(--danger) !important; }
     clear(box);
     if (!lo.charClass){
       box.appendChild(el('div', { class:'empty-note', text:L('Escolha a classe do loadout (no topo) para montar a árvore de skills.', "Choose the loadout's class (at the top) to plan its skill tree.") }));
+      return;
+    }
+    if (NO_TREE.indexOf(lo.charClass) !== -1){
+      box.appendChild(el('div', { class:'empty-note', text:L(lo.charClass + ' não sobe de nível, então não tem árvore de skills.', lo.charClass + " doesn't level up, so it has no skill tree.") }));
       return;
     }
     if (!skillDb){

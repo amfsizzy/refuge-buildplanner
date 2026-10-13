@@ -969,6 +969,48 @@ input.invalid{ border-color:var(--danger) !important; }
 .layout-switch button[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
 .layout-switch button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
 @media (pointer:coarse){ .layout-switch button{ min-height:36px; } }
+
+/* ---- skill tree (v2): one section per class, a 7-column grid like the in-game window ---- */
+.st-top{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+.st-line{ font-family:var(--font-display); font-size:15px; color:var(--fg); }
+.st-total{ font-size:12px; color:var(--fg-faint); margin-top:2px; }
+.st-tools{ display:flex; gap:6px; flex-wrap:wrap; }
+.st-help{ font-size:11.5px; color:var(--fg-faint); margin-top:8px; }
+.st-msg{ min-height:18px; font-size:12px; color:var(--danger); margin:6px 0 4px; }
+.st-class{ border:1px solid var(--border); border-radius:12px; padding:10px 12px 12px; margin-top:10px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)) 0%, var(--surface) 70%); }
+.st-class.locked{ opacity:.55; }
+.st-class-head{ display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-bottom:8px; }
+.st-class-head h3{ margin:0; font-family:var(--font-display); font-size:16px; font-weight:400; color:var(--accent-strong); }
+.st-pts{ font-family:var(--font-mono); font-size:12px; color:var(--fg-dim); padding:1px 8px; border-radius:999px; border:1px solid var(--border); }
+.st-pts.full{ color:var(--stat-item); border-color:color-mix(in srgb, var(--stat-item) 50%, transparent); }
+.st-note{ font-size:11px; color:var(--fg-faint); }
+.st-lock{ font-size:11px; color:var(--mid); }
+.st-reset{ margin-left:auto; padding:3px 10px; font-size:11px; }
+.st-scroll{ overflow-x:auto; padding-bottom:2px; }
+.st-grid{ display:grid; grid-template-columns:repeat(7, minmax(78px, 1fr)); gap:6px; min-width:600px; }
+.st-cell{
+  display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px 4px; border-radius:9px;
+  border:1px solid var(--border-soft); background:var(--surface-2); cursor:pointer; user-select:none; min-width:0;
+}
+.st-cell:hover{ border-color:var(--accent); }
+.st-cell:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+.st-cell.on{ border-color:color-mix(in srgb, var(--accent) 60%, transparent); background:color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+.st-cell.maxed{ box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.st-name{ font-size:10.5px; color:var(--fg-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.st-cell.on .st-name{ color:var(--fg); }
+.st-icon{ width:34px; height:34px; display:grid; place-items:center; border-radius:7px; background:var(--surface-3); border:1px solid var(--border-soft); }
+.st-icon img{ width:24px; height:24px; image-rendering:pixelated; }
+.st-cell:not(.on) .st-icon img{ filter:grayscale(.85); opacity:.65; }
+.st-lv{ display:flex; align-items:center; gap:2px; font-family:var(--font-mono); font-size:11px; color:var(--fg-faint); }
+.st-cell.on .st-lv{ color:var(--accent-strong); font-weight:700; }
+.st-step{ width:18px; height:18px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--fg-faint); font-size:14px; line-height:1; cursor:pointer; opacity:0; }
+.st-cell:hover .st-step, .st-cell:focus-within .st-step{ opacity:1; }
+.st-step:hover{ color:var(--accent-strong); background:var(--surface-3); }
+@media (pointer:coarse){ .st-step{ opacity:1; width:26px; height:26px; } }
+.st-tip-icon{ width:24px !important; height:24px !important; background:none !important; }
+.st-need{ color:var(--fg-dim); }
+.st-need.ok{ color:var(--stat-item); }
 </style>
 </head>
 <body>
@@ -1031,6 +1073,7 @@ input.invalid{ border-color:var(--danger) !important; }
         <nav class="tabs" data-group="main">
           <button class="tab-btn active" data-tab="equip" type="button" data-en="Equipment">Equipamento</button>
           <button class="tab-btn" data-tab="shadow" type="button">Shadow</button>
+          <button class="tab-btn" data-tab="skills" type="button">Skills</button>
           <button class="tab-btn" data-tab="farm" type="button">Farm</button>
           <button class="tab-btn" data-tab="notes" type="button" data-en="Notes">Notas</button>
         </nav>
@@ -1060,6 +1103,10 @@ input.invalid{ border-color:var(--danger) !important; }
           <div class="panel-tools"><div class="layout-switch" role="group" aria-label="Layout" data-en-aria-label="Layout"><button type="button" data-layout="doll" data-en="New">Novo</button><button type="button" data-layout="grid" data-en="Classic">Clássico</button></div><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="equip-grid" id="shadowGrid"></div>
+      </section>
+
+      <section class="tab-panel" id="panel-skills" hidden>
+        <div id="skillTree"></div>
       </section>
 
       <section class="tab-panel" id="panel-farm" hidden>
@@ -1256,7 +1303,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // whitelist: known fields only, right types, clamped numbers, capped string lengths. A crafted
   // code can't crash rendering, pollute prototypes, bloat storage or break saving.
   var LIMITS = { loadouts:100, name:80, charClass:40, notes:20000, itemName:120, spriteUrl:300,
-    cards:4, extras:10, refine:10, extraLen:60, owned:500, codeChars:300000, decodedBytes:2000000, fileBytes:5000000 };
+    cards:4, extras:10, refine:10, extraLen:60, owned:500, treeSkills:400, codeChars:300000, decodedBytes:2000000, fileBytes:5000000 };
   var STAGE_KEYS = ['early', 'mid', 'late'];
   function own(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
   function isObj(v){ return !!v && typeof v === 'object' && !Array.isArray(v); }
@@ -1305,6 +1352,14 @@ input.invalid{ border-color:var(--danger) !important; }
     if (isObj(v.owned)) Object.keys(v.owned).slice(0, LIMITS.owned).forEach(function(k){
       if (/^\d{1,9}$/.test(k) && v.owned[k] === true) sd.owned[k] = true;
     });
+    if (isObj(v.tree)){
+      sd.tree = {};
+      Object.keys(v.tree).slice(0, LIMITS.treeSkills).forEach(function(k){
+        if (!/^[a-z0-9-]{1,40}\/[a-z0-9-]{1,80}$/.test(k)) return;
+        var lv = cleanNum(v.tree[k], 0, 20, 0);
+        if (lv) sd.tree[k] = lv;
+      });
+    }
     if (isObj(v.skills)){
       sd.skills = {};
       PASSIVES.forEach(function(p){
@@ -2510,6 +2565,386 @@ input.invalid{ border-color:var(--danger) !important; }
     });
   }
 
+  // ---------- skill tree (v2) ----------
+  // Every class the character went through, top to bottom on one page. Each class has its own
+  // points (1 per job level): Orphan 9 (job 10), then job 50 (49 points) and job 70 (69 points)
+  // for the next two, as the player confirmed. A class only takes points once every point of
+  // the class before it is spent, like in game. The grid of each class is laid out from the
+  // prerequisites (7 columns, like the in-game window): skills with no prerequisite in the
+  // class sit on the left and each one that needs another sits to its right.
+  var SKILL_ICON = function(code){ return 'https://rtm-database.pages.dev/assets/skills/' + encodeURIComponent(code) + '.png'; };
+  var CLASS_PARENT = {
+    'Jester':'Orphan', 'Vagabond':'Orphan', 'Raider':'Orphan', 'Trickster':'Orphan', 'Bouncer':'Orphan',
+    'Peacekeeper':'Orphan', 'Thief':'Orphan', 'Ronin':'Orphan', 'Judge':'Orphan', 'Dark Knight':'Orphan',
+    'Illusionist':'Orphan', 'Mimic':'Orphan',
+    'Legend':'Vagabond', 'Dracomancer':'Raider', 'Revenant':'Trickster', 'Pit Boss':'Bouncer',
+    'Shadowseer':'Thief', 'Prowler':'Thief', 'Assassin':'Thief', 'Unchained Thief':'Thief', 'Rogue':'Thief',
+    'Unchained Assassin':'Assassin', 'Blade Dancer':'Assassin', 'Shinobi':'Assassin', 'Scoundrel':'Assassin', 'Executioner':'Assassin',
+    'Night Raven':'Blade Dancer', 'Satsujin':'Shinobi', 'Black Plague':'Scoundrel', 'Gravekeeper':'Executioner',
+    'Phantom Thief':'Unchained Thief',
+    'Unchained Rogue':'Rogue', 'Duelist':'Rogue', 'Mystic':'Rogue', 'Saboteur':'Rogue', 'Deadeye':'Rogue',
+    'Kingslayer':'Duelist', 'Arcane Master':'Mystic', 'Blast Juggler':'Saboteur', 'Sinner':'Deadeye'
+  };
+  // Points per class by its place in the line (Orphan = 0). Beyond that, and for Merchant (a
+  // class of its own), the number isn't confirmed yet: the tree counts points with no cap.
+  var CLASS_POINTS_BY_DEPTH = [9, 49, 69, 69];
+  var TREE_COLS = 7;
+  var skillDb = null;       // { byClass:{cls:[skill]}, byKey:{key:skill} } once the site's skill list loads
+  var skillDbFailed = false;
+  var treeMsg = '';         // why the last click didn't change anything
+
+  function indexSkills(raw){
+    var I = {}; raw.cols.forEach(function(c, i){ I[c] = i; });
+    var types = raw.types || [], classes = raw.classes || [];
+    var byClass = {}, byKey = {};
+    raw.rows.forEach(function(r){
+      var cls = classes[r[I.cls]] || '';
+      var type = types[r[I.type]] || '';
+      if (!cls || cls === 'Shadow set' || type === 'Class note') return;
+      var key = String(r[I.key] || '');
+      if (!/^[a-z0-9-]+\/[a-z0-9-]+$/.test(key)) return;
+      var s = {
+        key: key, slug: key.split('/')[1], name: String(r[I.name] || ''), cls: cls, type: type,
+        max: Math.max(1, Math.min(20, r[I.max] | 0)), icon: String(r[I.icon] || ''),
+        desc: String(r[I.desc] || '').slice(0, 2500),
+        needs: (Array.isArray(r[I.needs]) ? r[I.needs] : []).filter(function(n){ return Array.isArray(n) && n.length >= 2; })
+          .map(function(n){ return { name: String(n[0]), lv: Math.max(1, n[1] | 0) }; })
+      };
+      (byClass[cls] = byClass[cls] || []).push(s);
+      byKey[key] = s;
+    });
+    return { byClass: byClass, byKey: byKey };
+  }
+  // Root first: Orphan → Thief → Assassin → Blade Dancer → Night Raven.
+  function classLine(cls){
+    if (!cls) return [];
+    var line = [cls], guard = 0;
+    while (CLASS_PARENT[line[0]] && guard++ < 10) line.unshift(CLASS_PARENT[line[0]]);
+    return line;
+  }
+  function classCap(cls, depth){
+    if (cls === 'Merchant') return null;
+    return depth < CLASS_POINTS_BY_DEPTH.length ? CLASS_POINTS_BY_DEPTH[depth] : null;
+  }
+  function stageTree(lo){
+    var sd = activeStageData(lo);
+    if (!isObj(sd.tree)) sd.tree = {};
+    return sd.tree;
+  }
+  function treeLv(tree, s){ return Math.max(0, Math.min(s.max, tree[s.key] | 0)); }
+  // The tree of the active loadout as a model: classes in line order, with skills, caps and use.
+  function treeModel(lo){
+    var line = classLine(lo.charClass);
+    var tree = stageTree(lo);
+    var classes = line.map(function(cls, i){
+      var skills = (skillDb && skillDb.byClass[cls]) || [];
+      var used = skills.reduce(function(t, s){ return t + treeLv(tree, s); }, 0);
+      // Some classes' skills add up to fewer levels than their job gives (Blade Dancer: 40 of
+      // 69); maxing every skill then counts as a full class, so the next one can open.
+      var jobCap = classCap(cls, i), room = skills.reduce(function(t, s){ return t + s.max; }, 0);
+      var cap = jobCap === null ? null : Math.min(jobCap, room);
+      return { cls: cls, depth: i, skills: skills, cap: cap, jobCap: jobCap, used: used };
+    });
+    return { line: line, tree: tree, classes: classes };
+  }
+  function classFull(c){ return c.cap === null || c.used >= c.cap; }
+  // A prerequisite is looked up in the skill's own class first, then in the classes before it.
+  function resolveNeed(model, name, classIdx){
+    for (var i = classIdx; i >= 0; i--){
+      var hit = model.classes[i].skills.filter(function(s){ return s.name === name; })[0];
+      if (hit) return { skill: hit, idx: i };
+    }
+    return null;
+  }
+  function classIndexOf(model, s){
+    for (var i = 0; i < model.classes.length; i++) if (model.classes[i].cls === s.cls) return i;
+    return -1;
+  }
+  // Levels a skill needs set (itself and its prerequisites, recursively) to reach `target`.
+  function raisePlan(model, s, target, plan, depth){
+    if (depth > 30) return plan;
+    var idx = classIndexOf(model, s);
+    var cur = plan[s.key] !== undefined ? plan[s.key] : treeLv(model.tree, s);
+    if (target > cur) plan[s.key] = target;
+    s.needs.forEach(function(n){
+      var r = resolveNeed(model, n.name, idx);
+      if (r) raisePlan(model, r.skill, Math.min(r.skill.max, n.lv), plan, depth + 1);
+    });
+    return plan;
+  }
+  function trySetSkill(lo, s, target){
+    var model = treeModel(lo);
+    var cur = treeLv(model.tree, s);
+    target = Math.max(0, Math.min(s.max, target));
+    if (target === cur) return '';
+    return target > cur ? tryRaise(model, s, target) : tryLower(model, s, target);
+  }
+  function tryRaise(model, s, target){
+    var plan = raisePlan(model, s, target, {}, 0);
+    var used = model.classes.map(function(c){ return c.used; });
+    Object.keys(plan).forEach(function(k){
+      var sk = skillDb.byKey[k];
+      used[classIndexOf(model, sk)] += plan[k] - treeLv(model.tree, sk);
+    });
+    for (var i = 0; i < model.classes.length; i++){
+      var c = model.classes[i];
+      if (c.cap !== null && used[i] > c.cap)
+        return L('Não há pontos suficientes em ' + c.cls + ' (' + used[i] + ' de ' + c.cap + ').', 'Not enough points in ' + c.cls + ' (' + used[i] + ' of ' + c.cap + ').');
+      // A class takes points only once every class before it is full.
+      if (used[i] > c.used){
+        for (var j = 0; j < i; j++){
+          var p = model.classes[j];
+          if (p.cap !== null && used[j] < p.cap)
+            return L('Gaste todos os pontos de ' + p.cls + ' antes (' + used[j] + ' de ' + p.cap + ').', 'Spend every point of ' + p.cls + ' first (' + used[j] + ' of ' + p.cap + ').');
+        }
+      }
+    }
+    Object.keys(plan).forEach(function(k){ model.tree[k] = plan[k]; });
+    return '';
+  }
+  function tryLower(model, s, target){
+    var idx = classIndexOf(model, s);
+    var blockers = [];
+    model.classes.forEach(function(c, ci){
+      c.skills.forEach(function(d){
+        if (!treeLv(model.tree, d)) return;
+        d.needs.forEach(function(n){
+          var r = resolveNeed(model, n.name, ci);
+          if (r && r.skill.key === s.key && n.lv > target) blockers.push(d.name + ' (' + L('precisa de Lv ', 'needs Lv ') + n.lv + ')');
+        });
+      });
+    });
+    if (blockers.length) return L('Usada por: ', 'Used by: ') + blockers.join(', ') + '.';
+    var c = model.classes[idx];
+    var later = model.classes.slice(idx + 1).filter(function(x){ return x.used > 0; });
+    if (c.cap !== null && later.length)
+      return L('Tire antes os pontos de ' + later.map(function(x){ return x.cls; }).join(', ') + ': ' + c.cls + ' precisa ficar completa.',
+        'Remove the points of ' + later.map(function(x){ return x.cls; }).join(', ') + ' first: ' + c.cls + ' has to stay full.');
+    if (target) model.tree[s.key] = target; else delete model.tree[s.key];
+    return '';
+  }
+  function resetTreeFrom(lo, idx){
+    var model = treeModel(lo);
+    model.classes.slice(idx).forEach(function(c){ c.skills.forEach(function(s){ delete model.tree[s.key]; }); });
+  }
+  // Column = how many prerequisites deep the skill is inside its class; row = next to the
+  // skill it comes from when that cell is free.
+  function layoutClass(skills){
+    var byName = {}; skills.forEach(function(s){ byName[s.name] = s; });
+    var depth = {};
+    function d(s, guard){
+      if (depth[s.key] !== undefined) return depth[s.key];
+      if (guard > 20) return 0;
+      depth[s.key] = 0; // guards against loops in the data
+      var v = 0;
+      s.needs.forEach(function(n){ var p = byName[n.name]; if (p && p !== s) v = Math.max(v, d(p, guard + 1) + 1); });
+      return (depth[s.key] = v);
+    }
+    skills.forEach(function(s){ d(s, 0); });
+    // Skills linked by a prerequisite inside the class go first, by depth; the ones with no
+    // link then fill the free cells left to right, so the grid stays compact like in game.
+    var linked = {};
+    skills.forEach(function(s){
+      s.needs.forEach(function(n){ var p = byName[n.name]; if (p && p !== s){ linked[s.key] = true; linked[p.key] = true; } });
+    });
+    var order = skills.filter(function(s){ return linked[s.key]; })
+      .sort(function(a, b){ return depth[a.key] - depth[b.key] || a.name.localeCompare(b.name); });
+    var taken = {}, pos = {};
+    order.forEach(function(s){
+      var col = Math.min(TREE_COLS - 1, depth[s.key]);
+      var parent = s.needs.map(function(n){ return byName[n.name]; }).filter(function(p){ return p && pos[p.key]; })[0];
+      var row = parent ? pos[parent.key].row : 0;
+      while (taken[col + ':' + row]) row++;
+      taken[col + ':' + row] = true;
+      pos[s.key] = { col: col, row: row };
+    });
+    var cell = 0;
+    skills.filter(function(s){ return !linked[s.key]; }).sort(function(a, b){ return a.name.localeCompare(b.name); })
+      .forEach(function(s){
+        while (taken[(cell % TREE_COLS) + ':' + Math.floor(cell / TREE_COLS)]) cell++;
+        pos[s.key] = { col: cell % TREE_COLS, row: Math.floor(cell / TREE_COLS) };
+        taken[pos[s.key].col + ':' + pos[s.key].row] = true;
+      });
+    return pos;
+  }
+
+  function renderSkillTree(lo){
+    var box = document.getElementById('skillTree');
+    if (!box) return;
+    clear(box);
+    if (!lo.charClass){
+      box.appendChild(el('div', { class:'empty-note', text:L('Escolha a classe do loadout (no topo) para montar a árvore de skills.', "Choose the loadout's class (at the top) to plan its skill tree.") }));
+      return;
+    }
+    if (!skillDb){
+      box.appendChild(el('div', { class:'empty-note', text: skillDbFailed
+        ? L('Não foi possível carregar a lista de skills do site. Recarregue a página para tentar de novo.', "Couldn't load the skill list from the site. Reload the page to try again.")
+        : L('Carregando as skills…', 'Loading skills…') }));
+      return;
+    }
+    var model = treeModel(lo);
+    var total = model.classes.reduce(function(t, c){ return t + c.used; }, 0);
+    var head = el('div', { class:'st-top' });
+    head.appendChild(el('div', {}, [
+      el('div', { class:'st-line', text: model.line.join(' → ') }),
+      el('div', { class:'st-total', text: total + L(' pontos usados nesta fase', ' points used in this stage') })
+    ]));
+    var tools = el('div', { class:'st-tools' });
+    var prev = STAGE_KEYS[STAGE_KEYS.indexOf(lo.activeStage) - 1];
+    if (prev){
+      var copy = el('button', { type:'button', class:'ghost-btn', text:L('Copiar da fase ', 'Copy from stage ') + prev.charAt(0).toUpperCase() + prev.slice(1) });
+      copy.addEventListener('click', function(){
+        var src = lo.stages[prev] && lo.stages[prev].tree;
+        activeStageData(lo).tree = isObj(src) ? JSON.parse(JSON.stringify(src)) : {};
+        treeMsg = ''; saveLoadouts(); render();
+      });
+      tools.appendChild(copy);
+    }
+    if (total) tools.appendChild(resetButton(L('Resetar tudo', 'Reset all'), function(){ resetTreeFrom(lo, 0); }));
+    head.appendChild(tools);
+    box.appendChild(head);
+    box.appendChild(el('div', { class:'st-help', text: TOUCH
+      ? L('Toque no ícone para subir 1 nível; use ‹ › para ajustar. Os pré-requisitos sobem juntos.', 'Tap an icon to add a level; use ‹ › to adjust. Prerequisites go up with it.')
+      : L('Clique sobe 1 nível, botão direito desce, Shift+clique vai ao máximo. Os pré-requisitos sobem juntos.', 'Click adds a level, right-click removes one, Shift+click goes to max. Prerequisites go up with it.') }));
+    box.appendChild(el('div', { class:'st-msg', role:'status', 'aria-live':'polite', text: treeMsg }));
+
+    model.classes.forEach(function(c, ci){
+      var blocker = model.classes.slice(0, ci).filter(function(p){ return !classFull(p); })[0];
+      var sec = el('section', { class:'st-class' + (blocker ? ' locked' : '') });
+      var h = el('div', { class:'st-class-head' });
+      h.appendChild(el('h3', { text: c.cls }));
+      var pts = c.cap === null ? c.used + L(' pontos', ' points') : c.used + ' / ' + c.cap + L(' pontos', ' points');
+      h.appendChild(el('span', { class:'st-pts' + (c.cap !== null && c.used === c.cap ? ' full' : ''), text: pts }));
+      if (c.cap === null) h.appendChild(el('span', { class:'st-note', text:L('limite de pontos ainda não confirmado', 'points cap not confirmed yet') }));
+      else if (c.jobCap > c.cap) h.appendChild(el('span', { class:'st-note', text:L('o job dá ' + c.jobCap + ' pontos, mas as skills desta classe só somam ' + c.cap, 'the job gives ' + c.jobCap + ' points, but this class’s skills only add up to ' + c.cap) }));
+      if (blocker) h.appendChild(el('span', { class:'st-lock', text:L('Travada: gaste antes os pontos de ', 'Locked: first spend the points of ') + blocker.cls }));
+      if (c.used) h.appendChild(resetButton(L('Resetar', 'Reset'), function(){ resetTreeFrom(lo, ci); }, true));
+      sec.appendChild(h);
+      if (!c.skills.length){
+        sec.appendChild(el('div', { class:'empty-note', text:L('Nenhuma skill desta classe na base do site.', 'No skills of this class in the site database.') }));
+      } else {
+        var pos = layoutClass(c.skills);
+        var wrap = el('div', { class:'st-scroll' });
+        var grid = el('div', { class:'st-grid' });
+        c.skills.forEach(function(s){ grid.appendChild(skillCell(lo, model, s, ci, pos[s.key])); });
+        wrap.appendChild(grid);
+        sec.appendChild(wrap);
+      }
+      box.appendChild(sec);
+    });
+  }
+  function resetButton(label, fn, small){
+    var b = el('button', { type:'button', class:'ghost-btn' + (small ? ' st-reset' : ''), text:label });
+    b.addEventListener('click', function(){ fn(); treeMsg = ''; saveLoadouts(); render(); });
+    return b;
+  }
+  function skillCell(lo, model, s, ci, p){
+    var lv = treeLv(model.tree, s);
+    var cell = el('div', { class:'st-cell' + (lv ? ' on' : '') + (lv === s.max ? ' maxed' : ''), tabindex:'0', role:'button',
+      'aria-label': s.name + ' ' + lv + '/' + s.max });
+    cell.style.gridColumn = String(p.col + 1);
+    cell.style.gridRow = String(p.row + 1);
+    cell.appendChild(el('div', { class:'st-name', text: s.name }));
+    var ic = el('div', { class:'st-icon' });
+    if (s.icon){
+      var img = document.createElement('img');
+      img.src = SKILL_ICON(s.icon); img.alt = ''; img.loading = 'lazy'; img.width = 24; img.height = 24;
+      img.addEventListener('error', function(){ img.remove(); });
+      ic.appendChild(img);
+    }
+    cell.appendChild(ic);
+    var lvRow = el('div', { class:'st-lv' });
+    var minus = el('button', { type:'button', class:'st-step', tabindex:'-1', 'aria-label':L('Descer nível de ', 'Lower ') + s.name, text:'‹' });
+    var plus = el('button', { type:'button', class:'st-step', tabindex:'-1', 'aria-label':L('Subir nível de ', 'Raise ') + s.name, text:'›' });
+    lvRow.appendChild(minus);
+    lvRow.appendChild(el('span', { text: lv + '/' + s.max }));
+    lvRow.appendChild(plus);
+    cell.appendChild(lvRow);
+    function change(target){ hideTip(); treeMsg = trySetSkill(lo, s, target); saveLoadouts(); render(); }
+    minus.addEventListener('click', function(e){ e.stopPropagation(); change(lv - 1); });
+    plus.addEventListener('click', function(e){ e.stopPropagation(); change(lv + 1); });
+    cell.addEventListener('click', function(e){ change(e.shiftKey ? s.max : lv + 1); });
+    cell.addEventListener('contextmenu', function(e){ e.preventDefault(); change(lv - 1); });
+    cell.addEventListener('keydown', function(e){
+      if (e.target !== cell) return;
+      if (e.key === 'Enter' || e.key === ' ' || e.key === '+' || e.key === 'ArrowUp'){ e.preventDefault(); change(e.shiftKey ? s.max : lv + 1); }
+      else if (e.key === '-' || e.key === 'ArrowDown' || e.key === 'Backspace'){ e.preventDefault(); change(lv - 1); }
+    });
+    attachSkillTip(cell, function(){ fillSkillTip(model, s, ci); });
+    return cell;
+  }
+  function fillSkillTip(model, s, ci){
+    var t = ensureTip();
+    clear(t);
+    var head = el('div', { class:'ht-head' });
+    if (s.icon){
+      var img = document.createElement('img'); img.src = SKILL_ICON(s.icon); img.alt = ''; img.className = 'st-tip-icon';
+      img.addEventListener('error', function(){ img.remove(); });
+      head.appendChild(img);
+    }
+    head.appendChild(el('div', {}, [
+      el('div', { class:'ht-name', text: s.name + ' ' + treeLv(model.tree, s) + '/' + s.max }),
+      el('div', { class:'ht-sub', text: [s.cls, s.type].filter(Boolean).join(' · ') })
+    ]));
+    t.appendChild(head);
+    if (s.needs.length){
+      var blk = el('div', { class:'ht-block' });
+      blk.appendChild(el('div', { class:'ht-badge', text:L('Pré-requisitos', 'Prerequisites') }));
+      s.needs.forEach(function(n){
+        var r = resolveNeed(model, n.name, ci);
+        var ok = !!r && treeLv(model.tree, r.skill) >= n.lv;
+        var where = r ? (r.idx !== ci ? ' (' + r.skill.cls + ')' : '') : L(' (não encontrada na base)', ' (not in the database)');
+        blk.appendChild(el('div', { class:'t st-need' + (ok ? ' ok' : ''), text: (ok ? '✓ ' : '• ') + n.name + ' Lv ' + n.lv + where }));
+      });
+      t.appendChild(blk);
+    }
+    var unlocks = [];
+    model.classes.forEach(function(c, i){
+      c.skills.forEach(function(d){
+        d.needs.forEach(function(n){ var r = resolveNeed(model, n.name, i); if (r && r.skill.key === s.key) unlocks.push(d.name + ' (Lv ' + n.lv + ')'); });
+      });
+    });
+    if (unlocks.length){
+      var ub = el('div', { class:'ht-block' });
+      ub.appendChild(el('div', { class:'ht-badge', text:L('Libera', 'Unlocks') }));
+      ub.appendChild(el('div', { class:'t', text: unlocks.join(', ') }));
+      t.appendChild(ub);
+    }
+    if (s.desc){
+      var db = el('div', { class:'ht-block' });
+      db.appendChild(el('div', { class:'t', text: s.desc }));
+      t.appendChild(db);
+    }
+  }
+  function attachSkillTip(node, fill){
+    if (TOUCH) return;
+    node.addEventListener('mouseenter', function(e){
+      tipX = e.clientX; tipY = e.clientY;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(function(){ fill(); placeTip(); tipEl.classList.add('show'); }, 220);
+    });
+    node.addEventListener('mousemove', function(e){
+      tipX = e.clientX; tipY = e.clientY;
+      if (!tipRaf) tipRaf = requestAnimationFrame(placeTip);
+    });
+    node.addEventListener('mouseleave', hideTip);
+  }
+  // The Status tab's passives follow the tree once it has points in this stage.
+  function treeLevelForPassive(lo, p){
+    if (!skillDb) return null;
+    var tree = activeStageData(lo).tree;
+    if (!isObj(tree) || !Object.keys(tree).length) return null;
+    var found = false, best = 0;
+    classLine(lo.charClass).forEach(function(cls){
+      (skillDb.byClass[cls] || []).forEach(function(s){
+        if (s.slug !== p.id) return;
+        found = true;
+        best = Math.max(best, treeLv(tree, s));
+      });
+    });
+    return found ? best : null;
+  }
+
   // ---------- rendering ----------
   // Clickable boxes that aren't <button>s (empty slots, card slots, loadout rows) still need to
   // be reachable with Tab and usable with Enter/Space.
@@ -2983,6 +3418,7 @@ input.invalid{ border-color:var(--danger) !important; }
     renderStatStrip(lo);
     renderSlotGroup(lo, 'equip');
     renderSlotGroup(lo, 'shadow');
+    renderSkillTree(lo);
     renderStatCalc(lo);
     renderStatusPanel(lo);
     renderCompare(lo);
@@ -3234,6 +3670,7 @@ input.invalid{ border-color:var(--danger) !important; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function(raw){
+      try { skillDb = indexSkills(raw); } catch(e){ skillDbFailed = true; }
       var ki = raw.cols.indexOf('key'), di = raw.cols.indexOf('desc');
       var bySlug = {};
       raw.rows.forEach(function(r){ var slug = String(r[ki]).split('/')[1]; (bySlug[slug] = bySlug[slug] || []).push(r[di] || ''); });
@@ -3245,6 +3682,8 @@ input.invalid{ border-color:var(--danger) !important; }
       passiveCheck = res;
       var lo = activeLoadout(); if (lo) render();
     }).catch(function(err){
+      skillDbFailed = true;
+      var lo = activeLoadout(); if (lo) render();
       console.warn('Não foi possível conferir as passivas com o site:', err);
     });
   }
@@ -3279,7 +3718,8 @@ input.invalid{ border-color:var(--danger) !important; }
     return sd.skills;
   }
   function skillLevel(lo, p){
-    var lv = parseInt(stageSkills(lo)[p.id], 10) || 0;
+    var fromTree = treeLevelForPassive(lo, p);
+    var lv = fromTree !== null ? fromTree : (parseInt(stageSkills(lo)[p.id], 10) || 0);
     return Math.max(0, Math.min(p.max, lv));
   }
   // Per skill: { lv, bonus, parts:[{ok, why}], blocked } where blocked = description changed on the site.
@@ -3634,6 +4074,8 @@ input.invalid{ border-color:var(--danger) !important; }
       var lvWrap = el('label', { class:'skill-lv' });
       lvWrap.appendChild(document.createTextNode('Lv'));
       var input = el('input', { type:'number', min:'0', max:String(p.max), value:String(ev.lv), 'aria-label':L('Nível de ', 'Level of ') + p.name });
+      var fromTree = treeLevelForPassive(lo, p) !== null;
+      if (fromTree){ input.disabled = true; input.title = L('Nível vindo da aba Skills', 'Level from the Skills tab'); }
       input.addEventListener('change', function(){
         var v = Math.max(0, Math.min(p.max, parseInt(input.value, 10) || 0));
         var skills = stageSkills(lo);
@@ -4363,7 +4805,7 @@ input.invalid{ border-color:var(--danger) !important; }
   });
   clampField(document.getElementById('fLevel'), 1, MAX_LEVEL);
   document.getElementById('fClass').addEventListener('change', function(e){
-    var lo = activeLoadout(); if (!lo) return; lo.charClass = e.target.value; saveLoadouts(); renderSidebar(); renderSummary(lo);
+    var lo = activeLoadout(); if (!lo) return; lo.charClass = e.target.value; treeMsg = ''; saveLoadouts(); render();
   });
   document.getElementById('fLevel').addEventListener('input', function(e){
     var lo = activeLoadout(); if (!lo) return;

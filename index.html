@@ -499,12 +499,22 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 }
 .result-row:hover{ background:var(--surface-2); border-color:var(--border); }
 .result-empty{ color:var(--fg-faint); font-size:12px; padding:14px 4px; text-align:center; }
-.manual-toggle{
-  background:transparent; border:none; color:var(--accent); font-size:11.5px; text-decoration:underline;
-  padding:4px 0; align-self:flex-start;
+button.result-row{ width:100%; background:none; color:inherit; font:inherit; text-align:left; flex:0 0 auto; }
+.result-row:focus-visible{ background:var(--surface-2); border-color:var(--accent); outline:none; }
+.result-count{ font-size:11px; color:var(--fg-faint); font-family:var(--font-mono); }
+.result-count:empty{ display:none; }
+.result-more{
+  flex:0 0 auto; background:transparent; border:1px dashed var(--border); border-radius:7px; color:var(--fg-dim);
+  font-size:12px; padding:9px 4px; margin:4px 0; cursor:pointer;
 }
-.manual-form{ display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:10px; }
-.manual-form input{ background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px; }
+.result-more:hover{ color:var(--accent-strong); border-color:var(--accent); }
+.card-unknown{ font-size:12px; color:var(--fg-faint); }
+.field-hint{ font-size:11px; color:var(--danger); }
+input.invalid{ border-color:var(--danger) !important; }
+.icon-btn.danger.confirming{ color:#fff; background:var(--danger); border-color:var(--danger); }
+/* Keyboard focus ring for everything focusable that has no ring of its own. */
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.slot-body:focus-visible, .card-slot:focus-visible, .loadout-item:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
 .primary-btn{ background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-sm); padding:9px; font-weight:700; box-shadow:var(--shadow-glow); }
 [hidden]{ display:none !important; }
 /* item name as a link to the detail panel + refine input */
@@ -653,6 +663,23 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   .equip-grid{ grid-template-columns:1fr; }
   .equip-grid > *:last-child:nth-child(odd){ grid-column:auto; }
 }
+/* Touch screens: bring small controls up to a comfortable finger size without
+   changing the layout (around 32–36px tall instead of 18–26px). */
+@media (pointer:coarse), (max-width:760px){
+  .mini-btn{ min-height:34px; font-size:11.5px; }
+  .close-x{ min-width:40px; min-height:40px; font-size:22px; }
+  .filter-pill{ min-height:34px; font-size:13px; }
+  .filter-pill .fp-track{ width:32px; height:18px; }
+  .filter-pill .fp-track::after{ width:12px; height:12px; }
+  .filter-pill[aria-checked="true"] .fp-track::after{ transform:translateX(14px); }
+  .card-slot{ width:34px; height:34px; }
+  .card-slot .x{ width:20px; height:20px; font-size:12px; top:-7px; right:-7px; }
+  .card-row{ gap:9px; }
+  .refine-input input{ width:42px; min-height:30px; font-size:13px; }
+  .result-row{ min-height:46px; }
+  .clear-all-btn, .icon-btn, .ghost-btn, .stage-btn, .tab-btn{ min-height:36px; }
+  .extra-form input{ min-height:32px; }
+}
 </style>
 </head>
 <body>
@@ -695,7 +722,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     <div class="loadout-head" id="loadoutHead" hidden>
       <div class="field grow">
         <label for="fName" data-en="Loadout name">Nome do loadout</label>
-        <input id="fName" type="text" maxlength="80" placeholder="ex: Sniper — Mid Game" data-en-placeholder="e.g. Sniper — Mid Game">
+        <input id="fName" type="text" maxlength="80" required aria-describedby="fNameHint" placeholder="ex: Sniper — Mid Game" data-en-placeholder="e.g. Sniper — Mid Game">
+        <span class="field-hint" id="fNameHint" hidden data-en="The loadout needs a name.">O loadout precisa de um nome.</span>
       </div>
       <div class="field">
         <label for="fClass" data-en="Class">Classe</label>
@@ -809,17 +837,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   <div class="modal">
     <div class="modal-head">
       <h3 id="modalTitle" data-en="Choose item">Escolher item</h3>
-      <button class="close-x" id="modalClose" type="button">&times;</button>
+      <button class="close-x" id="modalClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
     </div>
     <input class="search-input" id="searchInput" type="text" placeholder="Buscar por nome…" data-en-placeholder="Search by name…">
     <div class="filter-pills" id="filterPills" role="group" aria-label="Filtros" data-en-aria-label="Filters"></div>
+    <div class="result-count" id="resultCount" aria-live="polite"></div>
     <div class="results" id="searchResults"></div>
-    <button class="manual-toggle" id="manualToggleBtn" type="button" data-en="+ manual entry (item not in the database)">+ entrada manual (item fora da base)</button>
-    <div class="manual-form" id="manualForm" hidden>
-      <input id="manualName" type="text" maxlength="120" placeholder="Nome do item" data-en-placeholder="Item name">
-      <input id="manualSprite" type="text" maxlength="300" placeholder="URL do sprite (opcional)" data-en-placeholder="Sprite URL (optional)">
-      <button class="primary-btn" id="manualApply" type="button" data-en="Use this item">Usar este item</button>
-    </div>
   </div>
 </div>
 
@@ -837,7 +860,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   <div class="modal">
     <div class="modal-head">
       <h3 data-en="Share loadout">Compartilhar loadout</h3>
-      <button class="close-x" id="shareModalClose" type="button">&times;</button>
+      <button class="close-x" id="shareModalClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
     </div>
 
     <div class="field">
@@ -866,6 +889,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   var STORAGE_KEY = 'rtm-hud-loadouts-v1';
   var DB_CACHE_KEY = 'rtm-hud-itemdb-v1';
   var THEME_KEY = 'rtm-hud-theme';
+  var ACTIVE_KEY = 'rtm-hud-active-v1'; // id of the loadout open last time
   var LANG_KEY = 'rtm-hud-lang';
 
   // UI language. Switching reloads the page, so every string (including the constant tables
@@ -1003,7 +1027,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   // keepId: true only for the user's own saved state; imports always get fresh ids.
   function sanitizeLoadout(raw, keepId){
     if (!isObj(raw)) return null;
-    var lo = blankLoadout(cleanStr(raw.name, LIMITS.name) || L('Loadout importado', 'Imported loadout'));
+    var lo = blankLoadout(cleanStr(raw.name, LIMITS.name).trim() || L('Loadout importado', 'Imported loadout'));
     if (keepId && typeof raw.id === 'string' && /^id-[a-z0-9-]{1,40}$/.test(raw.id)) lo.id = raw.id;
     lo.charClass = cleanStr(raw.charClass, LIMITS.charClass);
     lo.notes = cleanStr(raw.notes, LIMITS.notes);
@@ -1377,7 +1401,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
         render();
       } else {
         state.dbError = true;
-        statusEl.textContent = L('Não foi possível carregar a base do site agora. Entrada manual ainda funciona normalmente — use "+ entrada manual" ao escolher um item.', 'Could not load the site database right now. Manual entry still works — use "+ manual entry" when choosing an item.');
+        statusEl.textContent = L('Não foi possível carregar a base de itens agora. Recarregue a página em instantes para escolher itens.', 'Could not load the item database right now. Reload the page in a moment to choose items.');
         statusEl.classList.add('err');
       }
     });
@@ -1406,7 +1430,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       if (wantCards && !opts.anySlot && !it.locs.some(function(l){ return (opts.cardLocs || slotDef.locs).indexOf(l) !== -1; })) continue;
       if (!wantCards && cls && !canEquip(it, cls)) continue;
       out.push(it);
-      if (out.length >= 50) break;
     }
     out.sort(function(a,b){ return a.name.localeCompare(b.name); });
     return out;
@@ -1445,6 +1468,35 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   }
 
   // ---------- rendering ----------
+  // Clickable boxes that aren't <button>s (empty slots, card slots, loadout rows) still need to
+  // be reachable with Tab and usable with Enter/Space.
+  // Number fields never show a value past their limits: typing above the max snaps to the max
+  // right away; an empty or too-low value becomes the min when the field is left.
+  function clampField(input, min, max){
+    input.addEventListener('input', function(){
+      if (input.value !== '' && Number(input.value) > max) input.value = String(max);
+    });
+    input.addEventListener('blur', function(){
+      var n = parseInt(input.value, 10);
+      var fixed = isFinite(n) ? Math.max(min, Math.min(max, n)) : min;
+      if (input.value !== String(fixed)){
+        input.value = String(fixed);
+        input.dispatchEvent(new Event('input', { bubbles:true }));
+        input.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+    });
+  }
+  function makePressable(node, label, onPress){
+    node.setAttribute('role', 'button');
+    node.setAttribute('tabindex', '0');
+    if (label) node.setAttribute('aria-label', label);
+    node.addEventListener('click', onPress);
+    node.addEventListener('keydown', function(ev){
+      if (ev.target !== node || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+      ev.preventDefault();
+      onPress();
+    });
+  }
   function renderSidebar(){
     var list = document.getElementById('loadoutList');
     clear(list);
@@ -1459,7 +1511,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       meta.appendChild(el('span', { class:'badge ' + lo.activeStage, text: stageLabel(lo.activeStage) }));
       if (lo.charClass) meta.appendChild(el('span', { text: lo.charClass }));
       row.appendChild(meta);
-      row.addEventListener('click', function(){ state.activeId = lo.id; render(); });
+      if (lo.id === state.activeId) row.setAttribute('aria-current', 'true');
+      makePressable(row, lo.name, function(){ state.activeId = lo.id; render(); });
       list.appendChild(row);
     });
   }
@@ -1469,7 +1522,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   }
 
   function renderHeadForm(lo){
-    document.getElementById('fName').value = lo.name;
+    var nameEl = document.getElementById('fName');
+    if (document.activeElement !== nameEl){
+      nameEl.value = lo.name;
+      nameEl.classList.remove('invalid');
+      document.getElementById('fNameHint').hidden = true;
+    }
     document.getElementById('fLevel').value = activeStageData(lo).level || 1;
     populateClassOptions();
     document.getElementById('fClass').value = lo.charClass || '';
@@ -1553,9 +1611,10 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       if (!val){
         body.appendChild(el('div', { class:'slot-empty-icon', text:'+' }));
         body.appendChild(el('div', { class:'slot-empty-text', text:L('Vazio', 'Empty') }));
-        body.addEventListener('click', function(){ openModal(groupName, def, null); });
+        makePressable(body, L('Escolher item: ', 'Choose item: ') + def.label, function(){ openModal(groupName, def, null); });
       } else {
-        var row = spriteEl(val.manual ? (val.spriteUrl||'') : ICON(val.itemId));
+        // Old saves may hold hand-typed items (manual entry was removed); they show a "?" icon.
+        var row = spriteEl(val.manual ? '' : ICON(val.itemId));
         var info = el('div', { class:'item-info' });
         var matchedItem = (!val.manual && state.db) ? itemById(val.itemId) : null;
         var nameEl = el(matchedItem ? 'button' : 'div', { class:'item-name' + (matchedItem ? ' item-link' : ''), text: val.itemName });
@@ -1576,6 +1635,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
             refWrap.appendChild(document.createTextNode('+'));
             var refIn = el('input', { type:'number', min:'0', max:'20', value: String(val.refine || 0), 'aria-label':L('Refino de ', 'Refine of ') + val.itemName });
             refIn.addEventListener('click', function(ev){ ev.stopPropagation(); });
+            clampField(refIn, 0, 20);
             refIn.addEventListener('change', function(){
               val.refine = Math.max(0, Math.min(20, parseInt(refIn.value, 10) || 0));
               saveLoadouts();
@@ -1598,22 +1658,27 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
               var c = val.cards[ci];
               var cs = el('div', { class:'card-slot' });
               if (c){
-                var cimg = document.createElement('img');
-                cimg.src = c.manual ? (c.spriteUrl||'') : CARD_ICON(c.itemId);
-                cimg.alt = ''; cimg.loading = 'lazy';
-                cimg.addEventListener('error', function(){ cimg.style.visibility='hidden'; });
-                cs.appendChild(cimg);
+                if (!c.manual){
+                  var cimg = document.createElement('img');
+                  cimg.src = CARD_ICON(c.itemId);
+                  cimg.alt = ''; cimg.loading = 'lazy';
+                  cimg.addEventListener('error', function(){ cimg.style.visibility='hidden'; });
+                  cs.appendChild(cimg);
+                } else {
+                  cs.appendChild(el('span', { class:'card-unknown', text:'?' }));
+                }
                 cs.title = c.itemName;
-                var xBtn = el('button', { class:'x', text:'×' });
+                var xBtn = el('button', { type:'button', class:'x', text:'×', 'aria-label':L('Remover carta ', 'Remove card ') + c.itemName });
                 xBtn.addEventListener('click', function(ev){ ev.stopPropagation(); val.cards[ci] = null; saveLoadouts(); render(); });
+                xBtn.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
                 cs.appendChild(xBtn);
-                cs.addEventListener('click', function(){
+                makePressable(cs, c.itemName, function(){
                   if (c.manual || !itemById(c.itemId)){ openModal(groupName, def, ci); return; }
                   openDetail(c.itemId, { onSwap: function(){ openModal(groupName, def, ci); }, swapLabel:L('Trocar carta', 'Change card') });
                 });
               } else {
                 cs.title = L('Adicionar carta', 'Add card');
-                cs.addEventListener('click', function(){ openModal(groupName, def, ci); });
+                makePressable(cs, L('Adicionar carta em ', 'Add card to ') + def.label, function(){ openModal(groupName, def, ci); });
               }
               cardRow.appendChild(cs);
             })(ci);
@@ -1712,7 +1777,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     STAT_KEYS.forEach(function(s){
       var row = el('div', { class:'stat-row' });
       row.appendChild(el('span', { class:'stat-label', text:s.label }));
-      var input = el('input', { type:'number', min:'1', max:'99', value: sd.baseStats[s.key] });
+      var input = el('input', { type:'number', min:'1', max:'99', value: sd.baseStats[s.key], 'aria-label':s.label });
+      clampField(input, 1, 99);
       var totalEl = el('span', { class:'stat-total', text: String(sd.baseStats[s.key] + bonuses[s.key]) });
       input.addEventListener('input', function(){
         sd.baseStats[s.key] = Math.max(1, Math.min(99, Number(input.value) || 1));
@@ -1772,6 +1838,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   }
   function render(){
     migrateAllShadowSlots();
+    try { if (state.activeId) localStorage.setItem(ACTIVE_KEY, state.activeId); } catch(e){}
     var sx = window.scrollX, sy = window.scrollY;
     var side = document.getElementById('sideRight');
     var sideTop = side ? side.scrollTop : 0;
@@ -1813,14 +1880,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     document.getElementById('modalTitle').textContent = (cardIndex === null ? L('Escolher: ', 'Choose: ') : L('Carta para: ', 'Card for: ')) + slotDef.label;
     document.getElementById('searchInput').value = '';
     renderFilterPills();
-    document.getElementById('manualForm').hidden = true;
-    document.getElementById('manualName').value = '';
-    document.getElementById('manualSprite').value = '';
     document.getElementById('modalBackdrop').hidden = false;
     renderResults('');
     document.getElementById('searchInput').focus();
   }
   function closeModal(){
+    if (stopResultsPaging){ stopResultsPaging(); stopResultsPaging = null; }
     document.getElementById('modalBackdrop').hidden = true;
     state.modal = null;
   }
@@ -1876,29 +1941,18 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     render();
   }
 
-  function applyManual(name, spriteUrl){
-    var lo = activeLoadout(); if (!lo || !state.modal || !name) return;
-    var slots = activeStageData(lo).slots;
-    var m = state.modal;
-    var val = { itemName:name, spriteUrl:spriteUrl||'', manual:true };
-    if (m.cardIndex === null){
-      slots[m.slotDef.key] = val;
-    } else {
-      var slotVal = slots[m.slotDef.key];
-      if (!slotVal) return;
-      slotVal.cards = slotVal.cards || [];
-      slotVal.cards[m.cardIndex] = val;
-    }
-    saveLoadouts();
-    closeModal();
-    render();
-  }
-
+  // Every match is listed (no cap), but rows are built in pages as the list scrolls, so a
+  // short query like "a" doesn't build thousands of rows at once.
+  var RESULTS_PAGE = 50;
+  var stopResultsPaging = null; // removes the current list's scroll listener
   function renderResults(query){
     var results = document.getElementById('searchResults');
+    var countEl = document.getElementById('resultCount');
+    if (stopResultsPaging){ stopResultsPaging(); stopResultsPaging = null; }
     clear(results);
+    countEl.textContent = '';
     if (!state.db){
-      results.appendChild(el('div', { class:'result-empty', text: L('Base de itens indisponível. Use "+ entrada manual" abaixo.', 'Item database unavailable. Use "+ manual entry" below.') }));
+      results.appendChild(el('div', { class:'result-empty', text: L('Base de itens indisponível no momento. Recarregue a página em instantes.', 'Item database unavailable right now. Reload the page in a moment.') }));
       return;
     }
     var m = state.modal; if (!m) return;
@@ -1911,16 +1965,35 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       results.appendChild(el('div', { class:'result-empty', text: query ? L('Nada encontrado para "', 'Nothing found for "') + query + '".' : L('Digite para buscar…', 'Type to search…') }));
       return;
     }
-    found.forEach(function(it){
-      var row = el('div', { class:'result-row' });
-      row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
-      var info = el('div', { class:'item-info' });
-      info.appendChild(el('div', { class:'item-name', text: it.name }));
-      info.appendChild(el('div', { class:'item-sub', text: 'Lv ' + (it.lv||'?') + (it.slots ? ' · ' + it.slots + '-slot' : '') }));
-      row.appendChild(info);
-      row.addEventListener('click', function(){ applySelection(it); });
-      results.appendChild(row);
-    });
+    countEl.textContent = found.length === 1 ? L('1 item', '1 item') : found.length.toLocaleString(L('pt-BR', 'en-US')) + L(' itens', ' items');
+    var shown = 0, more = null;
+    function addPage(){
+      if (more){ more.remove(); more = null; }
+      var end = Math.min(found.length, shown + RESULTS_PAGE);
+      for (; shown < end; shown++) results.appendChild(resultRow(found[shown]));
+      if (shown < found.length){
+        more = el('button', { type:'button', class:'result-more', text: L('Mostrar mais (' + (found.length - shown) + ' restantes)', 'Show more (' + (found.length - shown) + ' left)') });
+        more.addEventListener('click', addPage);
+        results.appendChild(more);
+      }
+    }
+    // Near the bottom of the list, the next page loads by itself; the button is the fallback.
+    function onScroll(){
+      if (shown < found.length && results.scrollTop + results.clientHeight >= results.scrollHeight - 300) addPage();
+    }
+    results.addEventListener('scroll', onScroll, { passive:true });
+    stopResultsPaging = function(){ results.removeEventListener('scroll', onScroll); };
+    addPage();
+  }
+  function resultRow(it){
+    var row = el('button', { type:'button', class:'result-row' });
+    row.appendChild(spriteEl(it.isCard ? CARD_ICON(it.id) : ICON(it.id)));
+    var info = el('div', { class:'item-info' });
+    info.appendChild(el('div', { class:'item-name', text: it.name }));
+    info.appendChild(el('div', { class:'item-sub', text: 'Lv ' + (it.lv||'?') + (it.slots ? ' · ' + it.slots + '-slot' : '') }));
+    row.appendChild(info);
+    row.addEventListener('click', function(){ applySelection(it); });
+    return row;
   }
 
   // ---------- derived status (HIT/FLEE/Crit/Perfect Dodge/ATK/MATK/soft DEF/soft MDEF) ----------
@@ -2333,7 +2406,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     var manualRow = el('div', { class:'aspd-manual' }, [
       el('span', { text:L('Bônus manual de skill (ex: Frenzy +3):', 'Manual skill bonus (e.g. Frenzy +3):') })
     ]);
-    var manualInput = el('input', { type:'number', min:'0', max:'20', value: manual });
+    var manualInput = el('input', { type:'number', min:'0', max:'20', value: manual, 'aria-label':L('Bônus manual de ASPD', 'Manual ASPD bonus') });
+    clampField(manualInput, 0, 20);
     manualInput.addEventListener('input', function(){
       sd.manualAspdBonus = cleanNum(manualInput.value, 0, 20, 0);
       saveLoadouts();
@@ -2929,8 +3003,12 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       }
       var bytes;
       try { bytes = base64ToBytes(code.slice(5)); } catch(e){ return Promise.reject(new Error(L('Código corrompido ou incompleto.', 'Corrupted or incomplete code.'))); }
+      var tooLarge = L('Código grande demais.', 'Code is too large.');
       return inflateCapped(bytes).then(function(buf){
         return JSON.parse(new TextDecoder().decode(buf));
+      }).catch(function(err){
+        // Browser decompression/JSON errors come in the browser's language; show ours instead.
+        throw new Error(err && err.message === tooLarge ? tooLarge : L('Código corrompido ou incompleto.', 'Corrupted or incomplete code.'));
       });
     }
     if (code.indexOf('RTM0:') === 0){
@@ -2964,15 +3042,52 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     state.loadouts.push(copy); state.activeId = copy.id;
     saveLoadouts(); render();
   });
-  document.getElementById('delBtn').addEventListener('click', function(){
-    var lo = activeLoadout(); if (!lo) return;
-    state.loadouts = state.loadouts.filter(function(l){ return l.id !== lo.id; });
-    state.activeId = state.loadouts.length ? state.loadouts[0].id : null;
-    saveLoadouts(); render();
-  });
+  // Two-step delete, like "Clear all": the first click arms it for 3 s, the second deletes.
+  (function(){
+    var btn = document.getElementById('delBtn');
+    var armedFor = null, resetTimer = null;
+    function reset(){
+      clearTimeout(resetTimer);
+      armedFor = null;
+      btn.classList.remove('confirming');
+      btn.textContent = L('Excluir', 'Delete');
+    }
+    btn.addEventListener('click', function(){
+      var lo = activeLoadout(); if (!lo) return;
+      if (armedFor !== lo.id){
+        armedFor = lo.id;
+        btn.classList.add('confirming');
+        btn.textContent = L('Confirmar exclusão?', 'Confirm delete?');
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(reset, 3000);
+        return;
+      }
+      reset();
+      state.loadouts = state.loadouts.filter(function(l){ return l.id !== lo.id; });
+      state.activeId = state.loadouts.length ? mostRecent().id : null;
+      saveLoadouts(); render();
+      alertInline(L('Loadout "' + lo.name + '" excluído.', 'Loadout "' + lo.name + '" deleted.'));
+    });
+    btn.addEventListener('blur', reset);
+  })();
+  function mostRecent(){
+    return state.loadouts.slice().sort(function(a,b){ return b.updatedAt - a.updatedAt; })[0];
+  }
+  // A loadout must have a name before it can be shared or exported.
+  function unnamed(lo){
+    var field = document.getElementById('fName');
+    return !lo.name || !lo.name.trim() || (lo === activeLoadout() && !field.value.trim());
+  }
+  function askForName(){
+    alertInline(L('Dê um nome ao loadout antes de compartilhar ou exportar.', 'Give the loadout a name before sharing or exporting.'));
+    var f = document.getElementById('fName');
+    f.classList.add('invalid');
+    f.focus();
+  }
 
   document.getElementById('shareBtn').addEventListener('click', function(){
     var lo = activeLoadout(); if (!lo) return;
+    if (unnamed(lo)){ askForName(); return; }
     var out = document.getElementById('shareCodeOut');
     var status = document.getElementById('shareStatus');
     out.value = L('Gerando…', 'Generating…');
@@ -3021,9 +3136,24 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
       status.textContent = L('Falha ao importar: ', 'Import failed: ') + err.message; status.classList.add('err');
     });
   });
-  document.getElementById('fName').addEventListener('input', function(e){
-    var lo = activeLoadout(); if (!lo) return; lo.name = e.target.value; lo.updatedAt = Date.now(); saveLoadouts(); renderSidebar(); renderSummary(lo);
+  // The name is required: while the field is empty the last name is kept (and the field is
+  // flagged); leaving it empty puts that name back.
+  var fNameEl = document.getElementById('fName');
+  fNameEl.addEventListener('input', function(e){
+    var lo = activeLoadout(); if (!lo) return;
+    var empty = !e.target.value.trim();
+    fNameEl.classList.toggle('invalid', empty);
+    document.getElementById('fNameHint').hidden = !empty;
+    if (empty) return;
+    lo.name = e.target.value; lo.updatedAt = Date.now(); saveLoadouts(); renderSidebar(); renderSummary(lo);
   });
+  fNameEl.addEventListener('blur', function(){
+    var lo = activeLoadout(); if (!lo) return;
+    if (!fNameEl.value.trim()) fNameEl.value = lo.name;
+    fNameEl.classList.remove('invalid');
+    document.getElementById('fNameHint').hidden = true;
+  });
+  clampField(document.getElementById('fLevel'), 1, MAX_LEVEL);
   document.getElementById('fClass').addEventListener('change', function(e){
     var lo = activeLoadout(); if (!lo) return; lo.charClass = e.target.value; saveLoadouts(); renderSidebar(); renderSummary(lo);
   });
@@ -3094,38 +3224,32 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     if (e.key !== 'Escape') return;
     if (!document.getElementById('detailBackdrop').hidden) closeDetail();
     else if (!document.getElementById('modalBackdrop').hidden) closeModal();
+    else if (!document.getElementById('shareModalBackdrop').hidden) document.getElementById('shareModalBackdrop').hidden = true;
   });
   document.getElementById('notesInput').addEventListener('input', function(e){
     var lo = activeLoadout(); if (!lo) return;
     lo.notes = e.target.value;
     saveLoadouts();
   });
-  document.getElementById('manualToggleBtn').addEventListener('click', function(){
-    var f = document.getElementById('manualForm');
-    f.hidden = !f.hidden;
-  });
-  document.getElementById('manualApply').addEventListener('click', function(){
-    applyManual(document.getElementById('manualName').value.trim(), document.getElementById('manualSprite').value.trim());
-  });
-
+  // Export downloads every loadout as one .json backup file (Import reads it back).
   document.getElementById('exportBtn').addEventListener('click', function(){
+    if (!state.loadouts.length){ alertInline(L('Não há loadouts para exportar.', 'There are no loadouts to export.')); return; }
+    var lo = activeLoadout();
+    if (lo && unnamed(lo)){ askForName(); return; }
     var text = JSON.stringify({ schemaVersion:1, loadouts: state.loadouts }, null, 2);
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(function(){
-        alertInline(L('Loadouts copiados para a área de transferência. Cole em um arquivo .json para guardar backup.', 'Loadouts copied to the clipboard. Paste them into a .json file to keep a backup.'));
-      }).catch(function(){ promptFallbackExport(text); });
-    } else {
-      promptFallbackExport(text);
+    var d = new Date();
+    var stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    try{
+      var url = URL.createObjectURL(new Blob([text], { type:'application/json' }));
+      var a = el('a', { href:url, download:'refuge-loadouts-' + stamp + '.json' });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      alertInline(L('Backup baixado: ' + state.loadouts.length + ' loadout(s). Use "Importar" para carregar esse arquivo.',
+        'Backup downloaded: ' + state.loadouts.length + ' loadout(s). Use "Import" to load that file.'));
+    } catch(e){
+      alertInline(L('Não foi possível baixar o arquivo neste navegador.', "Couldn't download the file in this browser."));
     }
   });
-  function promptFallbackExport(text){
-    var ta = document.createElement('textarea');
-    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select();
-    try{ document.execCommand('copy'); alertInline(L('Copiado para a área de transferência.', 'Copied to the clipboard.')); }
-    catch(e){ alertInline(L('Não foi possível copiar automaticamente. Selecione e copie o texto manualmente no console.', "Couldn't copy automatically. Select and copy the text manually from the console.")); }
-    document.body.removeChild(ta);
-  }
   var toastTimer = null;
   function alertInline(msg){
     var t = document.getElementById('toast');
@@ -3147,19 +3271,31 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
     }
     var reader = new FileReader();
     reader.onload = function(){
-      try{
-        var parsed = JSON.parse(reader.result);
-        if (!parsed || !Array.isArray(parsed.loadouts)) throw new Error('invalid format');
-        var room = LIMITS.loadouts - state.loadouts.length;
-        parsed.loadouts = sanitizeLoadouts(parsed.loadouts, false).slice(0, Math.max(0, room));
-        if (!parsed.loadouts.length) throw new Error('nothing valid to import');
-        state.loadouts = state.loadouts.concat(parsed.loadouts);
-        if (!state.activeId && state.loadouts.length) state.activeId = state.loadouts[0].id;
-        saveLoadouts(); render();
-        alertInline(L('Importado: ' + parsed.loadouts.length + ' loadout(s) adicionados.', 'Imported: ' + parsed.loadouts.length + ' loadout(s) added.'));
-      } catch(err){
-        alertInline(L('Falha ao importar: arquivo não é um JSON de loadouts válido.', 'Import failed: the file is not a valid loadouts JSON.'));
+      var parsed;
+      try{ parsed = JSON.parse(reader.result); } catch(err){ parsed = null; }
+      if (!parsed || !Array.isArray(parsed.loadouts)){
+        alertInline(L('Falha ao importar: este arquivo não é um backup do Refuge Build Planner.', 'Import failed: this file is not a Refuge Build Planner backup.'));
+        return;
       }
+      var valid = sanitizeLoadouts(parsed.loadouts, false);
+      if (!valid.length){
+        alertInline(parsed.loadouts.length
+          ? L('Falha ao importar: nenhum loadout do arquivo pôde ser lido.', 'Import failed: none of the loadouts in the file could be read.')
+          : L('O arquivo é um backup válido, mas não tem nenhum loadout.', 'The file is a valid backup, but it has no loadouts.'));
+        return;
+      }
+      var room = Math.max(0, LIMITS.loadouts - state.loadouts.length);
+      if (!room){
+        alertInline(L('Limite de 100 loadouts atingido. Exclua algum para importar.', 'Limit of 100 loadouts reached. Delete one to import.'));
+        return;
+      }
+      var added = valid.slice(0, room);
+      state.loadouts = state.loadouts.concat(added);
+      if (!state.activeId) state.activeId = added[0].id;
+      saveLoadouts(); render();
+      alertInline(added.length < valid.length
+        ? L('Importado: ' + added.length + ' de ' + valid.length + ' loadouts (limite de 100 atingido).', 'Imported: ' + added.length + ' of ' + valid.length + ' loadouts (limit of 100 reached).')
+        : L('Importado: ' + added.length + ' loadout(s) adicionados.', 'Imported: ' + added.length + ' loadout(s) added.'));
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -3189,7 +3325,10 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   if (state.loadouts.length === 0){
     state.loadouts.push(blankLoadout(L('Exemplo — Mago Mid Game', 'Example — Mage Mid Game')));
   }
-  state.activeId = state.loadouts[0].id;
+  // Reopen the loadout that was open last time; fall back to the most recently edited one.
+  var lastActive = null;
+  try { lastActive = localStorage.getItem(ACTIVE_KEY); } catch(e){}
+  state.activeId = state.loadouts.some(function(l){ return l.id === lastActive; }) ? lastActive : mostRecent().id;
   try { render(); } catch(e){
     console.warn('Render failed at boot:', e);
     alertInline(L('Um loadout salvo não pôde ser exibido. Os outros continuam disponíveis.', 'A saved loadout could not be shown. The others are still available.'));

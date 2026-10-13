@@ -470,6 +470,11 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .sets-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:16px; }
 .set-row{ padding:9px 0; border-bottom:1px solid var(--border-soft); }
 .fx-list{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.stat-points{ margin-top:10px; padding:9px 11px; border-radius:var(--radius-sm); background:var(--surface-2); border:1px solid var(--border-soft); font-size:12.5px; color:var(--fg-dim); }
+.stat-points .sp-num{ font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--accent-strong); }
+.stat-points .sp-left{ margin-top:2px; font-size:12px; color:var(--early); }
+.stat-points.over{ border-color:var(--danger); }
+.stat-points.over .sp-num, .stat-points.over .sp-left{ color:var(--danger); }
 .fx-chip{
   font-family:var(--font-mono); font-size:11px; color:var(--fx); border-radius:5px; padding:1px 6px;
   border:1px solid color-mix(in srgb, var(--fx) 40%, transparent); background:color-mix(in srgb, var(--fx) 8%, transparent);
@@ -818,7 +823,8 @@ input.invalid{ border-color:var(--danger) !important; }
           <span></span><span>Base</span><span>Equip.</span><span>Total</span>
         </div>
         <div class="stat-calc-rows" id="statCalcRows"></div>
-        <div class="stat-calc-note" data-en="Base capped at 99. The bonus adds flat item/card bonuses, each piece's refine, complete sets, extra options and passives (below).">Base limitada a 99. O bônus soma o fixo de item/carta, refino de cada peça, conjuntos completos, opções extras e passivas (abaixo).</div>
+        <div class="stat-points" id="statPoints" aria-live="polite"></div>
+        <div class="stat-calc-note" data-en="Base capped at 99. Each point costs 1 up to 49, 2 from 50 to 98 and 3 for 99; the total per level comes from the server's table. The bonus adds flat item/card bonuses, each piece's refine, complete sets, extra options and passives (below).">Base limitada a 99. Cada ponto custa 1 até o 49, 2 do 50 ao 98 e 3 para o 99; o total por nível vem da tabela do servidor. O bônus soma o fixo de item/carta, refino de cada peça, conjuntos completos, opções extras e passivas (abaixo).</div>
       </div>
 
       <div class="sim-box">
@@ -1848,6 +1854,54 @@ input.invalid{ border-color:var(--danger) !important; }
     return out;
   }
   var MAX_LEVEL = 150; // the server goes to level 150 (base stats stay capped at 99)
+  // Total stat points a character has at each base level (index = level - 1), from the
+  // server's own table (shared by the player 2026-10-13). Matches the resets measured at
+  // levels 49 (154) and 105 (334); a level 85 reset showed 259 against the table's 258.
+  var STAT_POINTS_BY_LEVEL = [
+    18, 21, 24, 27, 30, 33, 36, 39, 42,
+    52, 54, 56, 58, 60, 62, 64, 66, 68, 70,
+    80, 82, 84, 86, 88, 90, 92, 94, 96, 98,
+    108, 110, 112, 114, 116, 118, 120, 122, 124, 126,
+    136, 138, 140, 142, 144, 146, 148, 150, 152, 154,
+    164, 166, 168, 170, 172, 174, 176, 178, 180, 182,
+    192, 194, 196, 198, 200, 202, 204, 206, 208, 210,
+    220, 222, 224, 226, 228, 230, 232, 234, 236, 238,
+    248, 250, 252, 254, 256, 258, 260, 262, 264, 266,
+    276, 278, 280, 282, 284, 286, 288, 290, 292, 294,
+    314, 318, 322, 326, 330, 334, 338, 342, 346, 350,
+    360, 364, 368, 372, 376, 380, 384, 388, 392, 396,
+    406, 410, 414, 418, 422, 426, 427, 428, 429, 430,
+    433, 434, 435, 436, 437, 438, 439, 440, 441, 442,
+    443, 444, 445, 446, 447, 447, 447, 447, 447, 447, 447
+  ];
+  function statPointsAt(level){ return STAT_POINTS_BY_LEVEL[Math.max(1, Math.min(MAX_LEVEL, level)) - 1]; }
+  // Raising a base stat from v to v+1 costs 1 up to 49, 2 from 49→50 to 97→98, and 3 for
+  // 98→99 (confirmed in game).
+  function statRaiseCost(v){ return v < 49 ? 1 : (v < 98 ? 2 : 3); }
+  function statPointsSpent(baseStats){
+    var total = 0;
+    STAT_KEYS.forEach(function(s){
+      for (var v = 1; v < (baseStats[s.key] || 1); v++) total += statRaiseCost(v);
+    });
+    return total;
+  }
+  function renderStatPoints(lo){
+    var box = document.getElementById('statPoints');
+    if (!box) return;
+    clear(box);
+    var sd = activeStageData(lo);
+    var level = sd.level || 1;
+    var have = statPointsAt(level), spent = statPointsSpent(sd.baseStats), left = have - spent;
+    box.classList.toggle('over', left < 0);
+    box.appendChild(el('div', { class:'sp-main' }, [
+      el('span', { class:'sp-num', text: String(spent) }),
+      document.createTextNode(L(' de ', ' of ') + have + L(' pontos usados no nível ', ' points used at level ') + level)
+    ]));
+    box.appendChild(el('div', { class:'sp-left', text: left >= 0
+      ? (left === 1 ? L('1 ponto livre', '1 point left') : left + L(' pontos livres', ' points left'))
+      : L((-left) + ' ponto(s) a mais do que o nível permite. Abaixe algum atributo ou suba o level da fase.',
+          (-left) + ' point(s) more than this level allows. Lower a stat or raise this stage\'s level.') }));
+  }
   function renderStatCalc(lo){
     var sd = activeStageData(lo);
     var rows = document.getElementById('statCalcRows');
@@ -2496,6 +2550,7 @@ input.invalid{ border-color:var(--danger) !important; }
     manualRow.appendChild(manualInput);
     aspdBox.appendChild(manualRow);
 
+    renderStatPoints(lo);
     renderEffectsBox(lo);
     renderSetsBox(setsBox, activeSets);
     renderSkillsBox(lo);

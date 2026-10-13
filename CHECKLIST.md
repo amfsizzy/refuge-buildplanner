@@ -6,7 +6,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 19 of 54 items confirmed.
+**Progress:** 22 of 54 items confirmed.
 
 ## Refine
 
@@ -55,19 +55,17 @@ We don't have access to the game files: the planner only knows what the server's
 
 ## Stat points
 
-*High priority* · Not in the tool yet. Confirmed: 18 points at level 1; raising a stat costs 1 up to 49, 2 from 49→50 up to 98, and 3 for 98→99. The gain rule (+2 per level, +10 every 10 levels) matches at level 49 but not at levels 85 and 105. The tests below measure the gain directly at level up.
+*High priority* · Solved and already in the tool: the calculator shows points used and left from the points-per-level table of the server. Cost: 1 up to 49, 2 from 49→50 up to 98, and 3 for 98→99.
 
-**Open (3)**
-
-- [ ] `p2` **Points per regular level up**: Note "Status Point" before and after a level up that does not end in 0, in three ranges: below 50, between 50 and 99, and above 100 (e.g. 45→46, 85→86, 105→106). The provisional rule says +2 in all of them. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `p5` **Bonus at levels ending in 0**: Same test when reaching a level ending in 0, including 50 (e.g. 49→50, 89→90, 99→100, 109→110). The provisional rule says +12 (2 + 10). ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `p6` **Other characters' spent points**: A screenshot of the Status window (base stats and "Status Point") of characters at other levels, ideally 60, 70, 95 and 100+. Each one shows the total earned so far. ([send result](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-  - Result: Medido até agora (base level; pontos gastos + "Status Point" livres): · Nível 49: 154 (a regra dá 154, bate) · Nível 85: 259 (a regra dá 266, 7 a menos) · Nível 105: 334 (a regra dá 326, 8 a mais) · Classe, quest e reset foram descartados. A diferença está em algum ponto entre o nível 50 e o 105.
+*Nothing open in this section.*
 
 <details>
-<summary>Confirmed (3)</summary>
+<summary>Confirmed (6)</summary>
 
 - [x] `p1` **Free points at level 1**: Confirmado: 18 pontos no nível 1.
+- [x] `p2` **Points per regular level up**: Resolvido pela tabela do servidor: +3 por nível do 1 ao 9, +2 por nível até o 99, +4 do 101 ao 125, +1 a partir do 126 (trava em 447 no nível 144).
+- [x] `p5` **Bonus at levels ending in 0**: Resolvido pela tabela do servidor: os níveis terminados em 0 dão +10 no total (inclusive 110 e 120).
+- [x] `p6` **Other characters' spent points**: Tabela do servidor conferida com resets: nível 49 = 154 e nível 105 = 334 batem. Nível 85: o reset deu 259 e a tabela diz 258 (1 ponto de diferença, a reconferir).
 - [x] `p3` **Stat cost**: Confirmado: custa 1 até o 49, 2 do 49→50 até o 97→98, e 3 do 98→99. Não há outro degrau.
 - [x] `p4` **Base stat cap at level 150**: Confirmado: o atributo base continua limitado a 99, mesmo no nível 150.
 

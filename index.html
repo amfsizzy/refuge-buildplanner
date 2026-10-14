@@ -225,9 +225,10 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   display:flex; gap:6px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft);
 }
 .sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:10px; }
-.side-wide{ display:block; width:100%; margin-bottom:12px; }
-.history-actions{ border-bottom:none; padding-bottom:0; margin-bottom:8px; }
-.history-actions .ghost-btn{ flex:1; }
+.sidebar .side-wide{ display:block; width:100%; flex:0 0 auto; margin:-4px 0 12px; }
+/* Undo/redo sit in the tabs row, right after the tabs. */
+.hist-mini{ display:flex; gap:4px; align-self:center; margin-right:auto; }
+.hist-mini .ghost-btn{ flex:0 0 auto; padding:5px 10px; font-size:14px; line-height:1; }
 .ghost-btn:disabled{ opacity:.4; cursor:default; }
 .ghost-btn:disabled:hover{ border-color:var(--border); color:inherit; }
 #loadoutList{ flex:0 1 auto; max-height:45vh; overflow-y:auto; }
@@ -512,7 +513,11 @@ input.invalid{ border-color:var(--danger) !important; }
 /* Keyboard focus ring for everything focusable that has no ring of its own. */
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 .slot-body:focus-visible, .card-slot:focus-visible, .loadout-item:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
-.panel-tools{ display:flex; gap:8px; }
+.panel-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.sex-toggle{ display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
+.sex-btn{ background:transparent; border:0; color:var(--fg-dim); padding:6px 10px; font-size:13px; line-height:1; cursor:pointer; }
+.sex-btn + .sex-btn{ border-left:1px solid var(--border); }
+.sex-btn[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
 .suggest-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .suggest-modal{ max-width:560px; }
 .sg-note{ font-size:11.5px; color:var(--mid); line-height:1.5; margin:0; }
@@ -1125,10 +1130,6 @@ input.invalid{ border-color:var(--danger) !important; }
       <button class="ghost-btn" id="importBtn" type="button" data-en="Import">Importar</button>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
-    <div class="sidebar-actions history-actions">
-      <button class="ghost-btn" id="undoBtn" type="button" title="Desfazer (Ctrl+Z)" data-en="↶ Undo" data-en-title="Undo (Ctrl+Z)" disabled>↶ Desfazer</button>
-      <button class="ghost-btn" id="redoBtn" type="button" title="Refazer (Ctrl+Y)" data-en="↷ Redo" data-en-title="Redo (Ctrl+Y)" disabled>↷ Refazer</button>
-    </div>
     <button class="ghost-btn side-wide" id="vsBtn" type="button" title="Comparar dois loadouts lado a lado" data-en="⇄ Compare loadouts" data-en-title="Compare two loadouts side by side">⇄ Comparar loadouts</button>
     <h2>Loadouts</h2>
     <div id="loadoutList"></div>
@@ -1177,6 +1178,10 @@ input.invalid{ border-color:var(--danger) !important; }
           <button class="tab-btn" data-tab="history" type="button" data-en="History">Histórico</button>
           <button class="tab-btn tab-quiet" data-tab="checklist" type="button">Checklist</button>
         </nav>
+        <div class="hist-mini">
+          <button class="ghost-btn" id="undoBtn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button>
+          <button class="ghost-btn" id="redoBtn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button>
+        </div>
         <div class="stage-bar" id="stageBar" hidden>
           <div class="stage-toggle">
             <button class="stage-btn active" data-stage="early" type="button">Early</button>
@@ -1192,7 +1197,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
           <div class="stat-strip" id="statStrip"></div>
-          <div class="panel-tools"><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><div class="sex-toggle" role="group" aria-label="Boneco" data-en-aria-label="Character"><button type="button" class="sex-btn" data-sex="m" title="Masculino" aria-label="Masculino" data-en-title="Male" data-en-aria-label="Male">♂</button><button type="button" class="sex-btn" data-sex="f" title="Feminino" aria-label="Feminino" data-en-title="Female" data-en-aria-label="Female">♀</button></div><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="equipGrid"></div>
       </section>
@@ -1200,7 +1205,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-shadow" hidden>
         <div class="panel-head">
           <span></span>
-          <div class="panel-tools"><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><div class="sex-toggle" role="group" aria-label="Boneco" data-en-aria-label="Character"><button type="button" class="sex-btn" data-sex="m" title="Masculino" aria-label="Masculino" data-en-title="Male" data-en-aria-label="Male">♂</button><button type="button" class="sex-btn" data-sex="f" title="Feminino" aria-label="Feminino" data-en-title="Female" data-en-aria-label="Female">♀</button></div><button class="ghost-btn suggest-btn" id="setFillBtn" type="button" disabled data-en="Complete set">Completar conjunto</button><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="shadowGrid"></div>
       </section>
@@ -2483,6 +2488,7 @@ input.invalid{ border-color:var(--danger) !important; }
       if (!val){ openModal(group, def, null); return; }
       dollPinned[group] = dollPinned[group] === def.key ? null : def.key;
       markPinned(group); renderShowcase(lo, group);
+      if (group === 'shadow') syncSetFillBtn(lo);
     });
     if (p.it) attachTip(tile, p.it, function(){ return p.refine; });
     return tile;
@@ -2819,9 +2825,7 @@ input.invalid{ border-color:var(--danger) !important; }
     if (!shown.length) g.appendChild(el('span', { class:'sc-none', text:L('Nenhum bônus ainda.', 'No bonuses yet.') }));
     shown.forEach(function(t){ g.appendChild(el('span', { text:t })); });
     // With nothing picked, the class sprite stands in the middle (same male/female as the build image).
-    var sex = 'm';
-    try { sex = localStorage.getItem('rtm-hud-cardsex') === 'f' ? 'f' : 'm'; } catch(e){}
-    var charImg = el('img', { class:'sc-char', alt:'', src: charSprite(lo.charClass, sex) });
+    var charImg = el('img', { class:'sc-char', alt:'', src: charSprite(lo.charClass, charSex()) });
     charImg.addEventListener('error', function(){ charImg.hidden = true; });
     stage.appendChild(charImg);
     stage.appendChild(el('div', { class:'sc-sum-box' }, [head, g]));
@@ -3709,6 +3713,8 @@ input.invalid{ border-color:var(--danger) !important; }
     renderHeadForm(lo);
     renderStatStrip(lo);
     syncSuggestBtn(lo);
+    syncSexButtons();
+    syncSetFillBtn(lo);
     renderSlotGroup(lo, 'equip');
     renderSlotGroup(lo, 'shadow');
     renderSkillTree(lo);
@@ -5203,15 +5209,16 @@ input.invalid{ border-color:var(--danger) !important; }
     var holder = el('div', { class:'card-preview' });
     var actions = el('div', { class:'card-actions' });
     // Male or female figure in the middle, remembered for next time.
-    var sex = 'm';
-    try { sex = localStorage.getItem('rtm-hud-cardsex') === 'f' ? 'f' : 'm'; } catch(e){}
+    var sex = charSex();
     var pick = el('div', { class:'stage-toggle card-sex', role:'group', 'aria-label':L('Boneco', 'Figure') });
     [['m', L('Masculino', 'Male')], ['f', L('Feminino', 'Female')]].forEach(function(o){
       var b = el('button', { type:'button', class:'stage-btn' + (sex === o[0] ? ' active' : ''), 'aria-pressed': String(sex === o[0]), text: o[1] });
       b.addEventListener('click', function(){
         if (sex === o[0]) return;
         sex = o[0];
-        try { localStorage.setItem('rtm-hud-cardsex', sex); } catch(e){}
+        try { localStorage.setItem(SEX_KEY, sex); } catch(e){}
+        syncSexButtons();
+        var cur = activeLoadout(); if (cur){ renderShowcase(cur, 'equip'); renderShowcase(cur, 'shadow'); }
         Array.prototype.forEach.call(pick.children, function(c){ var on = c === b; c.classList.toggle('active', on); c.setAttribute('aria-pressed', String(on)); });
         draw();
       });
@@ -6284,6 +6291,71 @@ input.invalid{ border-color:var(--danger) !important; }
     lo.notes = e.target.value;
     saveLoadouts();
   });
+  // ---------- male/female character, shared by the showcase and the build image ----------
+  var SEX_KEY = 'rtm-hud-cardsex';
+  function charSex(){ try { return localStorage.getItem(SEX_KEY) === 'f' ? 'f' : 'm'; } catch(e){ return 'm'; } }
+  function syncSexButtons(){
+    var sex = charSex();
+    document.querySelectorAll('.sex-btn').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.sex === sex)); });
+  }
+  document.querySelectorAll('.sex-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      try { localStorage.setItem(SEX_KEY, b.dataset.sex); } catch(e){}
+      render();
+    });
+  });
+
+  // ---------- Shadow: complete the set of a piece already equipped ----------
+  // Uses the selected piece's set, or else the only incomplete set among the shadow pieces.
+  // Missing members go into their shadow slots (replacing what is there); refine starts at 0.
+  function shadowSetFill(lo){
+    if (!state.db) return null;
+    var sd = activeStageData(lo);
+    var pinned = dollPinned.shadow && sd.slots[dollPinned.shadow];
+    var sources = pinned ? [pinned] : SHADOW_SLOTS.map(function(d){ return sd.slots[d.key]; }).filter(Boolean);
+    var names = [];
+    sources.forEach(function(v){
+      if (v.manual) return;
+      Object.keys(state.db.setMembership).forEach(function(n){
+        if (names.indexOf(n) === -1 && state.db.setMembership[n].indexOf(v.itemId) !== -1) names.push(n);
+      });
+    });
+    var plans = names.map(function(n){ return { name: n, fill: setFillPlan(lo, sd, n) }; })
+      .filter(function(p){ return p.fill.length; });
+    return plans.length === 1 || (pinned && plans.length) ? plans[0] : null;
+  }
+  function setFillPlan(lo, sd, name){
+    var members = state.db.setMembership[name].map(itemById).filter(function(it){ return it && !it.isCard; });
+    var worn = {}, used = {};
+    SHADOW_SLOTS.forEach(function(d){ var v = sd.slots[d.key]; if (v && !v.manual) worn[v.itemId] = d.key; });
+    members.forEach(function(it){ if (worn[it.id]) used[worn[it.id]] = true; });
+    var fill = [];
+    members.forEach(function(it){
+      if (worn[it.id] || !canEquip(it, lo.charClass)) return;
+      var d = SHADOW_SLOTS.filter(function(x){ return !used[x.key] && slotMatchesItem(x, it, {}); })[0];
+      if (!d) return;
+      used[d.key] = true;
+      fill.push({ key: d.key, it: it });
+    });
+    return fill;
+  }
+  function syncSetFillBtn(lo){
+    var btn = document.getElementById('setFillBtn');
+    var plan = shadowSetFill(lo);
+    btn.disabled = !plan;
+    btn.title = plan ? L('Equipa o que falta de ', 'Equips the rest of ') + plan.name + ': ' + plan.fill.map(function(f){ return f.it.name; }).join(', ')
+      : L('Clique numa peça de conjunto para escolher qual conjunto completar', 'Click a set piece to choose which set to complete');
+  }
+  document.getElementById('setFillBtn').addEventListener('click', function(){
+    var lo = activeLoadout(); if (!lo) return;
+    var plan = shadowSetFill(lo); if (!plan) return;
+    var sd = activeStageData(lo), next = Object.assign({}, sd.slots);
+    plan.fill.forEach(function(f){ next[f.key] = { itemId: f.it.id, itemName: f.it.name, manual: false }; });
+    sd.slots = next;
+    saveLoadouts();
+    render();
+  });
+
   // ---------- Suggest build ----------
   // Picks, for each slot, the item whose own stats score best for a profile (weights below),
   // then tries every complete set on top of that and keeps it only when the whole loadout

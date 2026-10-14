@@ -1003,6 +1003,7 @@ input.invalid{ border-color:var(--danger) !important; }
 .farm-lv{ margin-left:auto; font:600 11px var(--font-mono); padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
 .lv-mobs{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .lv-mob{ font:600 11px var(--font-mono); color:var(--fg-dim); background:var(--surface); border:1px solid var(--border-soft); border-radius:6px; padding:2px 7px; }
+.farm-where{ font:600 10.5px var(--font-mono); color:var(--fg-faint); border:1px solid var(--border-soft); border-radius:5px; padding:1px 6px; }
 .lv-drops{ font-size:11.5px; color:var(--stat-item); margin-top:6px; }
 .farm-lv.ok{ color:var(--stat-item); } .farm-lv.warn{ color:var(--mid); } .farm-lv.hard{ color:var(--danger); }
 .farm-route{ font-size:11.5px; color:var(--fg-dim); margin:0 0 8px; overflow-wrap:anywhere; }
@@ -2105,6 +2106,38 @@ input.invalid{ border-color:var(--danger) !important; }
         5:'center', 6:'right side', 7:'top-left corner', 8:'top', 9:'top-right corner' }
     : { 1:'canto inferior esquerdo', 2:'parte de baixo', 3:'canto inferior direito', 4:'lado esquerdo',
         5:'centro', 6:'lado direito', 7:'canto superior esquerdo', 8:'parte de cima', 9:'canto superior direito' };
+  // ---------- monsters (db-mobs.json): exact maps, how many spawn there, /where code, EXP ----------
+  var MOBS_URL = 'https://rtm-database.pages.dev/assets/data/db-mobs.json';
+  function fetchMobs(){
+    fetch(MOBS_URL).then(function(res){
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function(raw){
+      var c = {}; raw.cols.forEach(function(k, i){ c[k] = i; });
+      var byId = {}, byMap = {}, mapZone = {}, mapCode = {};
+      raw.rows.forEach(function(r){
+        var maps = Array.isArray(r[c.maps]) ? r[c.maps] : [], crowd = r[c.crowd] || [], codes = r[c.codes] || [];
+        var zone = raw.zones[r[c.zone]] || '';
+        var mob = { id: r[c.id], name: String(r[c.name] || ''), lv: r[c.lv] | 0, exp: r[c.exp] | 0, mvp: !!r[c.mvp], maps: [] };
+        maps.forEach(function(mi, i){
+          var name = raw.maps[mi]; if (!name) return;
+          var count = (crowd[i] && crowd[i][0]) | 0;
+          mob.maps.push({ name: name, count: count });
+          (byMap[name] = byMap[name] || []).push({ mob: mob, count: count });
+          if (zone && !mapZone[name]) mapZone[name] = zone;
+          if (codes[i] && !mapCode[name]) mapCode[name] = String(codes[i]).slice(0, 30);
+        });
+        byId[mob.id] = mob;
+      });
+      state.mobs = { byId: byId, byMap: byMap, mapZone: mapZone, mapCode: mapCode };
+      if (activeLoadout()) renderFarm(activeLoadout());
+    }).catch(function(){ state.mobs = null; });
+  }
+  // Where a drop source can be farmed: its exact maps when the monster data loaded, else its area.
+  function sourcePlaces(s){
+    var m = state.mobs && state.mobs.byId[s.mobId];
+    return m && m.maps.length ? m.maps.map(function(x){ return x.name; }) : [s.zone];
+  }
   function fetchPlaces(){
     fetch(PLACES_URL).then(function(res){
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -5760,8 +5793,10 @@ input.invalid{ border-color:var(--danger) !important; }
       var byZone = {};
       left.forEach(function(id){
         targets[id].item.sources.forEach(function(s){
-          var z = byZone[s.zone] = byZone[s.zone] || { ids: {}, prio: 0 };
-          if (!z.ids[id]){ z.ids[id] = true; if (fd.prio[id]) z.prio++; }
+          sourcePlaces(s).forEach(function(place){
+            var z = byZone[place] = byZone[place] || { ids: {}, prio: 0 };
+            if (!z.ids[id]){ z.ids[id] = true; if (fd.prio[id]) z.prio++; }
+          });
         });
       });
       var best = Object.keys(byZone).sort(function(a, b){
@@ -5782,13 +5817,14 @@ input.invalid{ border-color:var(--danger) !important; }
       var card = el('section', { class:'farm-stop' });
       var rows = stop.ids.map(function(id){
         var it = targets[id].item;
-        var here = it.sources.filter(function(s){ return s.zone === stop.zone; }).sort(function(a, b){ return b.rate - a.rate; })[0];
+        var here = it.sources.filter(function(s){ return sourcePlaces(s).indexOf(stop.zone) !== -1; }).sort(function(a, b){ return b.rate - a.rate; })[0];
         return { t: targets[id], s: here };
       }).sort(function(a, b){ return (fd.prio[b.t.item.id] ? 1 : 0) - (fd.prio[a.t.item.id] ? 1 : 0) || a.t.item.name.localeCompare(b.t.item.name); });
       var lvs = rows.map(function(r){ return r.s.mobLv || 0; }).filter(Boolean);
       var head = el('div', { class:'farm-stop-head' });
       head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
       head.appendChild(el('h4', { text: stop.zone }));
+      if (state.mobs && state.mobs.mapCode[stop.zone]) head.appendChild(el('span', { class:'farm-where', text: '/where ' + state.mobs.mapCode[stop.zone] }));
       head.appendChild(el('span', { class:'farm-stop-count', text: rows.length + (rows.length === 1 ? L(' item', ' item') : L(' itens', ' items')) }));
       if (lvs.length){
         var lo1 = Math.min.apply(null, lvs), hi1 = Math.max.apply(null, lvs);
@@ -5819,39 +5855,51 @@ input.invalid{ border-color:var(--danger) !important; }
   // The database has no EXP per mob, so this only says where the mobs match your level,
   // never which map gives the most EXP. MVPs are left out.
   var LEVEL_RANGE = 10, LEVEL_MAPS = 10;
-  function mobsByZone(){
-    if (state.db.mobsByZone) return state.db.mobsByZone;
+  // Per map: its regular (non-MVP) monsters as { name, lv, exp, count } and which item ids drop there.
+  function levelPlaces(){
+    if (state.db.levelPlaces && state.db.levelPlaces.mobs === state.mobs) return state.db.levelPlaces.out;
     var out = {};
+    if (state.mobs){
+      Object.keys(state.mobs.byMap).forEach(function(map){
+        out[map] = { mobs: state.mobs.byMap[map].filter(function(e){ return !e.mob.mvp && e.mob.lv; })
+          .map(function(e){ return { name: e.mob.name, lv: e.mob.lv, exp: e.mob.exp, count: e.count }; }), items: {} };
+      });
+    }
     state.db.items.forEach(function(it){
       it.sources.forEach(function(s){
-        if (s.mvp || !s.zone || s.zone === '—' || !s.mobLv) return;
-        var z = out[s.zone] = out[s.zone] || { mobs: {}, items: {} };
-        z.mobs[s.mob] = s.mobLv;
-        z.items[it.id] = true;
+        if (s.mvp || !s.zone || s.zone === '—') return;
+        sourcePlaces(s).forEach(function(place){
+          var z = out[place] = out[place] || { mobs: [], items: {} };
+          if (!state.mobs && !z.mobs.some(function(m){ return m.name === s.mob; })) z.mobs.push({ name: s.mob, lv: s.mobLv, exp: 0, count: 0 });
+          z.items[it.id] = true;
+        });
       });
     });
-    state.db.mobsByZone = out;
+    state.db.levelPlaces = { mobs: state.mobs, out: out };
     return out;
   }
   function levelMaps(lo, targets, fd){
-    var level = activeStageData(lo).level || 1, zones = mobsByZone();
+    var level = activeStageData(lo).level || 1, places = levelPlaces();
     var pending = Object.keys(targets).filter(function(id){ return !isOwned(lo, id) && !fd.skip[id]; });
-    return Object.keys(zones).map(function(zone){
-      var z = zones[zone];
-      var near = Object.keys(z.mobs).filter(function(m){ return Math.abs(z.mobs[m] - level) <= LEVEL_RANGE; })
-        .map(function(m){ return { name: m, lv: z.mobs[m] }; }).sort(function(a, b){ return a.lv - b.lv; });
-      var gap = near.reduce(function(t, m){ return t + Math.abs(m.lv - level); }, 0) / (near.length || 1);
-      return { zone: zone, near: near, gap: gap, drops: pending.filter(function(id){ return z.items[id]; }) };
+    return Object.keys(places).map(function(map){
+      var z = places[map];
+      var near = z.mobs.filter(function(m){ return Math.abs(m.lv - level) <= LEVEL_RANGE; }).sort(function(a, b){ return a.lv - b.lv; });
+      var count = near.reduce(function(t, m){ return t + m.count; }, 0);
+      var exp = near.reduce(function(t, m){ return t + m.count * m.exp; }, 0);
+      return { zone: map, near: near, count: count, exp: exp, drops: pending.filter(function(id){ return z.items[id]; }) };
     }).filter(function(m){ return m.near.length; }).sort(function(a, b){
-      return b.near.length - a.near.length || b.drops.length - a.drops.length || a.gap - b.gap || a.zone.localeCompare(b.zone);
+      return b.exp - a.exp || b.near.length - a.near.length || b.drops.length - a.drops.length || a.zone.localeCompare(b.zone);
     }).slice(0, LEVEL_MAPS);
   }
   function renderFarmLevel(lo, list, targets, fd){
     var level = activeStageData(lo).level || 1;
-    list.appendChild(el('p', { class:'panel-intro', text: L('Mapas com mais monstros entre Lv ', 'Maps with the most monsters between Lv ')
-      + Math.max(1, level - LEVEL_RANGE) + L(' e ', ' and ') + (level + LEVEL_RANGE) + L(' (level desta fase ±', " (this stage's level ±") + LEVEL_RANGE
-      + L('). A base não tem a EXP de cada monstro, então isto mostra onde os monstros são do seu nível, não qual mapa dá mais EXP. MVPs ficam de fora. Em empate, sobe o mapa onde caem mais itens que faltam neste loadout.',
-        "). The database has no EXP per monster, so this shows where the monsters match your level, not which map gives the most EXP. MVPs are left out. On a tie, the map where more of this loadout's missing items drop comes first.") }));
+    var withExp = !!state.mobs;
+    list.appendChild(el('p', { class:'panel-intro', text: L('Mapas com monstros entre Lv ', 'Maps with monsters between Lv ')
+      + Math.max(1, level - LEVEL_RANGE) + L(' e ', ' and ') + (level + LEVEL_RANGE) + L(' (level desta fase ±', " (this stage's level ±") + LEVEL_RANGE + '). '
+      + (withExp
+        ? L('Ordem pela EXP base somada de todos esses monstros do mapa (quantidade × EXP de cada um). É a EXP da base, sem bônus nem penalidade por diferença de level. MVPs ficam de fora.',
+            'Ordered by the base EXP of all those monsters on the map added up (count × EXP of each). Database EXP, with no bonus or level-difference penalty. MVPs are left out.')
+        : L('Os dados de EXP ainda não carregaram; a ordem é pelo número de tipos de monstro.', 'EXP data has not loaded yet; ordered by the number of monster kinds.')) }));
     var maps = levelMaps(lo, targets, fd);
     if (!maps.length){
       list.appendChild(el('div', { class:'empty-note', text: L('Nenhum mapa com monstros nessa faixa de level.', 'No map with monsters in that level range.') }));
@@ -5862,13 +5910,16 @@ input.invalid{ border-color:var(--danger) !important; }
       var head = el('div', { class:'farm-stop-head' });
       head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
       head.appendChild(el('h4', { text: m.zone }));
-      head.appendChild(el('span', { class:'farm-stop-count', text: m.near.length + (m.near.length === 1 ? L(' monstro', ' monster') : L(' monstros', ' monsters')) }));
+      if (state.mobs && state.mobs.mapCode[m.zone]) head.appendChild(el('span', { class:'farm-where', text: '/where ' + state.mobs.mapCode[m.zone] }));
+      if (withExp) head.appendChild(el('span', { class:'farm-stop-count', text: m.count + L(' monstros · ', ' monsters · ') + m.exp.toLocaleString(L('pt-BR', 'en-US')) + L(' EXP base', ' base EXP') }));
       var lo1 = m.near[0].lv, hi1 = m.near[m.near.length - 1].lv;
       head.appendChild(el('span', { class:'farm-lv ' + (hi1 <= level ? 'ok' : 'warn'), text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
       card.appendChild(head);
       card.appendChild(farmRouteLine(m.zone));
       var mobs = el('div', { class:'lv-mobs' });
-      m.near.forEach(function(x){ mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv })); });
+      m.near.forEach(function(x){
+        mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv + (withExp ? ' · ' + x.count + '× · ' + x.exp + ' EXP' : '') }));
+      });
       card.appendChild(mobs);
       if (m.drops.length){
         card.appendChild(el('div', { class:'lv-drops', text: L('Também cai aqui: ', 'Also drops here: ')
@@ -5881,7 +5932,8 @@ input.invalid{ border-color:var(--danger) !important; }
   function farmRouteLine(zone){
     var line = el('div', { class:'farm-route' });
     var P = state.places;
-    var place = P && !P.failed && P.byName ? P.byName[zone] : null;
+    var area = (state.mobs && state.mobs.mapZone[zone]) || zone;
+    var place = P && !P.failed && P.byName ? (P.byName[zone] || P.byName[area]) : null;
     if (!place || !place.ride){
       line.textContent = P && !P.failed ? L('Sem rota na base do site.', 'No route in the site database.') : L('Carregando rotas…', 'Loading routes…');
       return line;
@@ -5894,6 +5946,7 @@ input.invalid{ border-color:var(--danger) !important; }
       var npc = place.ride[0] === 1 ? 'Dungeon Caravan' : L('Kafra Orfanato', 'Orphanage Kafra');
       text = [npc, place.ride[1]].concat(place.route.map(function(m){ return P.maps[m] || '?'; })).join(' > ');
     }
+    if (zone !== area && text.indexOf(zone) === -1) text += ' > ' + zone;
     line.appendChild(el('span', { class:'farm-route-k', text:L('Como chegar: ', 'How to get there: ') }));
     line.appendChild(document.createTextNode(text));
     line.appendChild(el('span', { class:'farm-route-tag' + (played && played.confirmed ? ' ok' : ''),
@@ -6870,6 +6923,7 @@ input.invalid{ border-color:var(--danger) !important; }
   renderHistory();
   fetchDb();
   fetchPlaces();
+  fetchMobs();
   checkPassivesAgainstSite();
 })();
 </script>

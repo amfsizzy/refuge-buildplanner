@@ -2,7 +2,7 @@
 
 Português: [CHECKLIST.pt-BR.md](CHECKLIST.pt-BR.md)
 
-We don't have access to the game files: the planner only knows what the server's **public item database** makes available. Everything below isn't published there, so it has to be measured in game. Pick an **open** item, follow its steps and post your result in the **"Refuge Build Planner" thread** on the server's Discord, with a screenshot of your Status window (class, level, base stats and gear with refine levels). Mention the item code (e.g. `r2`).
+We don't have access to the game files: the planner only knows what the server's **public item database** makes available. Everything below isn't published there, so it has to be measured in game. Pick an **open** item, follow its steps and post your result in the **[Refuge Build Planner thread](https://discord.com/channels/1500898812942745602/1557950291347771462)** on the server's Discord, with a screenshot of your Status window (class, level, base stats and gear with refine levels). Mention the item code (e.g. `r2`).
 
 ⚠️ Never post your account login, password, email or any personal information.
 

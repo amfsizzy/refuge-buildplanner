@@ -2,7 +2,7 @@
 
 English: [CHECKLIST.md](CHECKLIST.md)
 
-Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de itens pública** do servidor disponibiliza. Tudo abaixo não está publicado lá, então precisa ser medido no jogo. Escolha um item **em aberto**, siga o passo a passo e mande o resultado na **thread "Refuge Build Planner"** do Discord do servidor, com um print da janela de Status (classe, level, atributos base e equipamento com refino). Informe o código do item (ex.: `r2`).
+Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de itens pública** do servidor disponibiliza. Tudo abaixo não está publicado lá, então precisa ser medido no jogo. Escolha um item **em aberto**, siga o passo a passo e mande o resultado na **[thread Refuge Build Planner](https://discord.com/channels/1500898812942745602/1557950291347771462)** do Discord do servidor, com um print da janela de Status (classe, level, atributos base e equipamento com refino). Informe o código do item (ex.: `r2`).
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 

@@ -588,6 +588,15 @@ input.invalid{ border-color:var(--danger) !important; }
 .src-row:last-child{ border-bottom:none; }
 .src-row .src-rate{ font-family:var(--font-mono); color:var(--accent); white-space:nowrap; }
 .mvp-tag{ font-size:9.5px; font-weight:700; color:var(--mid); border:1px solid var(--mid); border-radius:999px; padding:0 6px; margin-left:4px; }
+/* drop chance and MVP, easy to spot wherever a source is listed */
+.rate-chips{ display:inline-flex; gap:4px; align-items:center; vertical-align:middle; }
+.rate-chip{ font:700 11px var(--font-mono); color:var(--accent-strong); padding:0 6px; border-radius:5px; line-height:1.5;
+  border:1px solid color-mix(in srgb, var(--accent) 55%, transparent); background:color-mix(in srgb, var(--accent) 14%, transparent); }
+.mvp-chip{ font:800 10px var(--font-body); letter-spacing:.04em; color:#1a1205; background:var(--mid); border-radius:5px; padding:0 6px; line-height:1.6; }
+.src-list{ display:inline-flex; flex-wrap:wrap; gap:3px 10px; align-items:center; }
+.src-one{ white-space:nowrap; }
+.src-more{ font-size:10.5px; color:var(--fg-faint); }
+.fi-src .src-list{ margin-left:4px; }
 .detail-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .detail-actions a, .detail-actions button{
   font-size:12px; padding:7px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
@@ -778,7 +787,7 @@ input.invalid{ border-color:var(--danger) !important; }
   border-top:1px solid var(--border-soft); font-family:var(--font-mono); font-size:10.5px;
 }
 .dstrip span{
-  padding:1px 6px; border-radius:5px; white-space:nowrap; line-height:1.45;
+  padding:1px 6px; border-radius:5px; white-space:nowrap; line-height:1.45; max-width:100%; overflow:hidden; text-overflow:ellipsis;
   border:1px solid color-mix(in srgb, currentColor 35%, transparent); background:color-mix(in srgb, currentColor 8%, transparent);
 }
 .dstrip .s-base{ color:var(--fg-dim); }
@@ -868,27 +877,6 @@ input.invalid{ border-color:var(--danger) !important; }
 }
 @media (pointer:coarse){ .ref-pen{ width:32px; height:32px; } .ref-pen svg{ width:16px; height:16px; } }
 
-/* Rolled options: a gold panel of their own */
-.sc-rolls{
-  border:1px solid color-mix(in srgb, var(--stat-roll) 55%, transparent); border-radius:10px; padding:10px 12px;
-  background:linear-gradient(180deg, color-mix(in srgb, var(--stat-roll) 13%, transparent) 0%, color-mix(in srgb, var(--stat-roll) 4%, transparent) 100%);
-  display:flex; flex-direction:column; gap:6px;
-}
-.sc-rolls.empty{ border-style:dashed; }
-.sc-rolls-head{ display:flex; align-items:center; gap:7px; color:var(--stat-roll); }
-.sc-rolls-head h4{ margin:0; font-size:11px; letter-spacing:.09em; text-transform:uppercase; font-weight:700; color:var(--stat-roll); }
-.sc-rolls-icon svg{ width:16px; height:16px; display:block; }
-.sc-rolls-count{ margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--fg-faint); }
-.sc-rolls-help{ margin:0; font-size:11.5px; color:var(--fg-dim); }
-.sc-rolls .extra-chip{ color:var(--stat-roll); border-color:color-mix(in srgb, var(--stat-roll) 55%, transparent); background:color-mix(in srgb, var(--stat-roll) 10%, transparent); }
-.sc-rolls .extra-form{ display:flex; gap:6px; align-items:stretch; }
-.sc-rolls .extra-form input{ flex:1; min-width:0; border:1px dashed color-mix(in srgb, var(--stat-roll) 60%, transparent); }
-.sc-rolls .extra-form input:focus{ border-style:solid; border-color:var(--stat-roll); }
-.sc-rolls-add{
-  flex:none; padding:4px 12px; border-radius:7px; font-weight:700; font-size:12px; cursor:pointer;
-  color:#1a1205; background:var(--stat-roll); border:1px solid var(--stat-roll);
-}
-.sc-rolls-add:hover{ filter:brightness(1.08); }
 /* Small bevelled close box, like the "x" on the game's windows; turns red on hover. */
 .sc-close{
   position:absolute; top:10px; right:10px; z-index:2; width:20px; height:20px; padding:0;
@@ -934,18 +922,28 @@ input.invalid{ border-color:var(--danger) !important; }
 }
 @media (pointer:coarse){ .hovertip{ display:none; } }
 
-/* Resumo | Origem tabs inside the showcase */
-.sc-tabs{ display:flex; gap:2px; padding:3px; border-radius:9px; background:var(--surface-2); border:1px solid var(--border-soft); }
-.sc-tab{
-  flex:1; padding:6px 8px; border:0; border-radius:7px; background:transparent; color:var(--fg-dim);
-  font-size:12px; font-weight:700; cursor:pointer;
-}
-.sc-tab:hover{ color:var(--fg); }
-.sc-tab[aria-selected="true"]{ background:var(--surface); color:var(--accent-strong); box-shadow:0 1px 3px rgba(0,0,0,.25); }
-.sc-tab:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
-@media (pointer:coarse){ .sc-tab{ min-height:36px; } }
-.sc-pane{ display:flex; flex-direction:column; gap:10px; }
-.sc-pane > .sc-sec + .sc-sec{ border-top:1px solid var(--border-soft); padding-top:10px; }
+/* Base and Rolls side by side under the title; rolls are gold chips, no box */
+.sc-kv{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px 12px; align-items:center; }
+.sc-k{ font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--fg-faint); font-weight:700; }
+.sc-k.rolls{ color:var(--stat-roll); }
+.sc-rolls-row{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; min-width:0; }
+.roll-chip{ display:inline-flex; align-items:center; gap:2px; font:600 11.5px var(--font-mono); color:var(--stat-roll); padding:1px 2px 1px 7px; border-radius:6px;
+  border:1px solid color-mix(in srgb, var(--stat-roll) 50%, transparent); background:color-mix(in srgb, var(--stat-roll) 12%, transparent); }
+.roll-chip.note{ border-style:dashed; opacity:.75; }
+.roll-x{ border:0; background:transparent; color:inherit; font-size:13px; line-height:1; width:18px; height:18px; padding:0; cursor:pointer; opacity:.7; border-radius:4px; }
+.roll-x:hover{ opacity:1; background:color-mix(in srgb, var(--stat-roll) 20%, transparent); }
+.roll-add{ display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; color:var(--stat-roll); background:transparent;
+  border:1px solid color-mix(in srgb, var(--stat-roll) 45%, transparent); border-radius:999px; padding:2px 10px 2px 7px; cursor:pointer; }
+.roll-add:hover, .roll-add:focus-visible{ background:color-mix(in srgb, var(--stat-roll) 14%, transparent); outline:none; border-color:var(--stat-roll); }
+.roll-dice svg{ width:14px; height:14px; display:block; }
+.roll-form{ display:inline-flex; min-width:0; flex:1 1 140px; }
+.roll-form input{ width:100%; min-width:0; font:12px var(--font-mono); padding:3px 8px; border-radius:6px; color:var(--fg);
+  background:var(--surface-2); border:1px solid var(--stat-roll); }
+@media (pointer:coarse){ .roll-x{ width:28px; height:28px; } .roll-add{ min-height:32px; } }
+.sc-body > .sc-sec + .sc-sec, .sc-kv + .sc-sec{ border-top:1px solid var(--border-soft); padding-top:10px; }
+.tchip.multi{ cursor:help; }
+
+
 .sc-lines.locked{ color:var(--fg-faint); }
 .sc-lines.locked span{ border-style:dashed; background:none; }
 
@@ -1838,6 +1836,22 @@ input.invalid{ border-color:var(--danger) !important; }
   // 2026-10-05). "Kafra Orfanato" = Kafra Allysia and "Dungeon Caravan" = Skia Nerius (every
   // destination matches the NPC in db-places). `confirmed` mirrors the checklist tick (all 13 ticked
   // as of 2026-10-05); unticked notes show as "anotado, não confirmado". Keyed by ride destination.
+  // Trades players confirmed in game that the database doesn't list (2026-10-13): N of one item
+  // for one of another. Keyed by the item you get.
+  var EXCHANGES = {
+    7363: [{ qty:100, itemId:7362, where:L('troca com um NPC no fim do último mapa de Sky Garden', 'trade with an NPC at the end of the last Sky Garden map') }] // Odin's Blessing ← Einherjar Soul
+  };
+  function exchangeLine(ex){
+    var giveIt = itemById(ex.itemId);
+    var line = el('div', { class:'acq-line' });
+    line.appendChild(document.createTextNode(ex.qty + '× ' + (giveIt ? giveIt.name : '#' + ex.itemId) + ' · ' + ex.where));
+    if (giveIt && giveIt.sources.length){
+      var s = sourceList(giveIt, 3, false);
+      s.classList.add('mat-src');
+      line.appendChild(el('div', {}, [ s ]));
+    }
+    return line;
+  }
   var PLAYER_ROUTES = {
     "Morroc's Guild": { text:L("Kafra Orfanato > Morroc's Guild", "Orphanage Kafra > Morroc's Guild"), confirmed:true },
     'Geffen Cave': { text:'Dungeon Caravan > Geffen Cave', confirmed:true },
@@ -2003,7 +2017,6 @@ input.invalid{ border-color:var(--danger) !important; }
   var DOLL_LABEL = { atk:'ATK', matk:'MATK', str:'STR', agi:'AGI', vit:'VIT', int:'INT', dex:'DEX', luk:'LUK',
     hit:'HIT', flee:'FLEE', crit:'Crit', pdodge:'P.Dodge', def:'DEF', mdef:'MDEF', aspd:'ASPD', aspdPct:'ASPD', aspdLimit:'ASPD Lim' };
   var dollPinned = { equip:null, shadow:null }; // slot key shown in each showcase
-  var showcaseView = { equip:'sum', shadow:'sum' }; // 'sum' (Resumo) or 'src' (Origem)
   var dollContext = { equip:null, shadow:null };    // loadout + stage each showcase was drawn for
   var TOUCH = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
 
@@ -2098,7 +2111,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var sd = activeStageData(lo);
     var setNames = completeSetNames(lo);
     var ctx = lo.id + '|' + lo.activeStage;
-    if (dollContext[group] !== ctx){ dollContext[group] = ctx; dollPinned[group] = null; showcaseView[group] = 'sum'; }
+    if (dollContext[group] !== ctx){ dollContext[group] = ctx; dollPinned[group] = null; rollAdding[group] = null; }
     if (dollPinned[group] && !sd.slots[dollPinned[group]]) dollPinned[group] = null;
     function col(keys, cls){
       var c = el('div', { class:'doll-col ' + cls });
@@ -2119,7 +2132,7 @@ input.invalid{ border-color:var(--danger) !important; }
     [/\bVariable Cast(?: Time)?\b/g, 'Var Cast'], [/\bFixed Cast(?: Time)?\b/g, 'Fix Cast'],
     [/\bAfter Cast Delay\b/g, 'ACD'], [/\bPerfect Dodge\b/g, 'P.Dodge'], [/\bPerfect Hit\b/g, 'P.Hit'],
     [/\bMove(?:ment)? Speed\b/g, 'Move Spd'], [/\bTotal /g, ''],
-    [/\bDamage\b|\bDMG\b/g, 'Dmg'], [/\bResistance\b/g, 'Res'], [/\bRegeneration\b/g, 'Regen'],
+    [/\bDamage\b|\bDMG\b/gi, 'Dmg'], [/\bResistance\b/gi, 'Res'], [/\bReduction\b/gi, 'Red.'], [/\bRegeneration\b/g, 'Regen'],
     [/\bRecovery\b/g, 'Recov'], [/\bPhysical\b/g, 'Phys'], [/\bMagic(?:al)?\b/g, 'Mag'],
     [/\bagainst\b/g, 'vs'], [/\bElement(?:al)?\b/gi, 'Ele'], [/\bCooldown\b/gi, 'CD'], [/\bHealing\b/g, 'Heal']
   ];
@@ -2127,7 +2140,7 @@ input.invalid{ border-color:var(--danger) !important; }
   function shortChip(cls, t){
     var s = shortName(t);
     var chip = el('span', { class: cls + (s !== t ? ' abbr' : ''), text: s });
-    if (s !== t) chip.title = t;
+    chip.title = t; // full text on hover, also when a long chip is cut short
     return chip;
   }
   function dollTile(lo, group, def, val, setNames){
@@ -2244,7 +2257,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var head = el('div', {}, [title]);
     if (p.it){
       head.appendChild(el('div', { class:'sc-sub', text: [def.label, p.it.cat, 'Lv ' + (p.it.lv || '?'), p.it.slots ? p.it.slots + '-slot' : ''].filter(Boolean).join(' · ') }));
-      if (p.it.jobsText) head.appendChild(el('div', { class:'sc-jobs', title:p.it.jobsText, text:L('Classes: ', 'Classes: ') + p.it.jobsText }));
+      if (p.it.jobsText) head.appendChild(el('div', { class:'sc-jobs', title:p.it.jobsText, text:L('Classes: ', 'Classes: ') + shortJobs(p.it.jobsText) }));
     }
     body.appendChild(head);
 
@@ -2256,34 +2269,31 @@ input.invalid{ border-color:var(--danger) !important; }
       s.appendChild(w); target.appendChild(s);
       return true;
     }
-    // Always visible: the item's base values and its rolls (what the player edits most).
-    sec(body, L('Base', 'Base'), p.base, 'base');
-    body.appendChild(rollsPanel(val, p.extras));
-
-    // The numbers, two ways: the slot total first, the breakdown by source on demand.
-    var view = showcaseView[group];
-    var tabs = el('div', { class:'sc-tabs', role:'tablist', 'aria-label':L('Valores do slot', 'Slot values') });
-    [['sum', L('Resumo', 'Summary')], ['src', L('Origem', 'Sources')]].forEach(function(t){
-      var b = el('button', { type:'button', role:'tab', class:'sc-tab', 'aria-selected': String(view === t[0]), text:t[1] });
-      b.addEventListener('click', function(){ showcaseView[group] = t[0]; renderShowcase(lo, group); });
-      tabs.appendChild(b);
-    });
-    body.appendChild(tabs);
-    var pane = el('div', { class:'sc-pane', role:'tabpanel' });
-    body.appendChild(pane);
-    var setNames = itemSetsIn(p.it, completeSetNames(lo));
-    if (view === 'sum'){
-      var any = totalSec(pane, L('Total deste slot', 'This slot in total'), [
-        ['c-item', bySource(p.own, p.itemFx.stat)], ['c-card', bySource(p.cardB, p.cardFx.stat)], ['c-roll', bySource(p.rollB, p.rollFx.stat)]
-      ]);
-      any = totalSec(pane, L('Outros efeitos', 'Other effects'), [
-        ['c-fx', bySource(null, p.itemFx.other)], ['c-card', bySource(null, p.cardFx.other)], ['c-roll', bySource(null, p.rollFx.other)]
-      ]) || any;
-      any = sec(pane, L('Faz parte do conjunto', 'Part of the set'), setNames, 'item') || any;
-      if (!any) pane.appendChild(el('div', { class:'sc-hint', text:L('Este slot não dá bônus que o planner calcula. Veja a descrição no tooltip.', "This slot gives no bonus the planner calculates. See the description in the tooltip.") }));
-    } else {
-      sourcesPane(pane, sec, lo, val, p, setNames);
+    // What the player reads and edits most, side by side: the item's base values and its rolls.
+    var kv = el('div', { class:'sc-kv' });
+    if (p.base.length){
+      var bl = el('div', { class:'sc-lines base' });
+      p.base.forEach(function(t){ bl.appendChild(el('span', { text:t })); });
+      kv.appendChild(el('div', { class:'sc-k', text:L('Base', 'Base') }));
+      kv.appendChild(bl);
     }
+    kv.appendChild(el('div', { class:'sc-k rolls', text:'Rolls' }));
+    kv.appendChild(rollsRow(lo, group, val, p.extras));
+    body.appendChild(kv);
+
+    // Every number of the slot in one list, colored by where it comes from; a value made of
+    // several sources shows the parts (and names them on hover).
+    var any = totalSec(body, L('Valores deste slot', 'This slot’s values'), [
+      ['c-item', bySource(p.own, p.itemFx.stat)], ['c-card', bySource(p.cardB, p.cardFx.stat)], ['c-roll', bySource(p.rollB, p.rollFx.stat)],
+      ['c-fx', bySource(null, p.itemFx.other)], ['c-card', bySource(null, p.cardFx.other)], ['c-roll', bySource(null, p.rollFx.other)]
+    ]);
+    if (p.it){
+      var locked = lockedLines(p.it);
+      if (locked.length) any = sec(body, L('Ainda bloqueado pelo level', 'Still locked by level'), locked, 'locked') || any;
+    }
+    any = cardsSec(body, val) || any;
+    any = setsSec(body, lo, itemSetsIn(p.it, completeSetNames(lo))) || any;
+    if (!any) body.appendChild(el('div', { class:'sc-hint', text:L('Este slot não dá bônus que o planner calcula. Veja a descrição no tooltip.', "This slot gives no bonus the planner calculates. See the description in the tooltip.") }));
 
     var actions = el('div', { class:'sc-actions' });
     var swap = el('button', { type:'button', text:L('Trocar', 'Change') });
@@ -2344,6 +2354,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var w = el('div', { class:'sc-lines tchips' });
     rows.forEach(function(r){
       var chip = el('span', { class:'tchip ' + (r.parts.length === 1 ? r.parts[0].cls : 'multi') });
+      if (r.parts.length > 1) chip.title = r.parts.map(function(x){ return (SOURCE_NAME[x.cls] || '') + ' ' + fmtN(x.e.n, r.unit); }).join(' · ');
       chip.appendChild(el('b', { text: r.label + ' ' + fmtN(r.sum, r.unit) }));
       if (r.parts.length > 1) r.parts.forEach(function(x){
         chip.appendChild(el('span', { class:'tpart ' + x.cls, text: fmtN(x.e.n, '').replace(/^\+/, '') }));
@@ -2354,18 +2365,20 @@ input.invalid{ border-color:var(--danger) !important; }
     return true;
   }
 
-  // "Origem" tab: where each number of the slot comes from.
-  function sourcesPane(pane, sec, lo, val, p, setNames){
-    sec(pane, L('Do item', 'From the item') + (p.refine ? ' (+' + p.refine + ')' : ''), statLines(p.own, p.itemFx.stat), 'item');
-    sec(pane, L('Outros efeitos do item', 'Other effects of the item'), effectLines(p.itemFx.other), 'fx');
-    if (p.it){
-      var locked = lockedLines(p.it);
-      if (locked.length) sec(pane, L('Ainda bloqueado pelo level', 'Still locked by level'), locked, 'locked');
-    }
-    if ((val.cards || []).some(Boolean)){
-      var cs = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Cartas', 'Cards') }) ]);
-      (val.cards || []).forEach(function(c){
-        if (!c) return;
+  var SOURCE_NAME = { 'c-item':L('item', 'item'), 'c-card':L('cartas', 'cards'), 'c-roll':'rolls', 'c-fx':L('item', 'item') };
+  // "All except Bouncer, Dark Knight, …" is long; the showcase says how many and the hover lists them.
+  function shortJobs(text){
+    var m = /^All except (.+)$/i.exec(text);
+    if (m){ var n = m[1].split(/\s*,\s*/).length; return n > 3 ? L('todas exceto ' + n + ' classes', 'all but ' + n + ' classes') : text; }
+    var list = text.split(/\s*,\s*/);
+    return list.length > 4 ? list.slice(0, 3).join(', ') + L(' e mais ', ' and ') + (list.length - 3) + L('', ' more') : text;
+  }
+  // The cards in the slot, each with what it gives.
+  function cardsSec(target, val){
+    var cards = (val.cards || []).filter(Boolean);
+    if (!cards.length) return false;
+    var cs = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Cartas (' + cards.length + ')', 'Cards (' + cards.length + ')') }) ]);
+    cards.forEach(function(c){
         var ci = !c.manual ? itemById(c.itemId) : null;
         var row = el('div', { class:'sc-card-row' });
         if (ci){
@@ -2387,10 +2400,13 @@ input.invalid{ border-color:var(--danger) !important; }
         }
         row.appendChild(t);
         cs.appendChild(row);
-      });
-      pane.appendChild(cs);
-    }
-    // Detail of each complete set this piece belongs to.
+    });
+    target.appendChild(cs);
+    return true;
+  }
+  // Each complete set this piece belongs to, with what the set gives.
+  function setsSec(target, lo, setNames){
+    var any = false;
     computeActiveSets(lo).complete.forEach(function(s){
       if (setNames.indexOf(s.name) === -1) return;
       var ss = el('div', { class:'sc-sec sc-set' }, [ el('h4', { text:L('Conjunto completo: ', 'Complete set: ') + s.name }) ]);
@@ -2399,8 +2415,10 @@ input.invalid{ border-color:var(--danger) !important; }
       if (bl.length){ var w1 = el('div', { class:'sc-lines item' }); bl.forEach(function(t){ w1.appendChild(el('span', { text:t })); }); ss.appendChild(w1); }
       if (fl.length){ var w2 = el('div', { class:'sc-lines fx' }); fl.forEach(function(t){ w2.appendChild(el('span', { text:t })); }); ss.appendChild(w2); }
       if (!bl.length && !fl.length && s.bonusText) ss.appendChild(el('div', { class:'sc-hint', text:s.bonusText }));
-      pane.appendChild(ss);
+      target.appendChild(ss);
+      any = true;
     });
+    return any;
   }
 
   // "+7 ✎" next to the item name: the pencil turns the number into a 0–10 field.
@@ -2442,24 +2460,55 @@ input.invalid{ border-color:var(--danger) !important; }
     return wrap;
   }
 
-  // Rolled options get their own gold panel so they're easy to spot and fill in.
+  // Rolled options as gold chips next to "Rolls", with a small gold button to add one: the
+  // field opens in the same line, Enter adds and keeps it open for the next, Esc closes it.
   var DICE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>';
-  function rollsPanel(val, extras){
-    var panel = el('div', { class:'sc-rolls' + (extras.length ? '' : ' empty') });
-    var icon = el('span', { class:'sc-rolls-icon', 'aria-hidden':'true' });
-    icon.innerHTML = DICE_SVG; // static markup, no data
-    panel.appendChild(el('div', { class:'sc-rolls-head' }, [
-      icon,
-      el('h4', { text:'Rolls' }),
-      el('span', { class:'sc-rolls-count', text: extras.length + '/' + LIMITS.extras })
-    ]));
-    if (!extras.length) panel.appendChild(el('p', { class:'sc-rolls-help',
-      text: L('Seu item veio com bônus aleatórios? Adicione aqui (ex.: ATK +3, Max HP +2%).', 'Did your item roll random bonuses? Add them here (e.g. ATK +3, Max HP +2%).') }));
-    var ex = renderExtras(val);
-    var form = ex.querySelector('form');
-    if (form) form.appendChild(el('button', { type:'submit', class:'sc-rolls-add', text:L('Adicionar', 'Add') }));
-    panel.appendChild(ex);
-    return panel;
+  var rollAdding = { equip:null, shadow:null }; // slot key whose "add roll" field is open
+  function rollsRow(lo, group, val, extras){
+    var key = dollPinned[group];
+    var row = el('div', { class:'sc-rolls-row' });
+    extras.forEach(function(line, i){
+      var counted = extraIsCounted(line);
+      var chip = el('span', { class:'roll-chip' + (counted ? '' : ' note'),
+        title: counted ? L('Somado no simulador', 'Added to the simulator') : L('Não calculado: aparece só como anotação', 'Not calculated: shown as a note only') }, [ el('span', { text: line }) ]);
+      var x = el('button', { type:'button', class:'roll-x', text:'×', 'aria-label':L('Remover ', 'Remove ') + line });
+      x.addEventListener('click', function(){
+        val.extras = extras.filter(function(_, j){ return j !== i; });
+        if (!val.extras.length) delete val.extras;
+        saveLoadouts(); render();
+      });
+      chip.appendChild(x);
+      row.appendChild(chip);
+    });
+    if (extras.length >= LIMITS.extras) return row;
+    if (rollAdding[group] === key){
+      var form = el('form', { class:'roll-form' });
+      var input = el('input', { type:'text', list:'extraSuggestions', maxlength:'60', placeholder:L('ex.: ATK +3', 'e.g. ATK +3'), 'aria-label':L('Novo roll', 'New roll') });
+      form.appendChild(input);
+      form.addEventListener('submit', function(ev){
+        ev.preventDefault();
+        var line = input.value.replace(/\s+/g, ' ').trim();
+        if (!line || /\+\s*$/.test(line)) return;
+        val.extras = extras.concat([line]);
+        saveLoadouts(); render();
+        var again = document.querySelector('#dollCenter-' + group + ' .roll-form input');
+        if (again) again.focus({ preventScroll: true });
+      });
+      function close(){ rollAdding[group] = null; renderShowcase(lo, group); }
+      input.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(); } });
+      input.addEventListener('blur', function(){ setTimeout(function(){ if (!input.value && rollAdding[group] === key && !form.contains(document.activeElement)) close(); }, 120); });
+      row.appendChild(form);
+      setTimeout(function(){ if (input.isConnected) input.focus({ preventScroll: true }); }, 0);
+    } else {
+      var add = el('button', { type:'button', class:'roll-add', 'aria-label':L('Adicionar roll', 'Add a roll') });
+      var dice = el('span', { class:'roll-dice', 'aria-hidden':'true' });
+      dice.innerHTML = DICE_SVG; // static markup, no data
+      add.appendChild(dice);
+      add.appendChild(document.createTextNode(extras.length ? '+' : L('adicionar roll', 'add roll')));
+      add.addEventListener('click', function(){ rollAdding[group] = key; renderShowcase(lo, group); });
+      row.appendChild(add);
+    }
+    return row;
   }
 
   function showcaseSummary(lo, group, sd){
@@ -4497,16 +4546,34 @@ input.invalid{ border-color:var(--danger) !important; }
     var s = it.sources[0];
     return s.mob + ' · ' + s.zone + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '');
   }
+  // Where something drops, drop chance first: "Sarah Irine · Sky Garden Okolnir [25%]", MVP in
+  // yellow, up to `max` sources (best chance first).
+  function rateChip(s){
+    var wrap = el('span', { class:'rate-chips' });
+    wrap.appendChild(el('span', { class:'rate-chip', text: s.rate + '%' }));
+    if (s.mvp) wrap.appendChild(el('span', { class:'mvp-chip', text:'MVP' }));
+    return wrap;
+  }
+  function sourceList(it, max, withLv){
+    var box = el('span', { class:'src-list' });
+    if (!it || !it.sources.length) return box;
+    it.sources.slice(0, max).forEach(function(s){
+      var one = el('span', { class:'src-one' });
+      one.appendChild(document.createTextNode(s.mob + (withLv ? ' · Lv' + s.mobLv : '') + ' · ' + s.zone + ' '));
+      one.appendChild(rateChip(s));
+      box.appendChild(one);
+    });
+    if (it.sources.length > max) box.appendChild(el('span', { class:'src-more', text:'+' + (it.sources.length - max) + L(' fontes', ' sources') }));
+    return box;
+  }
   function buildAcquireInfo(it){
     var box = el('div', { class:'acq' });
     if (it.sources.length){
       var sec = el('div', { class:'acq-sec' }, [ el('h5', { text:L('Dropa de', 'Drops from') }) ]);
       it.sources.forEach(function(s){
         var row = el('div', { class:'src-row' });
-        var left = el('span', { text: s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone });
-        if (s.mvp) left.appendChild(el('span', { class:'mvp-tag', text:'MVP' }));
-        row.appendChild(left);
-        row.appendChild(el('span', { class:'src-rate', text: s.rate + '%' }));
+        row.appendChild(el('span', { text: s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone }));
+        row.appendChild(rateChip(s));
         sec.appendChild(row);
       });
       box.appendChild(sec);
@@ -4529,13 +4596,25 @@ input.invalid{ border-color:var(--danger) !important; }
           var nm = el(mi ? 'button' : 'span', { class: mi ? 'item-link' : '', text: m[0] + '× ' + m[1] });
           if (mi){ nm.type = 'button'; nm.addEventListener('click', function(){ openDetail(mi.id); }); }
           li.appendChild(nm);
-          var src = bestSourceText(mi);
-          if (src) li.appendChild(el('span', { class:'mat-src', text: src }));
+          if (mi && mi.sources.length){
+            var ms = sourceList(mi, 3, false);
+            ms.classList.add('mat-src');
+            li.appendChild(ms);
+          }
+          (EXCHANGES[m[2]] || []).forEach(function(ex){
+            var give = itemById(ex.itemId);
+            li.appendChild(el('span', { class:'mat-src', text: L('ou ', 'or ') + ex.qty + '× ' + (give ? give.name : '#' + ex.itemId) + ' (' + ex.where + ')' }));
+          });
           ul.appendChild(li);
         });
         q.appendChild(ul);
       }
       box.appendChild(q);
+    }
+    if (EXCHANGES[it.id]){
+      var xs = el('div', { class:'acq-sec' }, [ el('h5', { text:L('Troca (confirmada em jogo)', 'Trade (confirmed in game)') }) ]);
+      EXCHANGES[it.id].forEach(function(ex){ xs.appendChild(exchangeLine(ex)); });
+      box.appendChild(xs);
     }
     if (it.shop) box.appendChild(el('div', { class:'acq-sec' }, [ el('h5', { text:L('Loja', 'Shop') }), el('div', { class:'acq-line', text:L('Vendido em loja (NPC).', 'Sold in an NPC shop.') }) ]));
     if (!it.sources.length && !it.how && !it.shop){
@@ -4663,7 +4742,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
   // One item row: star, "already have", sprite, name (opens the detail), where it comes from,
   // "won't farm", and the full list of sources on demand.
-  function farmRow(lo, t, fd, srcText){
+  function farmRow(lo, t, fd, here){
     var it = t.item;
     var owned = isOwned(lo, it.id), skipped = !!fd.skip[it.id], prio = !!fd.prio[it.id];
     var isOpen = !!state.farmOpen[it.id];
@@ -4683,7 +4762,7 @@ input.invalid{ border-color:var(--danger) !important; }
     nameBtn.addEventListener('click', function(e){ e.stopPropagation(); openDetail(it.id); });
     main.appendChild(nameBtn);
     if (t.tag) nameBtn.appendChild(el('span', { class:'farm-tag', text: t.tag }));
-    main.appendChild(el('div', { class:'fi-src', text: srcText || farmSourceText(it) }));
+    main.appendChild(farmSource(it, here));
     row.appendChild(main);
     var skip = el('button', { type:'button', class:'farm-skip' + (skipped ? ' on' : ''), 'aria-pressed': String(skipped),
       title: skipped ? L('Voltar a farmar', 'Farm it again') : L('Não vou farmar (compro ou troco)', "Won't farm it (buying or trading)"), text: skipped ? '↺' : '⊘',
@@ -4710,14 +4789,23 @@ input.invalid{ border-color:var(--danger) !important; }
     entry.appendChild(panel);
     return entry;
   }
-  function farmSourceText(it){
-    if (it.sources.length){
-      var s = it.sources[0];
-      return s.mob + ' · Lv' + s.mobLv + ' · ' + s.zone + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '') + (it.sources.length > 1 ? ' · +' + (it.sources.length - 1) + L(' fontes', ' sources') : '');
+  // Where an item comes from, drop chance as a chip. `here` = the source already chosen for a
+  // Route card (its map is the card's title, so it isn't repeated).
+  function farmSource(it, here){
+    var box = el('div', { class:'fi-src' });
+    if (here){
+      box.appendChild(document.createTextNode(here.mob + ' · Lv' + here.mobLv + ' '));
+      box.appendChild(rateChip(here));
+    } else if (it.sources.length){
+      box.appendChild(sourceList(it, 1, true));
+    } else if (it.how){
+      box.textContent = 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
+    } else if (it.shop){
+      box.textContent = L('Loja (NPC)', 'Shop (NPC)');
+    } else {
+      box.textContent = L('Origem não listada na base', 'Source not listed in the database');
     }
-    if (it.how) return 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
-    if (it.shop) return L('Loja (NPC)', 'Shop (NPC)');
-    return L('Origem não listada na base', 'Source not listed in the database');
+    return box;
   }
 
   // ---- Route: maps where the most missing items drop together come first ----
@@ -4770,10 +4858,7 @@ input.invalid{ border-color:var(--danger) !important; }
       }
       card.appendChild(head);
       card.appendChild(farmRouteLine(stop.zone));
-      rows.forEach(function(r){
-        var s = r.s;
-        card.appendChild(farmRow(lo, r.t, fd, s.mob + ' · Lv' + s.mobLv + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '')));
-      });
+      rows.forEach(function(r){ card.appendChild(farmRow(lo, r.t, fd, r.s)); });
       list.appendChild(card);
     });
     if (other.length){
@@ -4876,7 +4961,15 @@ input.invalid{ border-color:var(--danger) !important; }
       row.appendChild(spriteEl(ICON(m.id)));
       var main = el('div', { class:'fi-main' });
       main.appendChild(el('div', { class:'item-name' }, [ el('span', { class:'farm-qty', text: m.qty + '× ' }), document.createTextNode(m.name) ]));
-      main.appendChild(el('div', { class:'fi-src', text: L('Para: ', 'For: ') + m.for.join(', ') + (mi && mi.sources.length ? ' · ' + bestSourceText(mi) : '') }));
+      var src = el('div', { class:'fi-src', text: L('Para: ', 'For: ') + m.for.join(', ') });
+      if (mi && mi.sources.length) src.appendChild(sourceList(mi, 3, false));
+      (EXCHANGES[m.id] || []).forEach(function(ex){
+        var give = itemById(ex.itemId);
+        var alt = el('div', { class:'fi-src farm-alt', text: L('ou ', 'or ') + ex.qty + '× ' + (give ? give.name : '#' + ex.itemId) + ' (' + ex.where + ')' });
+        if (give && give.sources.length) alt.appendChild(sourceList(give, 2, false));
+        src.appendChild(alt);
+      });
+      main.appendChild(src);
       row.appendChild(main);
       list.appendChild(row);
     });

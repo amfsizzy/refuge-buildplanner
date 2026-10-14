@@ -1026,6 +1026,13 @@ input.invalid{ border-color:var(--danger) !important; }
 .vs-letter{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:800 13px var(--font-mono); color:var(--accent-strong); border:1px solid var(--accent); }
 .vs-vs{ font:800 14px var(--font-display); color:var(--accent-strong); letter-spacing:.08em; }
 .vs-sec{ margin:14px 0 6px; font-size:13px; color:var(--fg-dim); }
+.vs-note{ font-size:11.5px; color:var(--fg-faint); line-height:1.5; margin-bottom:8px; max-width:80ch; }
+.vs-swaps{ display:flex; flex-direction:column; gap:6px; }
+.vs-swap{ display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border-soft); border-left:3px solid var(--border); border-radius:8px; }
+.vs-swap.up{ border-left-color:var(--stat-item); } .vs-swap.down{ border-left-color:var(--danger); }
+.vs-swap .vs-item{ flex:1; min-width:0; }
+.vs-delta{ font-size:11.5px; margin-top:2px; } .vs-delta.up{ color:var(--stat-item); } .vs-delta.down{ color:var(--danger); } .vs-delta.same{ color:var(--fg-faint); }
+.vs-take{ flex:0 0 auto; }
 .vs-scroll{ overflow-x:auto; }
 .vs-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:520px; }
 .vs-table th{ text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-faint); padding:6px 8px; border-bottom:1px solid var(--border); }
@@ -4809,6 +4816,7 @@ input.invalid{ border-color:var(--danger) !important; }
     gear.appendChild(gb);
     panel.appendChild(el('h3', { class:'vs-sec', text:L('Equipamento', 'Gear') + ' · ' + diffs + L(' slot(s) diferente(s)', ' slot(s) differ') }));
     panel.appendChild(el('div', { class:'vs-scroll' }, [gear]));
+    versusSwapSection(panel, A, B);
 
     // Numbers, B against A
     var st = el('table', { class:'vs-table vs-stats' });
@@ -4885,6 +4893,80 @@ input.invalid{ border-color:var(--danger) !important; }
       el('td', { text: b + unit }),
       el('td', { class:'vs-d ' + cls, text: d ? (d > 0 ? '+' : '') + d + unit : '=' })
     ]);
+  }
+  // ---- Swap suggestions: each piece of B that differs, tried alone in A ----
+  // The whole slot is copied (refine, cards and rolls included), and A is scored with the
+  // same profile weights as "Suggest build", guessed from A's stats and weapon.
+  function versusSlotsTotal(lo, stage, slots){
+    var tmp = JSON.parse(JSON.stringify(lo));
+    tmp.stages[stage].slots = slots;
+    var prevLv = levelOverride;
+    levelOverride = (lo.stages[stage] && lo.stages[stage].level) || 1;
+    try {
+      return withStage(stage, function(){
+        var b = computeAllBonuses(tmp), t = computeTotals(tmp);
+        ['atk', 'matk', 'def', 'mdef'].forEach(function(k){ b[k] += t[k]; });
+        return b;
+      });
+    } finally { levelOverride = prevLv; }
+  }
+  function versusSwaps(A, stageA, B, stageB){
+    var profile = withStage(stageA, function(){ return guessProfile(A); });
+    var w = suggestWeights(profile, false);
+    var slotsA = A.stages[stageA].slots, slotsB = B.stages[stageB].slots;
+    var base = versusSlotsTotal(A, stageA, slotsA);
+    var out = [];
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){
+      var vb = slotsB[d.key];
+      if (!vb || vb.manual || versusSlotKey(vb) === versusSlotKey(slotsA[d.key])) return;
+      var next = Object.assign({}, slotsA);
+      next[d.key] = JSON.parse(JSON.stringify(vb));
+      fixTwoHanded(next);
+      var tot = versusSlotsTotal(A, stageA, next), delta = {};
+      BONUS_ORDER.forEach(function(k){ var n = Math.round(((tot[k] || 0) - (base[k] || 0)) * 100) / 100; if (n) delta[k] = n; });
+      out.push({ def: d, val: vb, delta: delta, gain: weighBonus(tot, w) - weighBonus(base, w) });
+    });
+    out.sort(function(a, b){ return b.gain - a.gain; });
+    return { profile: profile, list: out };
+  }
+  function versusSwapSection(panel, A, B){
+    var res = versusSwaps(A, vs.a.stage, B, vs.b.stage);
+    panel.appendChild(el('h3', { class:'vs-sec', text:L('Trocas sugeridas para A (peças de B)', 'Suggested swaps for A (pieces from B)') }));
+    if (!res.list.length){
+      panel.appendChild(el('div', { class:'vs-note', text:L('B não tem nenhuma peça diferente para trazer.', 'B has no different piece to bring over.') }));
+      return;
+    }
+    panel.appendChild(el('div', { class:'vs-note', text:L('Cada peça de B testada sozinha em A, com refino, cartas e opções. Ordem pelo perfil "', 'Each piece of B tried alone in A, with refine, cards and rolls. Ordered by the "')
+      + SUGGEST_PROFILES[res.profile].label + L('" de A (sem ASPD). Só atributos somáveis; efeitos especiais não entram. Peça de conjunto sozinha não ativa o bônus do conjunto.', '" profile of A (no ASPD). Summable stats only; special effects are not counted. A set piece alone does not turn on the set bonus.') }));
+    var box = el('div', { class:'vs-swaps' });
+    res.list.forEach(function(r){
+      var it = itemById(r.val.itemId);
+      var lines = BONUS_ORDER.filter(function(k){ return r.delta[k]; }).map(function(k){
+        return DOLL_LABEL[k] + ' ' + (r.delta[k] > 0 ? '+' : '') + r.delta[k] + (k === 'aspdPct' ? '%' : '');
+      });
+      var tag = r.gain > 0.01 ? 'up' : r.gain < -0.01 ? 'down' : 'same';
+      var btn = el('button', { type:'button', class:'ghost-btn vs-take', text:L('Trazer para A', 'Bring to A') });
+      btn.addEventListener('click', function(){
+        var lo = loadoutById(vs.a.id); if (!lo) return;
+        var slots = Object.assign({}, lo.stages[vs.a.stage].slots);
+        slots[r.def.key] = JSON.parse(JSON.stringify(r.val));
+        lo.stages[vs.a.stage].slots = fixTwoHanded(slots);
+        saveLoadouts();
+        render();
+        renderVersus();
+      });
+      box.appendChild(el('div', { class:'vs-swap ' + tag }, [
+        it ? spriteEl(ICON(it.id)) : el('span'),
+        el('div', { class:'vs-item' }, [
+          el('div', { class:'vs-sub', text: r.def.label }),
+          el('div', { class:'vs-name', text: (r.val.refine ? '+' + r.val.refine + ' ' : '') + r.val.itemName }),
+          el('div', { class:'vs-delta ' + tag, text: (tag === 'up' ? L('Melhora: ', 'Better: ') : tag === 'down' ? L('Piora: ', 'Worse: ') : L('Igual: ', 'Even: '))
+            + (lines.join(' · ') || L('sem diferença somável', 'no summable difference')) })
+        ]),
+        btn
+      ]));
+    });
+    panel.appendChild(box);
   }
   document.addEventListener('keydown', function(e){ if (vs && e.key === 'Escape'){ e.preventDefault(); closeVersus(); } });
 

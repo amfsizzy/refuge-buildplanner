@@ -2,7 +2,7 @@
 
 English: [CHECKLIST.md](CHECKLIST.md)
 
-Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de itens pública** do servidor disponibiliza. Tudo abaixo não está publicado lá, então precisa ser medido no jogo. Escolha um item **em aberto**, teste e **[envie o resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml)** com um print da janela de Status (classe, level, atributos base e equipamento com refino). Informe o código do item (ex.: `r2`).
+Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de itens pública** do servidor disponibiliza. Tudo abaixo não está publicado lá, então precisa ser medido no jogo. Escolha um item **em aberto**, siga o passo a passo e mande o resultado na **thread "Refuge Build Planner"** do Discord do servidor, com um print da janela de Status (classe, level, atributos base e equipamento com refino). Informe o código do item (ex.: `r2`).
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
@@ -14,11 +14,27 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 **Em aberto (4)**
 
-- [ ] `r7` **DEF/MDEF por refino: escudo**: Mesmo teste com um escudo (DEF em +0, +1, +2 e +4). Na armadura de corpo deu +1 DEF a cada 2 refinos, arredondado para cima. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r7` **Quanto DEF/MDEF o refino dá no escudo?**
+  1. Equipe um escudo em +0 e abra a janela de Status (Alt+A).
+  2. Anote o DEF e o MDEF (o número da esquerda, antes do "+").
+  3. Repita com a mesma peça em +1, +2 e +4 (pode ser outra cópia dela).
+  4. Mande os prints com o nome da peça e o refino de cada um.
   - Resultado: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
-- [ ] `r8` **DEF/MDEF por refino: capa**: Mesmo teste com uma capa. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r9` **DEF/MDEF por refino: calçado**: Mesmo teste com um calçado. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `r10` **DEF/MDEF por refino: chapéu**: Mesmo teste com um chapéu de cima. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `r8` **Quanto DEF/MDEF o refino dá na capa?**
+  1. Equipe uma capa em +0 e abra a janela de Status (Alt+A).
+  2. Anote o DEF e o MDEF (o número da esquerda, antes do "+").
+  3. Repita com a mesma peça em +1, +2 e +4 (pode ser outra cópia dela).
+  4. Mande os prints com o nome da peça e o refino de cada um.
+- [ ] `r9` **Quanto DEF/MDEF o refino dá no calçado?**
+  1. Equipe um calçado em +0 e abra a janela de Status (Alt+A).
+  2. Anote o DEF e o MDEF (o número da esquerda, antes do "+").
+  3. Repita com a mesma peça em +1, +2 e +4 (pode ser outra cópia dela).
+  4. Mande os prints com o nome da peça e o refino de cada um.
+- [ ] `r10` **Quanto DEF/MDEF o refino dá no chapéu de cima?**
+  1. Equipe um chapéu de cima em +0 e abra a janela de Status (Alt+A).
+  2. Anote o DEF e o MDEF (o número da esquerda, antes do "+").
+  3. Repita com a mesma peça em +1, +2 e +4 (pode ser outra cópia dela).
+  4. Mande os prints com o nome da peça e o refino de cada um.
 
 <details>
 <summary>Confirmados (7)</summary>
@@ -39,7 +55,11 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 **Em aberto (1)**
 
-- [ ] `a3` **Tipo de arma**: Com a mesma AGI, troque o tipo de arma (adaga, espada, arco, cajado…) e anote o ASPD de cada. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `a3` **Quanto cada tipo de arma muda o ASPD?**
+  1. Tire a arma e anote o ASPD da janela de Status (sem buffs nem itens que mexam em ASPD).
+  2. Equipe uma arma de cada tipo que sua classe usa (adaga, espada, arco, cajado…), sem cartas ou opções de ASPD, e anote o ASPD de cada.
+  3. Não mude AGI nem DEX entre as trocas.
+  4. Mande a classe, a AGI e a DEX base e a lista "tipo de arma → ASPD".
   - Resultado: Primeiro dado: a adaga (com Blade Mastery 10) fica de 6 a 0 abaixo de "sem arma" conforme a AGI sobe (ver a1). Falta comparar outros tipos de arma.
 
 <details>
@@ -49,23 +69,6 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 - [x] `a2` **Efeito do DEX no ASPD**: Confirmado: o DEX não mexe no ASPD. Com AGI 99 e a adaga, DEX 1 e DEX 50 deram 182 (abaixo do teto de 185 desse Legend). O tooltip do DEX no jogo só fala em ATK/MATK.
 - [x] `a4` **Classe**: Confirmado: o teto base é 180 para todas as classes. Só skills sobem o limite: Jester (Card Mastery e Sleight Mastery no máximo, +1 cada), Legend (Frenzy, +3 passivo; ativo fixa o ASPD em 193) e Dracomancer com espada (Weapon Quicken, +1).
 - [x] `a5` **Teto máximo de ASPD**: Confirmado: o teto máximo do servidor é 190. Skills podem passar disso: o Legend chega a 193 com Frenzy.
-
-</details>
-
-## HP e SP máximos
-
-*Prioridade média* · Hoje ficam fora do cálculo porque dependem da classe.
-
-**Em aberto (2)**
-
-- [ ] `h1` **HP e SP base por classe e level**: Para cada classe que vocês jogam, anote HP e SP máximos com VIT e INT em 1, em alguns levels (ex.: 1, 30, 60, 99). ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-  - Resultado: Nenhuma das duas bases tem tabela de HP/SP por classe. Caminho: prints da janela de status (HP/SP máximos) sem equipamento, por classe, em alguns níveis (ex.: 1, 50, 99, 120, 150).
-- [ ] `h2` **VIT no HP**: Mude só o VIT (ex.: 1 → 50) e anote quanto o HP sobe. O Codex diz que é +1% do HP base por ponto. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-
-<details>
-<summary>Confirmados (1)</summary>
-
-- [x] `h3` **INT não muda o SP máximo**: Confirmado: INT não aumenta o SP máximo, só a regen de SP.
 
 </details>
 
@@ -87,16 +90,51 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 </details>
 
+## HP e SP máximos
+
+*Prioridade média* · Hoje ficam fora do cálculo porque dependem da classe.
+
+**Em aberto (2)**
+
+- [ ] `h1` **Qual é o HP e o SP máximo base de cada classe em cada level?**
+  1. Tire todo o equipamento e espere os buffs acabarem.
+  2. Abra a janela de Status e anote o HP e o SP máximos, a classe, o level base, a VIT e a INT.
+  3. Se puder, repita em outros levels (ex.: 1, 30, 60, 99, 120 e 150) ou com amigos de outras classes.
+  4. Mande os prints.
+  - Resultado: Nenhuma das duas bases tem tabela de HP/SP por classe. Caminho: prints da janela de status (HP/SP máximos) sem equipamento, por classe, em alguns níveis (ex.: 1, 50, 99, 120, 150).
+- [ ] `h2` **Quanto cada ponto de VIT soma no HP máximo?**
+  1. Sem equipamento, anote o HP máximo e a VIT base.
+  2. Suba a VIT (ou use um reset de atributos) e anote o HP de novo em pelo menos dois valores (ex.: VIT 1, 30 e 60).
+  3. Mande a classe, o level e os pares "VIT → HP máximo".
+
+<details>
+<summary>Confirmados (1)</summary>
+
+- [x] `h3` **INT não muda o SP máximo**: Confirmado: INT não aumenta o SP máximo, só a regen de SP.
+
+</details>
+
 ## Fórmulas que a ferramenta já usa
 
 *Prioridade média* · Vêm do Codex do site, que já errou uma vez (INT/SP). Como testar: sem equipamento, coloque na ferramenta o mesmo level e os mesmos atributos do personagem e compare cada número da janela de Status com a aba Status da ferramenta.
 
 **Em aberto (3)**
 
-- [ ] `f3` **Crítico**: Fórmula usada: 1 + LUK÷3 + 2 a cada 10 de LUK. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `f7` **Troca STR → DEX com arma à distância**: Com um arco equipado, anote o ATK de status (o número antes do "+") em 4 combinações: STR 1/DEX 1, STR 1/DEX 50, STR 50/DEX 1 e STR 50/DEX 50. Se puder, repita com chicote ou deck para saber se também contam como à distância. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `f3` **O Critical do planner bate com o do jogo?**
+  1. Sem equipamento, anote a LUK base e o Critical da janela de Status.
+  2. Mude a LUK (ou equipe um item com LUK) e anote de novo, em 2 ou 3 valores.
+  3. Mande os prints. O planner usa: 1 + LUK ÷ 3 + 2 a cada 10 de LUK.
+- [ ] `f7` **Com arma à distância, o ATK usa a DEX no lugar da STR?**
+  1. Equipe um arco e anote o ATK de status (o número antes do "+").
+  2. Repita nas combinações STR 1/DEX 1, STR 1/DEX 50, STR 50/DEX 1 e STR 50/DEX 50 (com reset de atributos ou personagens diferentes).
+  3. Se puder, repita com chicote ou deck.
+  4. Mande os prints com os atributos de cada um.
   - Resultado: Confirmado pelo jogador: armas que não precisam ficar a 1 quadrado do mob são à distância e usam DEX: arco, arco pesado, revólver, deck, chicote, codex, corrente e shuriken (luva e taco de golfe são corpo a corpo). Aplicado como espelho do corpo a corpo: DEX vira o atributo principal e STR o secundário. Falta só um print com arco para conferir os números.
-- [ ] `f10` **Redução de dano pela DEF e MDEF**: O tooltip de Defenses diz: 100 de DEF reduz cerca de 18%, 275 reduz 1/3 e 500 reduz 50%; 50 de MDEF reduz cerca de 30% e 100 de MDEF cerca de 55%. A fórmula clássica bate com a DEF e com 50 de MDEF, mas daria 45% para 100 de MDEF. Se alguém souber testar (dano recebido de um mesmo ataque com MDEF diferente), confirme. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `f10` **Quanto de dano a DEF e a MDEF reduzem?**
+  1. Deixe alguém (ou o mesmo monstro) acertar sempre o mesmo ataque ou skill em você.
+  2. Anote o dano recebido com DEF e MDEF diferentes (troque armadura ou escudo entre as tentativas).
+  3. Mande o dano de cada tentativa junto com o DEF e o MDEF da janela de Status.
+  4. Referência do tooltip de Defenses: 100 DEF ≈ 18%, 275 ≈ 1/3, 500 = 50%; 50 MDEF ≈ 30%, 100 MDEF ≈ 55%.
 
 <details>
 <summary>Confirmados (7)</summary>
@@ -111,38 +149,61 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 </details>
 
-## Bônus de equipamento
-
-*Prioridade baixa* · Casos que a ferramenta deixa de fora por não ter certeza.
-
-**Em aberto (2)**
-
-- [ ] `e1` **Conjunto da Grand Peco Card**: Junto com a carta parceira (Peco Peco), o DEF+5 do conjunto aplica? A ferramenta não soma porque não achou a parceira na base. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `e2` **Bônus de escolha (Metal Boots)**: "STR, INT or DEX +2": qual atributo recebe o bônus? ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-
-<details>
-<summary>Confirmados (1)</summary>
-
-- [x] `e3` **"Piece Bonus" de shadow em +0**: Confirmado: o Piece Bonus vale com a peça sozinha, sem o conjunto completo.
-
-</details>
-
 ## Habilidades passivas
 
 *Prioridade média* · A ferramenta só soma a passiva com o tipo de arma que tem certeza. Compare o Status com e sem a skill (ou com nível 0 e nível máximo).
 
 **Em aberto (4)**
 
-- [ ] `s1` **Long Sword conta como espada?**: Com Long Sword equipada, veja se Blade Mastery / Advanced Blade Mastery somam o ATK e o HIT. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `s2` **Two-Handed Sword, Knight Sword e Bone Sword contam como espada?**: Mesmo teste com cada uma (ex.: Assassin ou Rogue com Blade Mastery). O Dark Knight agora usa a Blade Dominion, que só dá ATK com espada de uma mão. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `s3` **Heavy Bow conta como arco?**: Com Heavy Bow equipado, veja se Bow Mastery soma o DEX. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `s4` **Perfection Mastery (Ronin)**: Critical já confirmado (25 + 3/nível). Falta: o "+25 de MATK a mais no Lv 5" vale só no nível 5 ou do 5 em diante? Compare o MATK nos níveis 5 e 6. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `s1` **A Long Sword conta para a Blade Mastery?**
+  1. Monte a mesma build no planner (classe, level, atributos, equipamento e skills).
+  2. No jogo, equipe a Long Sword e anote ATK e HIT da janela de Status.
+  3. Se o jogo mostrar a mais exatamente o bônus da Blade Mastery, a arma conta.
+  4. Mande o print e o nível da Blade Mastery.
+- [ ] `s2` **Two-Handed Sword, Knight Sword e Bone Sword contam para a Blade Mastery?**
+  1. Monte a mesma build no planner (classe, level, atributos, equipamento e skills).
+  2. No jogo, equipe cada uma delas (Two-Handed Sword, Knight Sword, Bone Sword) e anote ATK e HIT da janela de Status.
+  3. Se o jogo mostrar a mais exatamente o bônus da Blade Mastery, a arma conta.
+  4. Mande o print e o nível da Blade Mastery.
+- [ ] `s3` **O Heavy Bow conta para a Bow Mastery?**
+  1. Monte a mesma build no planner (classe, level, atributos, equipamento e skills).
+  2. No jogo, equipe o Heavy Bow e anote a DEX da janela de Status.
+  3. Se o jogo mostrar a mais exatamente o bônus da Bow Mastery, a arma conta.
+  4. Mande o print e o nível da Bow Mastery.
+- [ ] `s4` **O MATK extra da Perfection Mastery vale só no nível 5 ou do 5 em diante?**
+  1. Com uma espada de uma mão, anote o MATK com a Perfection Mastery no nível 5.
+  2. Suba a skill para o nível 6 e anote o MATK de novo.
+  3. Se o MATK cair do 5 para o 6, o "+25" vale só no nível 5; se subir +15, vale do 5 em diante.
+  4. Mande os dois prints.
   - Resultado: Confirmado no jogo: com espada de uma mão, Critical +25 e +3 por nível, HIT -300, MATK +15 por nível (igual à descrição do site; a outra fórmula, 30 + 2/nível, estava desatualizada). · Falta: o "+25 more at Lv 5" do MATK vale só no nível 5 ou do 5 em diante? Comparar o MATK nos níveis 5 e 6.
 
 <details>
 <summary>Confirmados (1)</summary>
 
 - [x] `s5` **Bônus de crítico/FLEE das masteries de foice e katar sem a arma**: Confirmado: Katar Mastery e as masteries de foice só dão os bônus com a arma equipada. No jogo, a maioria das masteries tem a linha "Requires a \[arma\] to take effect", mesmo quando a descrição do site não tem.
+
+</details>
+
+## Bônus de equipamento
+
+*Prioridade baixa* · Casos que a ferramenta deixa de fora por não ter certeza.
+
+**Em aberto (2)**
+
+- [ ] `e1` **O bônus do conjunto da Grand Peco Card (DEF +5) funciona?**
+  1. Equipe a Grand Peco Card junto com a carta parceira (Peco Peco Card).
+  2. Compare o DEF da janela de Status com e sem a Peco Peco Card.
+  3. Mande os dois prints.
+- [ ] `e2` **Na Metal Boots, qual atributo recebe o "STR, INT ou DEX +2"?**
+  1. Sem a Metal Boots, anote o bônus de STR, INT e DEX (o número depois do "+").
+  2. Equipe a Metal Boots e veja qual dos três subiu 2.
+  3. Se puder, teste com outra classe (o bônus pode depender da classe).
+  4. Mande os prints.
+
+<details>
+<summary>Confirmados (1)</summary>
+
+- [x] `e3` **"Piece Bonus" de shadow em +0**: Confirmado: o Piece Bonus vale com a peça sozinha, sem o conjunto completo.
 
 </details>
 
@@ -177,8 +238,14 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 **Em aberto (2)**
 
-- [ ] `o1` **Nível 60: Juperos, Crystal Caves, Thanatos Tower e Kiel Hyre**: Confirmar que esses destinos aparecem na Skia Nerius quando o Orfanato chega no nível 60. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
-- [ ] `o2` **Nível 105: Abyss Lake e Sky Garden**: Confirmar que esses destinos liberam no nível 105. ([enviar resultado](https://github.com/amfsizzy/refuge-buildplanner/issues/new?template=test-result.yml))
+- [ ] `o1` **No nível 60 do Orfanato, Juperos, Crystal Caves, Thanatos Tower e Kiel Hyre aparecem na Skia Nerius?**
+  1. Com o Orfanato no nível 60, fale com a Skia Nerius (Dungeon Caravan).
+  2. Veja se esses quatro destinos aparecem na lista.
+  3. Mande um print da lista.
+- [ ] `o2` **No nível 105 do Orfanato, Abyss Lake e Sky Garden liberam?**
+  1. Com o Orfanato no nível 105, fale com a Skia Nerius (Dungeon Caravan).
+  2. Veja se Abyss Lake e Sky Garden aparecem na lista.
+  3. Mande um print da lista.
 
 ---
 

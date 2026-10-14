@@ -406,11 +406,32 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .aspd-line{ font-size:12.5px; color:var(--fg-dim); line-height:1.7; }
 .aspd-total{ font-family:var(--font-mono); font-weight:700; color:var(--accent-strong); font-size:18px; }
 .aspd-over{ color:var(--mid); margin-top:4px; }
+.aspd-buff{ color:var(--accent-strong); font-weight:700; margin-top:4px; }
+/* support skills switched on for reference */
+.buffs{ margin-top:12px; border-top:1px solid var(--border-soft); padding-top:8px; }
+.buffs h3{ margin:0 0 2px; font-size:13px; color:var(--fg); }
+.buff-row{ padding:6px 0; border-bottom:1px dashed var(--border-soft); }
+.buff-row:last-child{ border-bottom:none; }
+.buff-head{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+.buff-head input{ width:16px; height:16px; accent-color:var(--accent-strong); }
+.buff-name{ font-weight:700; font-size:12.5px; }
+.buff-row.on .buff-name{ color:var(--accent-strong); }
+.buff-cls{ margin-left:auto; font-size:10.5px; color:var(--fg-faint); }
+.buff-text{ white-space:pre-line; font-size:11.5px; color:var(--fg-dim); margin:4px 0 0 24px; }
 .aspd-manual{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--fg-faint); }
 .aspd-manual input{ width:56px; background:var(--surface-2); border:1px solid var(--border); border-radius:5px; padding:4px 6px; color:var(--fg); font-family:var(--font-mono); text-align:center; }
 .sets-box{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-top:16px; }
 .set-row{ padding:9px 0; border-bottom:1px solid var(--border-soft); }
 .fx-list{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+/* what the planner shows but doesn't add up */
+.uncounted{ margin-top:12px; border-top:1px solid var(--border-soft); padding-top:6px; }
+.uncounted summary{ cursor:pointer; font-size:12px; font-weight:700; color:var(--fg-dim); padding:6px 0; }
+.uncounted summary:hover{ color:var(--accent-strong); }
+.unc-row{ padding:6px 0; border-bottom:1px dashed var(--border-soft); }
+.unc-row:last-child{ border-bottom:none; }
+.unc-src{ font-size:12px; font-weight:700; color:var(--fg); margin-bottom:2px; }
+.unc-line{ font-size:11.5px; color:var(--fg-dim); padding-left:10px; overflow-wrap:anywhere; }
+.unc-line.tagged{ color:var(--fg-faint); }
 .stat-points{ margin-top:10px; padding:9px 11px; border-radius:var(--radius-sm); background:var(--surface-2); border:1px solid var(--border-soft); font-size:12.5px; color:var(--fg-dim); }
 .stat-points .sp-num{ font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--accent-strong); }
 .stat-points .sp-left{ margin-top:2px; font-size:12px; color:var(--early); }
@@ -1291,6 +1312,12 @@ input.invalid{ border-color:var(--danger) !important; }
     if (isObj(v.owned)) Object.keys(v.owned).slice(0, LIMITS.owned).forEach(function(k){
       if (/^\d{1,9}$/.test(k) && v.owned[k] === true) sd.owned[k] = true;
     });
+    if (isObj(v.buffs)){
+      sd.buffs = {};
+      Object.keys(v.buffs).slice(0, 60).forEach(function(k){
+        if (/^[a-z0-9-]{1,40}\/[a-z0-9-]{1,80}$/.test(k) && v.buffs[k] === true) sd.buffs[k] = true;
+      });
+    }
     if (isObj(v.tree)){
       sd.tree = {};
       Object.keys(v.tree).slice(0, LIMITS.treeSkills).forEach(function(k){
@@ -2607,6 +2634,7 @@ input.invalid{ border-color:var(--danger) !important; }
         key: key, slug: key.split('/')[1], name: String(r[I.name] || ''), cls: cls, type: type,
         max: Math.max(1, Math.min(20, r[I.max] | 0)), icon: String(r[I.icon] || ''),
         desc: String(r[I.desc] || '').slice(0, 2500),
+        numbers: String(r[I.numbers] || '').slice(0, 1500),
         needs: (Array.isArray(r[I.needs]) ? r[I.needs] : []).filter(function(n){ return Array.isArray(n) && n.length >= 2; })
           .map(function(n){ return { name: String(n[0]), lv: Math.max(1, n[1] | 0) }; })
       };
@@ -3928,6 +3956,7 @@ input.invalid{ border-color:var(--danger) !important; }
     ]));
     var capEl = el('span', { class:'aspd-total', text: String(cap) + (manual ? '' : ' / 190') });
     aspdBox.appendChild(capEl);
+    if (buffOn(lo, 'vagabond/frenzy')) aspdBox.appendChild(el('div', { class:'aspd-line aspd-buff', text:L('Frenzy ligado: o ASPD fica fixo em 193 enquanto durar.', 'Frenzy on: ASPD is fixed at 193 while it lasts.') }));
     if (s.aspdCapRaw > 190){
       aspdBox.appendChild(el('div', { class:'aspd-line aspd-over', text:L('A soma dá ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' acima do teto máximo de 190. Esse excedente não entra; dá para trocar ASPD Limit por outra opção.',
         'The sum is ' + s.aspdCapRaw + ', ' + (s.aspdCapRaw - 190) + ' over the hard cap of 190. The excess does nothing; you could swap some ASPD Limit for another option.') }));
@@ -3959,12 +3988,67 @@ input.invalid{ border-color:var(--danger) !important; }
     var lines = effectLines(computeAllEffects(lo));
     if (!lines.length){
       box.appendChild(el('div', { class:'empty-note', text:L('Nenhum efeito extra no equipamento desta fase (dano contra elemento, HP %, conjuração…).', 'No extra effects on this stage\'s gear (damage vs element, HP %, casting…).') }));
-      return;
+    } else {
+      box.appendChild(el('div', { class:'empty-note', text:L('Somados de itens, cartas, conjuntos e opções roladas. Ainda não mudam os números do simulador acima.', 'Summed from items, cards, sets and rolled options. They don\'t change the simulator numbers above yet.') }));
+      var list = el('div', { class:'fx-list' });
+      lines.forEach(function(t){ list.appendChild(el('span', { class:'fx-chip', text:t })); });
+      box.appendChild(list);
     }
-    box.appendChild(el('div', { class:'empty-note', text:L('Somados de itens, cartas, conjuntos e opções roladas. Ainda não mudam os números do simulador acima.', 'Summed from items, cards, sets and rolled options. They don\'t change the simulator numbers above yet.') }));
-    var list = el('div', { class:'fx-list' });
-    lines.forEach(function(t){ list.appendChild(el('span', { class:'fx-chip', text:t })); });
-    box.appendChild(list);
+    var un = collectUncounted(lo);
+    if (!un.length) return;
+    var det = el('details', { class:'uncounted' });
+    var total = un.reduce(function(t, g){ return t + g.lines.length; }, 0);
+    det.appendChild(el('summary', { text:L('Não calculado (' + total + ') — só para informação', 'Not calculated (' + total + ') — for information only') }));
+    det.appendChild(el('div', { class:'empty-note', text:L('Bônus do equipamento que dependem de condição, de outra coisa ("por STR base", "ao ser atingido") ou que ainda não medimos. Ficam aqui para você saber que existem.', 'Gear bonuses that depend on a condition, on something else ("per base STR", "when hit") or that we haven\'t measured yet. Listed so you know they exist.') }));
+    un.forEach(function(g){
+      var row = el('div', { class:'unc-row' });
+      row.appendChild(el('div', { class:'unc-src', text: g.source }));
+      g.lines.forEach(function(t){ row.appendChild(el('div', { class:'unc-line' + (t.badge ? ' tagged' : ''), text: (t.badge ? '[' + t.badge + '] ' : '') + t.text })); });
+      det.appendChild(row);
+    });
+    box.appendChild(det);
+  }
+  // Everything on the equipped gear the simulator doesn't add: conditional blocks, set refine
+  // written in other ways, bonuses still locked by level, lines that scale on something else,
+  // and rolls that aren't recognized. One group per item or card.
+  function collectUncounted(lo){
+    var groups = [], byName = {};
+    function push(source, text, badge){
+      var g = byName[source];
+      if (!g){ g = byName[source] = { source: source, lines: [] }; groups.push(g); }
+      if (!g.lines.some(function(x){ return x.text === text; })) g.lines.push({ text: text, badge: badge || '' });
+    }
+    var level = activeStageData(lo).level || 1;
+    function scan(it, refine, label){
+      it.blocks.forEach(function(b){
+        if (b.kind === 'setHead' || b.kind === 'set' || !b.lines.length) return;
+        var header = b.header && !b.inline ? b.header.replace(/:$/, '') : '';
+        if (b.kind === 'cond' || (b.kind === 'setRefine' && !b.mode)){
+          push(label, b.lines.join(' / '), header);
+          return;
+        }
+        if (b.kind === 'levelAt' && level < b.min){
+          push(label, b.lines.join(' / '), L('nível ', 'level ') + b.min + '+');
+          return;
+        }
+        var counted = b.kind === 'base' || b.kind === 'perRefine' || b.kind === 'refineAt' || b.kind === 'levelAt';
+        if (!counted) return;
+        b.lines.forEach(function(l){
+          if (!/\d/.test(l)) return;
+          var bonus = parseLines([l], b.kind === 'perRefine'), fx = parseEffects([l], b.kind === 'perRefine');
+          var anyBonus = Object.keys(bonus).some(function(k){ return bonus[k]; });
+          if (!anyBonus && !Object.keys(fx).length) push(label, l, header);
+        });
+      });
+    }
+    forEachEquipped(lo, function(it, refine, val, isCard){ scan(it, refine, it.name + (isCard ? '' : (refine ? ' +' + refine : ''))); });
+    var slots = activeStageData(lo).slots;
+    EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){
+      var v = slots[d.key];
+      if (!v || !Array.isArray(v.extras)) return;
+      v.extras.forEach(function(x){ if (typeof x === 'string' && !extraIsCounted(x)) push(v.itemName, x, 'roll'); });
+    });
+    return groups;
   }
 
   function renderSkillsBox(lo){
@@ -4022,6 +4106,51 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     // Without a class there is no line yet, so every passive is listed to choose from.
     if (!cls) PASSIVES.forEach(function(p){ box.appendChild(row(p)); });
+    renderBuffToggles(lo, box);
+  }
+  function buffOn(lo, key){ var b = activeStageData(lo).buffs; return !!(b && b[key]); }
+  // Support skills of the class line (not the Orphan basics) that can be switched on to read
+  // what they give. Information only, except Frenzy, which the ASPD box shows as fixed at 193.
+  function buffSkills(lo){
+    if (!skillDb || !lo.charClass) return [];
+    var tree = activeStageData(lo).tree, useTree = isObj(tree) && Object.keys(tree).length > 0;
+    var out = [];
+    classLine(lo.charClass).forEach(function(cls){
+      if (cls === 'Orphan') return;
+      (skillDb.byClass[cls] || []).forEach(function(s){
+        if (s.type !== 'Supportive') return;
+        if (useTree && !treeLv(tree, s)) return;
+        out.push(s);
+      });
+    });
+    return out;
+  }
+  function renderBuffToggles(lo, box){
+    var list = buffSkills(lo);
+    if (!list.length) return;
+    var sd = activeStageData(lo);
+    var sec = el('div', { class:'buffs' });
+    sec.appendChild(el('h3', { text:L('Skills de suporte (ligar para ver)', 'Support skills (switch on to read)') }));
+    sec.appendChild(el('div', { class:'empty-note', text:L('Só informação: o que cada uma dá aparece ao ligar, mas não muda os números (o Frenzy fixa o ASPD em 193 no quadro de ASPD). Com a árvore de skills preenchida, aparecem só as que têm pontos.', "Information only: switching one on shows what it gives, without changing the numbers (Frenzy fixes ASPD at 193 in the ASPD box). With the skill tree filled in, only the ones with points show.") }));
+    list.forEach(function(s){
+      var on = buffOn(lo, s.key);
+      var row = el('div', { class:'buff-row' + (on ? ' on' : '') });
+      var lab = el('label', { class:'buff-head' });
+      var cb = el('input', { type:'checkbox', 'aria-label':L('Ligar ', 'Switch on ') + s.name });
+      cb.checked = on;
+      cb.addEventListener('change', function(){
+        if (!isObj(sd.buffs)) sd.buffs = {};
+        if (cb.checked) sd.buffs[s.key] = true; else delete sd.buffs[s.key];
+        saveLoadouts(); render();
+      });
+      lab.appendChild(cb);
+      lab.appendChild(el('span', { class:'buff-name', text: s.name }));
+      lab.appendChild(el('span', { class:'buff-cls', text: s.cls }));
+      row.appendChild(lab);
+      if (on) row.appendChild(el('div', { class:'buff-text', text: s.numbers || s.desc }));
+      sec.appendChild(row);
+    });
+    box.appendChild(sec);
   }
 
   function renderSetsBox(setsBox, activeSets){

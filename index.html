@@ -1542,6 +1542,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // ---------- History tab: every saved change, described, kept in the browser ----------
   // Each entry keeps the state right after the change, so "Go back here" can restore it.
   var HISTORY_KEY = 'rtm-hud-history-v1', HISTORY_MAX = 50, HISTORY_CHARS = 1500000;
+  var historyCurrent = -1; // entry the planner is at now (the newest, unless one was restored)
   var historyLog = (function(){
     try { var v = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); return Array.isArray(v) ? v.filter(function(e){ return e && typeof e.after === 'string'; }) : []; }
     catch(e){ return []; }
@@ -1562,6 +1563,7 @@ input.invalid{ border-color:var(--danger) !important; }
     try { desc = describeChange(JSON.parse(before), JSON.parse(after)); } catch(e){ desc = []; }
     if (!desc.length) return; // nothing a person would call a change (e.g. empty fields filled in)
     historyLog.push({ t: Date.now(), desc: desc, after: after });
+    historyCurrent = historyLog.length - 1;
     saveHistoryLog();
     renderHistory();
   }
@@ -1570,7 +1572,8 @@ input.invalid{ border-color:var(--danger) !important; }
   // Farm marks as text, ignoring empty groups the page fills in by itself.
   function farmMarks(f){
     if (!f) return '';
-    return ['prio', 'skip', 'mats'].map(function(k){ return Object.keys(f[k] || {}).filter(function(id){ return f[k][id]; }).sort().join(','); }).join('|');
+    var s = ['prio', 'skip', 'mats'].map(function(k){ return Object.keys(f[k] || {}).filter(function(id){ return f[k][id]; }).sort().join(','); }).join('|');
+    return s === '||' ? '' : s;
   }
   // Plain-language list of what changed between two saved states.
   function describeChange(a, b){
@@ -1644,7 +1647,8 @@ input.invalid{ border-color:var(--danger) !important; }
     historyLog.slice().reverse().forEach(function(e, i){
       var d = new Date(e.t);
       var when = (d.toDateString() === today ? '' : d.toLocaleDateString(L('pt-BR', 'en-US')) + ' ') + d.toLocaleTimeString(L('pt-BR', 'en-US'), { hour:'2-digit', minute:'2-digit' });
-      var isNow = e.after === lastSnap;
+      var idx = historyLog.length - 1 - i;
+      var isNow = idx === (historyCurrent === -1 ? historyLog.length - 1 : historyCurrent);
       var row = el('div', { class:'hist-row' + (isNow ? ' latest' : '') });
       row.appendChild(el('span', { class:'hist-time', text: when }));
       var txt = el('div', { class:'hist-desc' });
@@ -1659,6 +1663,7 @@ input.invalid{ border-color:var(--danger) !important; }
           undoStack.push(lastSnap); if (undoStack.length > UNDO_MAX) undoStack.shift();
           redoStack = [];
           restoreSnapshot(e.after);
+          historyCurrent = idx; renderHistory();
           alertInline(L('Planner voltou para ' + when + '. Use Desfazer para voltar.', 'Planner restored to ' + when + '. Use Undo to go back.'));
         });
         row.appendChild(back);
@@ -1682,12 +1687,14 @@ input.invalid{ border-color:var(--danger) !important; }
     if (!undoStack.length) return;
     redoStack.push(lastSnap);
     restoreSnapshot(undoStack.pop());
+    historyCurrent = -2; renderHistory(); // somewhere between entries: none is marked current
     alertInline(L('Desfeito.', 'Undone.'));
   }
   function redo(){
     if (!redoStack.length) return;
     undoStack.push(lastSnap);
     restoreSnapshot(redoStack.pop());
+    historyCurrent = -2; renderHistory();
     alertInline(L('Refeito.', 'Redone.'));
   }
   function syncHistoryButtons(){

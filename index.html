@@ -499,6 +499,7 @@ input.invalid{ border-color:var(--danger) !important; }
 .item-link:hover, .item-link:focus-visible{ color:var(--accent); text-decoration:underline; }
 .item-sub{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .filter-pills{ display:flex; gap:4px 16px; flex-wrap:wrap; align-items:center; }
+.attr-filter{ font-size:12px; padding:4px 8px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface-2); color:var(--fg); }
 .filter-pills:empty{ display:none; }
 /* Compact on/off switches for the item picker's filters. */
 .filter-pill{
@@ -1882,7 +1883,8 @@ input.invalid{ border-color:var(--danger) !important; }
     for (var i=0; i<state.db.items.length; i++){
       var it = state.db.items[i];
       if (wantCards !== it.isCard) continue;
-      if (q && it.name.toLowerCase().indexOf(q) === -1) continue;
+      if (q && it.name.toLowerCase().indexOf(q) === -1 && !(opts.inDesc && it.desc.toLowerCase().indexOf(q) !== -1)) continue;
+      if (opts.attr && !SEARCH_ATTRS[opts.attr].re.test(it.desc)) continue;
       if (!wantCards && !slotMatchesItem(slotDef, it, opts)) continue;
       if (wantCards && !opts.anySlot && !it.locs.some(function(l){ return (opts.cardLocs || slotDef.locs).indexOf(l) !== -1; })) continue;
       if (!wantCards && cls && !canEquip(it, cls)) continue;
@@ -3410,7 +3412,33 @@ input.invalid{ border-color:var(--danger) !important; }
       toggle(L('Só itens que ' + cls + ' pode usar', 'Only items ' + cls + ' can use'), L('Só itens que ' + cls + ' pode usar', 'Only items ' + cls + ' can use'), m.classOnly, function(){ m.classOnly = !m.classOnly; });
     }
     toggle(L('Mostrar itens de qualquer slot', 'Show items for any slot'), L('Ignora o filtro de slot deste espaço', 'Ignores this slot\'s filter'), m.anySlot, function(){ m.anySlot = !m.anySlot; });
+    toggle(L('Buscar também na descrição', 'Also search the description'), L('O texto digitado também é procurado na descrição do item', 'The typed text is also looked for in the item description'), !!m.inDesc, function(){ m.inDesc = !m.inDesc; });
+    // Items that give a given bonus, read from their description like the database's own filter.
+    var sel = el('select', { class:'attr-filter', 'aria-label':L('Filtrar por atributo', 'Filter by stat') });
+    sel.appendChild(el('option', { value:'', text:L('Qualquer atributo', 'Any stat') }));
+    Object.keys(SEARCH_ATTRS).forEach(function(k){ sel.appendChild(el('option', { value:k, text: SEARCH_ATTRS[k].label })); });
+    sel.value = m.attr || '';
+    sel.addEventListener('change', function(){ m.attr = sel.value; renderResults(document.getElementById('searchInput').value); });
+    box.appendChild(sel);
+    document.getElementById('searchInput').placeholder = m.inDesc ? L('Buscar por nome ou descrição…', 'Search by name or description…') : L('Buscar por nome…', 'Search by name…');
   }
+  // Stat filter of the item search: a description line that gives the bonus ("AGI +3",
+  // "All Stats +2", "Max HP +5%"), whatever the condition around it.
+  var SEARCH_ATTRS = {
+    str:{ label:'STR', re:/\b(STR|All Stats)\s*[+\-]\s*\d/i }, agi:{ label:'AGI', re:/\b(AGI|All Stats)\s*[+\-]\s*\d/i },
+    vit:{ label:'VIT', re:/\b(VIT|All Stats)\s*[+\-]\s*\d/i }, int:{ label:'INT', re:/\b(INT|All Stats)\s*[+\-]\s*\d/i },
+    dex:{ label:'DEX', re:/\b(DEX|All Stats)\s*[+\-]\s*\d/i }, luk:{ label:'LUK', re:/\b(LUK|All Stats)\s*[+\-]\s*\d/i },
+    atk:{ label:'ATK', re:/(^|[^M])\bATK\s*[+\-]\s*\d/im }, matk:{ label:'MATK', re:/\bMATK\s*[+\-]\s*\d/i },
+    hit:{ label:'HIT', re:/\bHIT\s*[+\-]\s*\d/i }, flee:{ label:'FLEE', re:/\bFlee\s*[+\-]\s*\d/i },
+    crit:{ label:L('Crítico', 'Critical'), re:/\bCritical(?: Rate)?\s*[+\-]\s*\d/i }, critdmg:{ label:L('Dano crítico', 'Critical damage'), re:/\bCritical Damage\b/i },
+    pdodge:{ label:'Perfect Dodge', re:/\bPerfect Dodge\b/i },
+    def:{ label:'DEF', re:/(^|[^M])\bDEF\s*[+\-]\s*\d/im }, mdef:{ label:'MDEF', re:/\bMDEF\s*[+\-]\s*\d/i },
+    hp:{ label:'Max HP', re:/\b(Max\s*)?HP\s*[+\-]\s*\d/i }, sp:{ label:'Max SP', re:/\b(Max\s*)?SP\s*[+\-]\s*\d/i },
+    aspd:{ label:'ASPD', re:/\bASPD\s*[+\-]\s*\d/i }, aspdlim:{ label:'ASPD Limit', re:/\bASPD Limit\b/i },
+    cast:{ label:L('Conjuração (cast)', 'Casting (cast)'), re:/\bCast\b/i }, delay:{ label:'After Cast Delay', re:/\bAfter Cast Delay\b/i },
+    pen:{ label:L('Penetração', 'Penetration'), re:/\bPenetration\b/i }, speed:{ label:L('Velocidade de movimento', 'Move speed'), re:/\bMove(?:ment)? Speed\b/i },
+    heal:{ label:L('Cura', 'Healing'), re:/\bHeal(?:ing)?\b/i }
+  };
 
   function applySelection(item){
     var lo = activeLoadout(); if (!lo || !state.modal) return;
@@ -3448,7 +3476,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var wantCards = m.cardIndex !== null;
     var lo = activeLoadout();
     var cls = (lo && lo.charClass && m.classOnly) ? lo.charClass : '';
-    var opts = { anySlot: m.anySlot, dualWield: m.dualWield, cardLocs: wantCards ? cardLocsFor(lo, m.slotDef) : null };
+    var opts = { anySlot: m.anySlot, dualWield: m.dualWield, cardLocs: wantCards ? cardLocsFor(lo, m.slotDef) : null, inDesc: !!m.inDesc, attr: m.attr || '' };
     var found = searchItems(query, m.slotDef, wantCards, opts, cls);
     if (found.length === 0){
       results.appendChild(el('div', { class:'result-empty', text: query ? L('Nada encontrado para "', 'Nothing found for "') + query + '".' : L('Digite para buscar…', 'Type to search…') }));

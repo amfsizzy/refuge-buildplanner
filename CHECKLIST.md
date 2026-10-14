@@ -26,23 +26,23 @@ We don't have access to the game files: the planner only knows what the server's
   1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
   2. Equip only a shield at +0 and note DEF and MDEF again.
   3. Repeat with the same shield at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
   - Result: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **How much DEF/MDEF does refine add to a garment?**
   1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
   2. Equip only a garment at +0 and note DEF and MDEF again.
   3. Repeat with the same garment at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
 - [ ] `r9` **How much DEF/MDEF does refine add to a pair of shoes?**
   1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
   2. Equip only a pair of shoes at +0 and note DEF and MDEF again.
   3. Repeat with the same shoes at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
 - [ ] `r10` **How much DEF/MDEF does refine add to an upper headgear?**
   1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
   2. Equip only an upper headgear at +0 and note DEF and MDEF again.
   3. Repeat with the same headgear at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>
@@ -67,7 +67,7 @@ We don't have access to the game files: the planner only knows what the server's
   1. With no weapon, open the attributes window (Alt+Q) and note your character's ASPD.
   2. Equip one weapon of each type your class uses (dagger, sword, bow…), with no cards and no ASPD rolls, and note the ASPD with each.
   3. Don't change AGI or DEX between swaps.
-  4. Send it written as: weapon → ASPD (including "no weapon"), your class, your level and your base AGI and DEX.
+  4. Send it written as: weapon name and type → ASPD (including "no weapon"), your class, your level and your base AGI and DEX.
   - Result: Primeiro dado: a adaga (com Blade Mastery 10) fica de 6 a 0 abaixo de "sem arma" conforme a AGI sobe (ver a1). Falta comparar outros tipos de arma.
 
 <details>
@@ -136,13 +136,13 @@ We don't have access to the game files: the planner only knows what the server's
   1. Equip a bow with no cards and no ATK rolls, and open the attributes window (Alt+Q).
   2. Note ATK (the left number, before the "+") with these stats: STR 1 / DEX 1, STR 1 / DEX 50, STR 50 / DEX 1 and STR 50 / DEX 50 (with a stat reset or different characters).
   3. If you can, repeat with a whip or a deck.
-  4. Send it written as: STR / DEX → ATK, the weapon, your class and your level.
+  4. Send it written as: weapon name and refine, STR / DEX → ATK, your class and your level.
   - Result: Confirmado pelo jogador: armas que não precisam ficar a 1 quadrado do mob são à distância e usam DEX: arco, arco pesado, revólver, deck, chicote, codex, corrente e shuriken (luva e taco de golfe são corpo a corpo). Aplicado como espelho do corpo a corpo: DEX vira o atributo principal e STR o secundário. Falta só um print com arco para conferir os números.
 - [ ] `f10` **How much damage do DEF and MDEF reduce?**
   1. Pick a monster that always uses the same attack, or ask someone to use the same skill on you every time.
   2. Note the damage you take and DEF and MDEF from the attributes window (Alt+Q).
   3. Swap armor or shield to change DEF/MDEF and note the damage again; do at least 3 swaps.
-  4. Send it written as: DEF / MDEF → damage taken, the monster or skill, your class and your level.
+  4. Send it written, for each try: name and refine of the armor or shield used → DEF / MDEF → damage taken. Along with the monster or skill, your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>
@@ -167,22 +167,22 @@ We don't have access to the game files: the planner only knows what the server's
   1. With points in Blade Mastery, equip a Long Sword, open the attributes window (Alt+Q) and note ATK and HIT.
   2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the ATK and HIT it shows.
   3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts for the skill.
-  4. Send it written as: weapon → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
+  4. Send it written as: weapon name and refine → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
 - [ ] `s2` **Do Two-Handed Sword, Knight Sword and Bone Sword count for Blade Mastery?**
   1. With points in Blade Mastery, equip each of them (one at a time), open the attributes window (Alt+Q) and note ATK and HIT.
   2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the ATK and HIT it shows.
   3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts for the skill.
-  4. Send it written as: weapon → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
+  4. Send it written as: weapon name and refine → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
 - [ ] `s3` **Does a Heavy Bow count for Bow Mastery?**
   1. With points in Bow Mastery, equip a Heavy Bow, open the attributes window (Alt+Q) and note DEX.
   2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the DEX it shows.
   3. If the game shows exactly the Bow Mastery bonus on top, the weapon counts for the skill.
-  4. Send it written as: weapon → DEX in game and in the planner, the Bow Mastery level, your class and your level.
+  4. Send it written as: weapon name and refine → DEX in game and in the planner, the Bow Mastery level, your class and your level.
 - [ ] `s4` **Does Perfection Mastery's extra MATK apply only at level 5, or from 5 up?**
   1. With a one-handed sword and Perfection Mastery at level 5, open the attributes window (Alt+Q) and note MATK.
   2. Raise the skill to level 6 and note MATK again.
   3. If MATK drops from 5 to 6, the "+25" is level 5 only; if it goes up by 15, it applies from 5 up.
-  4. Send it written as: skill level → MATK, your class and your level.
+  4. Send it written as: sword name and refine, skill level → MATK, your class and your level.
   - Result: Confirmado no jogo: com espada de uma mão, Critical +25 e +3 por nível, HIT -300, MATK +15 por nível (igual à descrição do site; a outra fórmula, 30 + 2/nível, estava desatualizada). · Falta: o "+25 more at Lv 5" do MATK vale só no nível 5 ou do 5 em diante? Comparar o MATK nos níveis 5 e 6.
 
 <details>
@@ -201,11 +201,11 @@ We don't have access to the game files: the planner only knows what the server's
 - [ ] `e1` **Does the Grand Peco Card set bonus (DEF +5) work?**
   1. With the Grand Peco Card equipped (without the Peco Peco Card), open the attributes window (Alt+Q) and note DEF.
   2. Also equip the Peco Peco Card and note DEF again.
-  3. Send it written as: DEF without the Peco Peco Card → DEF with it, your class and your level.
+  3. Send it written as: which pieces (name and refine) hold the two cards, DEF without the Peco Peco Card → DEF with it, your class and your level.
 - [ ] `e2` **On Metal Boots, which stat gets the "STR, INT or DEX +2"?**
   1. Without Metal Boots, open the attributes window (Alt+Q) and note the STR, INT and DEX bonus (the number after the "+").
   2. Equip Metal Boots and note the three again.
-  3. Send which of the three went up by 2, your class and your level. If you can, repeat with another class.
+  3. Send the Metal Boots refine, which of the three went up by 2, your class and your level. If you can, repeat with another class.
 
 <details>
 <summary>Confirmed (1)</summary>

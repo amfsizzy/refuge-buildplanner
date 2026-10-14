@@ -26,23 +26,23 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
   2. Equipe só um escudo em +0 e anote o DEF e o MDEF de novo.
   3. Repita com um escudo em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: refino → DEF e MDEF (ex.: +0 → 12 / 3), o nome da peça, sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
   - Resultado: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **Quanto DEF/MDEF o refino dá na capa?**
   1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
   2. Equipe só uma capa em +0 e anote o DEF e o MDEF de novo.
   3. Repita com uma capa em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: refino → DEF e MDEF (ex.: +0 → 12 / 3), o nome da peça, sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
 - [ ] `r9` **Quanto DEF/MDEF o refino dá no calçado?**
   1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
   2. Equipe só um calçado em +0 e anote o DEF e o MDEF de novo.
   3. Repita com um calçado em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: refino → DEF e MDEF (ex.: +0 → 12 / 3), o nome da peça, sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
 - [ ] `r10` **Quanto DEF/MDEF o refino dá no chapéu de cima?**
   1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
   2. Equipe só um chapéu de cima em +0 e anote o DEF e o MDEF de novo.
   3. Repita com um chapéu de cima em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: refino → DEF e MDEF (ex.: +0 → 12 / 3), o nome da peça, sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
 
 <details>
 <summary>Confirmados (7)</summary>
@@ -67,7 +67,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   1. Sem arma, abra a janela de atributos (Alt+Q) e anote o ASPD do seu personagem.
   2. Equipe uma arma de cada tipo que sua classe usa (adaga, espada, arco…), sem cartas e sem rolls de ASPD, e anote o ASPD com cada uma.
   3. Não mude AGI nem DEX entre as trocas.
-  4. Mande anotado: arma → ASPD (incluindo "sem arma"), sua classe, seu level e sua AGI e DEX base.
+  4. Mande anotado: nome e tipo da arma → ASPD (incluindo "sem arma"), sua classe, seu level e sua AGI e DEX base.
   - Resultado: Primeiro dado: a adaga (com Blade Mastery 10) fica de 6 a 0 abaixo de "sem arma" conforme a AGI sobe (ver a1). Falta comparar outros tipos de arma.
 
 <details>
@@ -136,13 +136,13 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   1. Equipe um arco sem cartas e sem rolls de ATK, e abra a janela de atributos (Alt+Q).
   2. Anote o ATK (o número da esquerda, antes do "+") com estes atributos: STR 1 / DEX 1, STR 1 / DEX 50, STR 50 / DEX 1 e STR 50 / DEX 50 (com reset de atributos ou personagens diferentes).
   3. Se puder, repita com um chicote ou um deck.
-  4. Mande anotado: STR / DEX → ATK, a arma, sua classe e seu level.
+  4. Mande anotado: nome e refino da arma, STR / DEX → ATK, sua classe e seu level.
   - Resultado: Confirmado pelo jogador: armas que não precisam ficar a 1 quadrado do mob são à distância e usam DEX: arco, arco pesado, revólver, deck, chicote, codex, corrente e shuriken (luva e taco de golfe são corpo a corpo). Aplicado como espelho do corpo a corpo: DEX vira o atributo principal e STR o secundário. Falta só um print com arco para conferir os números.
 - [ ] `f10` **Quanto de dano a DEF e a MDEF reduzem?**
   1. Escolha um monstro que use sempre o mesmo ataque, ou peça para alguém usar sempre a mesma skill em você.
   2. Anote o dano que você recebe e o DEF e o MDEF da janela de atributos (Alt+Q).
   3. Troque a armadura ou o escudo para mudar o DEF/MDEF e anote o dano de novo; faça pelo menos 3 trocas.
-  4. Mande anotado: DEF / MDEF → dano recebido, o monstro ou a skill, sua classe e seu level.
+  4. Mande anotado, para cada tentativa: nome e refino da armadura ou escudo usado → DEF / MDEF → dano recebido. Junto, o monstro ou a skill, sua classe e seu level.
 
 <details>
 <summary>Confirmados (7)</summary>
@@ -167,22 +167,22 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   1. Com pontos na Blade Mastery, equipe a Long Sword, abra a janela de atributos (Alt+Q) e anote o ATK e o HIT.
   2. Monte o mesmo personagem no planner (classe, level, atributos, a arma e as skills) e veja o ATK e o HIT que ele mostra.
   3. Se o jogo mostrar a mais exatamente o bônus da Blade Mastery, a arma conta para a skill.
-  4. Mande anotado: arma → o ATK e o HIT no jogo e no planner, o nível da Blade Mastery, sua classe e seu level.
+  4. Mande anotado: nome e refino da arma → o ATK e o HIT no jogo e no planner, o nível da Blade Mastery, sua classe e seu level.
 - [ ] `s2` **Two-Handed Sword, Knight Sword e Bone Sword contam para a Blade Mastery?**
   1. Com pontos na Blade Mastery, equipe cada uma delas (uma por vez), abra a janela de atributos (Alt+Q) e anote o ATK e o HIT.
   2. Monte o mesmo personagem no planner (classe, level, atributos, a arma e as skills) e veja o ATK e o HIT que ele mostra.
   3. Se o jogo mostrar a mais exatamente o bônus da Blade Mastery, a arma conta para a skill.
-  4. Mande anotado: arma → o ATK e o HIT no jogo e no planner, o nível da Blade Mastery, sua classe e seu level.
+  4. Mande anotado: nome e refino da arma → o ATK e o HIT no jogo e no planner, o nível da Blade Mastery, sua classe e seu level.
 - [ ] `s3` **O Heavy Bow conta para a Bow Mastery?**
   1. Com pontos na Bow Mastery, equipe o Heavy Bow, abra a janela de atributos (Alt+Q) e anote a DEX.
   2. Monte o mesmo personagem no planner (classe, level, atributos, a arma e as skills) e veja a DEX que ele mostra.
   3. Se o jogo mostrar a mais exatamente o bônus da Bow Mastery, a arma conta para a skill.
-  4. Mande anotado: arma → a DEX no jogo e no planner, o nível da Bow Mastery, sua classe e seu level.
+  4. Mande anotado: nome e refino da arma → a DEX no jogo e no planner, o nível da Bow Mastery, sua classe e seu level.
 - [ ] `s4` **O MATK extra da Perfection Mastery vale só no nível 5 ou do 5 em diante?**
   1. Com uma espada de uma mão e a Perfection Mastery no nível 5, abra a janela de atributos (Alt+Q) e anote o MATK.
   2. Suba a skill para o nível 6 e anote o MATK de novo.
   3. Se o MATK cair do 5 para o 6, o "+25" vale só no nível 5; se subir 15, vale do 5 em diante.
-  4. Mande anotado: nível da skill → MATK, sua classe e seu level.
+  4. Mande anotado: nome e refino da espada, nível da skill → MATK, sua classe e seu level.
   - Resultado: Confirmado no jogo: com espada de uma mão, Critical +25 e +3 por nível, HIT -300, MATK +15 por nível (igual à descrição do site; a outra fórmula, 30 + 2/nível, estava desatualizada). · Falta: o "+25 more at Lv 5" do MATK vale só no nível 5 ou do 5 em diante? Comparar o MATK nos níveis 5 e 6.
 
 <details>
@@ -201,11 +201,11 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 - [ ] `e1` **O bônus do conjunto da Grand Peco Card (DEF +5) funciona?**
   1. Com a Grand Peco Card equipada (sem a Peco Peco Card), abra a janela de atributos (Alt+Q) e anote o DEF.
   2. Equipe também a Peco Peco Card e anote o DEF de novo.
-  3. Mande anotado: DEF sem a Peco Peco Card → DEF com ela, sua classe e seu level.
+  3. Mande anotado: em quais peças (nome e refino) estão as duas cartas, DEF sem a Peco Peco Card → DEF com ela, sua classe e seu level.
 - [ ] `e2` **Na Metal Boots, qual atributo recebe o "STR, INT ou DEX +2"?**
   1. Sem a Metal Boots, abra a janela de atributos (Alt+Q) e anote o bônus de STR, INT e DEX (o número depois do "+").
   2. Equipe a Metal Boots e anote os três de novo.
-  3. Mande anotado qual dos três subiu 2, sua classe e seu level. Se puder, repita com outra classe.
+  3. Mande anotado: o refino da Metal Boots, qual dos três subiu 2, sua classe e seu level. Se puder, repita com outra classe.
 
 <details>
 <summary>Confirmados (1)</summary>

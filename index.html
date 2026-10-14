@@ -11,6 +11,15 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="icon" href="data:,">
 <title>Refuge Build Planner</title>
+<!-- Preview card when the link is pasted in Discord and other chats (same for every build). -->
+<meta name="description" content="Planner de builds para o RTM: Refuge — equipamento, cartas, shadow, árvore de skills, status e farm. Feito por fãs, não oficial.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Refuge Build Planner">
+<meta property="og:title" content="Refuge Build Planner">
+<meta property="og:description" content="Monte e compartilhe builds do RTM: Refuge — equipamento, cartas, shadow, skills, status e rota de farm. Feito por fãs, não oficial.">
+<meta property="og:url" content="https://amfsizzy.github.io/refuge-buildplanner/">
+<meta name="theme-color" content="#a95cff">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -298,6 +307,13 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 }
 .field.grow{ flex:1 1 180px; }
 .icon-btn-row{ display:flex; gap:6px; margin-left:auto; }
+/* "Share ▾" dropdown */
+.menu-wrap{ position:relative; }
+.menu{ position:absolute; right:0; top:calc(100% + 6px); z-index:60; min-width:230px; display:flex; flex-direction:column; padding:5px;
+  background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 16px 40px -12px rgba(0,0,0,.6); }
+.menu button{ text-align:left; background:transparent; border:0; color:var(--fg); font-size:13px; padding:8px 10px; border-radius:7px; cursor:pointer; }
+.menu button:hover, .menu button:focus-visible{ background:var(--surface-3); color:var(--accent-strong); outline:none; }
+.sidebar-actions .ghost-btn{ flex:1; }
 .icon-btn{
   background:var(--surface-2); border:1px solid var(--border); color:var(--fg-dim);
   border-radius:6px; padding:8px 11px; font-size:12px;
@@ -1065,7 +1081,6 @@ input.invalid{ border-color:var(--danger) !important; }
   <aside class="sidebar">
     <button class="new-btn" id="newLoadoutBtn" type="button" data-en="+ New Loadout">+ Novo Loadout</button>
     <div class="sidebar-actions">
-      <button class="ghost-btn" id="exportBtn" type="button" data-en="Export">Exportar</button>
       <button class="ghost-btn" id="importBtn" type="button" data-en="Import">Importar</button>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
@@ -1092,8 +1107,15 @@ input.invalid{ border-color:var(--danger) !important; }
         <select id="fClass"></select>
       </div>
       <div class="icon-btn-row">
-        <button class="icon-btn" id="shareBtn" type="button" title="Compartilhar" data-en="Share" data-en-title="Share">Compartilhar</button>
-        <button class="icon-btn" id="cardBtn" type="button" title="Gerar uma imagem da build para compartilhar" data-en="Build image" data-en-title="Make an image of the build to share">Imagem da build</button>
+        <div class="menu-wrap">
+          <button class="icon-btn" id="shareBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="shareMenu" data-en="Share ▾">Compartilhar ▾</button>
+          <div class="menu" id="shareMenu" role="menu" hidden>
+            <button type="button" role="menuitem" data-act="link" data-en="Copy link for Discord">Copiar link para o Discord</button>
+            <button type="button" role="menuitem" data-act="image" data-en="Build image">Imagem da build</button>
+            <button type="button" role="menuitem" data-act="code" data-en="Share code">Código de compartilhamento</button>
+            <button type="button" role="menuitem" data-act="export" data-en="Export backup (.json)">Exportar backup (.json)</button>
+          </div>
+        </div>
         <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
         <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
       </div>
@@ -4807,7 +4829,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var bd = el('div', { class:'vs-backdrop', id:'cardBackdrop' });
     var panel = el('div', { class:'vs-panel card-panel', role:'dialog', 'aria-modal':'true', 'aria-label':L('Imagem da build', 'Build image') });
     var x = el('button', { type:'button', class:'close-x', 'aria-label':L('Fechar', 'Close'), text:'×' });
-    function close(){ bd.remove(); document.removeEventListener('keydown', onKey); var b = document.getElementById('cardBtn'); if (b) b.focus(); }
+    function close(){ bd.remove(); document.removeEventListener('keydown', onKey); var b = document.getElementById('shareBtn'); if (b) b.focus(); }
     function onKey(e){ if (e.key === 'Escape'){ e.preventDefault(); close(); } }
     x.addEventListener('click', close);
     bd.addEventListener('click', function(e){ if (e.target === bd) close(); });
@@ -5596,7 +5618,7 @@ input.invalid{ border-color:var(--danger) !important; }
     f.focus();
   }
 
-  document.getElementById('shareBtn').addEventListener('click', function(){
+  function openShareModal(){
     var lo = activeLoadout(); if (!lo) return;
     if (unnamed(lo)){ askForName(); return; }
     var out = document.getElementById('shareCodeOut');
@@ -5609,7 +5631,66 @@ input.invalid{ border-color:var(--danger) !important; }
     encodeLoadoutCode(lo).then(function(code){ out.value = code; }).catch(function(err){
       out.value = ''; status.textContent = L('Falha ao gerar código: ', 'Could not generate the code: ') + err.message; status.classList.add('err');
     });
-  });
+  }
+  // A link that opens the planner with the build already imported. Copied in Discord's masked
+  // link format, so the chat shows "Build X — Refuge Build Planner" instead of the long code.
+  function copyBuildLink(){
+    var lo = activeLoadout(); if (!lo) return;
+    if (unnamed(lo)){ askForName(); return; }
+    encodeLoadoutCode(lo).then(function(code){
+      var url = location.origin + location.pathname + '#b=' + encodeURIComponent(code);
+      var label = (lo.name || 'Build').replace(/[\[\]]/g, '') + ' — Refuge Build Planner';
+      var text = '[' + label + '](' + url + ')';
+      var ok = function(){ alertInline(L('Link copiado! Cole no Discord: vai aparecer só "' + label + '" clicável.', 'Link copied! Paste it in Discord: only "' + label + '" shows, clickable.')); };
+      var fail = function(){ alertInline(L('O navegador não deixou copiar. Use "Código de compartilhamento".', "The browser didn't allow copying. Use \"Share code\".")); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok).catch(fail); else fail();
+    }).catch(function(err){ alertInline(L('Falha ao gerar o link: ', 'Could not make the link: ') + err.message); });
+  }
+  // Opening a shared link imports that build as a new loadout, then clears the address.
+  function importFromLink(){
+    var m = /^#b=(.+)$/.exec(location.hash || '');
+    if (!m) return;
+    var code; try { code = decodeURIComponent(m[1]); } catch(e){ code = ''; }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+    if (!code) return;
+    decodeLoadoutCode(code).then(function(raw){
+      var lo = sanitizeLoadout(raw, false);
+      if (!lo) throw new Error(L('o link não tem um loadout válido.', "the link doesn't hold a valid loadout."));
+      if (state.loadouts.length >= LIMITS.loadouts) throw new Error(L('limite de 100 loadouts atingido.', 'limit of 100 loadouts reached.'));
+      lo.updatedAt = Date.now();
+      state.loadouts.push(lo);
+      state.activeId = lo.id;
+      saveLoadouts(); render();
+      alertInline(L('Build "' + lo.name + '" aberta a partir do link.', 'Build "' + lo.name + '" opened from the link.'));
+    }).catch(function(err){ alertInline(L('Não foi possível abrir a build do link: ', "Couldn't open the build from the link: ") + err.message); });
+  }
+  // "Share ▾" menu: link, image, code and backup in one place.
+  (function(){
+    var btn = document.getElementById('shareBtn'), menu = document.getElementById('shareMenu');
+    function setOpen(open){
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open){ var first = menu.querySelector('[role=menuitem]'); if (first) first.focus(); }
+    }
+    btn.addEventListener('click', function(e){ e.stopPropagation(); setOpen(menu.hidden); });
+    menu.addEventListener('click', function(e){
+      var it = e.target.closest('[data-act]'); if (!it) return;
+      setOpen(false);
+      var act = it.dataset.act;
+      if (act === 'link') copyBuildLink();
+      else if (act === 'image') openBuildCard();
+      else if (act === 'code') openShareModal();
+      else if (act === 'export') exportBackup();
+    });
+    menu.addEventListener('keydown', function(e){
+      var items = Array.prototype.slice.call(menu.querySelectorAll('[role=menuitem]'));
+      var i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown'){ e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Escape'){ e.preventDefault(); setOpen(false); btn.focus(); }
+    });
+    document.addEventListener('click', function(e){ if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) setOpen(false); });
+  })();
   document.getElementById('shareModalClose').addEventListener('click', function(){
     document.getElementById('shareModalBackdrop').hidden = true;
   });
@@ -5688,7 +5769,6 @@ input.invalid{ border-color:var(--danger) !important; }
     if (k === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
     else if (k === 'y' || (k === 'z' && e.shiftKey)){ e.preventDefault(); redo(); }
   });
-  document.getElementById('cardBtn').addEventListener('click', openBuildCard);
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;
     function reset(){
@@ -5756,7 +5836,7 @@ input.invalid{ border-color:var(--danger) !important; }
     saveLoadouts();
   });
   // Export downloads every loadout as one .json backup file (Import reads it back).
-  document.getElementById('exportBtn').addEventListener('click', function(){
+  function exportBackup(){
     if (!state.loadouts.length){ alertInline(L('Não há loadouts para exportar.', 'There are no loadouts to export.')); return; }
     var lo = activeLoadout();
     if (lo && unnamed(lo)){ askForName(); return; }
@@ -5773,7 +5853,7 @@ input.invalid{ border-color:var(--danger) !important; }
     } catch(e){
       alertInline(L('Não foi possível baixar o arquivo neste navegador.', "Couldn't download the file in this browser."));
     }
-  });
+  }
   var toastTimer = null;
   function alertInline(msg){
     var t = document.getElementById('toast');
@@ -5861,6 +5941,7 @@ input.invalid{ border-color:var(--danger) !important; }
     alertInline(L('Um loadout salvo não pôde ser exibido. Os outros continuam disponíveis.', 'A saved loadout could not be shown. The others are still available.'));
   }
   lastSnap = snapshot(); // undo starts from what was loaded
+  importFromLink();
   renderChecklist();
   fetchDb();
   fetchPlaces();

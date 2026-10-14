@@ -522,6 +522,7 @@ input.invalid{ border-color:var(--danger) !important; }
 .sg-slot{ font-size:10.5px; color:var(--fg-faint); }
 .sg-name{ font-size:13px; font-weight:600; }
 .sg-stats{ font-size:11px; color:var(--early); }
+.sg-basic{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--fg-dim); cursor:pointer; }
 .sg-actions{ display:flex; gap:8px; justify-content:flex-end; }
 .sg-actions .primary-btn{ padding:9px 18px; }
 .primary-btn:disabled{ opacity:.45; cursor:not-allowed; }
@@ -1305,6 +1306,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <label for="suggestProfile" data-en="Build profile">Perfil da build</label>
       <select id="suggestProfile"></select>
     </div>
+    <label class="sg-basic" id="suggestBasicWrap"><input type="checkbox" id="suggestBasic"> <span data-en="Basic-attack build (counts ASPD)">Build de ataque básico (conta ASPD)</span></label>
     <div class="result-count" id="suggestInfo" aria-live="polite"></div>
     <div class="results" id="suggestList"></div>
     <div class="sg-actions">
@@ -6206,11 +6208,19 @@ input.invalid{ border-color:var(--danger) !important; }
   // scores higher — mixed pieces win when they are better. Items only: no cards, refine,
   // rolled options or effects the parser can't sum, so it is a starting point, not an answer.
   var SUGGEST_PROFILES = {
-    melee:  { label: L('Físico corpo a corpo', 'Physical melee'), w: { atk:1, str:2, dex:0.6, agi:0.8, luk:0.4, hit:0.3, crit:0.8, aspd:3, aspdPct:2, aspdLimit:2, flee:0.2, vit:0.3, def:0.3 } },
-    ranged: { label: L('Físico à distância', 'Physical ranged'), w: { atk:1, dex:2, str:0.4, agi:0.8, luk:0.4, hit:0.3, crit:0.8, aspd:3, aspdPct:2, aspdLimit:2, flee:0.2, vit:0.3, def:0.3 } },
+    melee:  { label: L('Físico corpo a corpo', 'Physical melee'), w: { atk:1, str:2, dex:0.6, agi:0.8, luk:0.4, hit:0.3, crit:0.8, flee:0.2, vit:0.3, def:0.3 } },
+    ranged: { label: L('Físico à distância', 'Physical ranged'), w: { atk:1, dex:2, str:0.4, agi:0.8, luk:0.4, hit:0.3, crit:0.8, flee:0.2, vit:0.3, def:0.3 } },
     magic:  { label: L('Mágico', 'Magic'), w: { matk:1, int:2, dex:0.8, vit:0.4, agi:0.2, def:0.2, mdef:0.4 } },
     tank:   { label: L('Tanque', 'Tank'), w: { vit:2, def:1.5, mdef:1, flee:0.5, pdodge:1, agi:0.5, str:0.4, atk:0.2 } }
   };
+  // ASPD only helps builds that hit with basic attacks (user, 2026-10-14: no INT build uses it),
+  // so it counts only when the player ticks "basic attack" on a physical profile.
+  var ASPD_WEIGHTS = { aspd:1, aspdPct:1, aspdLimit:1 };
+  function suggestWeights(profile, basic){
+    var w = Object.assign({}, SUGGEST_PROFILES[profile].w);
+    if (basic && (profile === 'melee' || profile === 'ranged')) Object.assign(w, ASPD_WEIGHTS);
+    return w;
+  }
   var SUGGEST_ROUNDS = 3, SUGGEST_SLOTS = EQUIP_SLOTS.concat(SHADOW_SLOTS);
   function suggestMissing(lo){
     var sd = activeStageData(lo), miss = [];
@@ -6223,7 +6233,9 @@ input.invalid{ border-color:var(--danger) !important; }
     var b = activeStageData(lo).baseStats;
     var w = weaponItem(lo, 'weapon');
     if ((b.int || 1) >= Math.max(b.str || 1, b.dex || 1)) return 'magic';
-    if ((w && RANGED_ATK_CATS.indexOf((w.cat || '').toLowerCase()) !== -1) || (b.dex || 1) > (b.str || 1)) return 'ranged';
+    // An equipped weapon decides melee vs ranged; without one, the bigger of DEX and STR does.
+    var ranged = w ? RANGED_ATK_CATS.indexOf((w.cat || '').toLowerCase()) !== -1 : (b.dex || 1) > (b.str || 1);
+    if (ranged) return 'ranged';
     if ((b.vit || 1) > Math.max(b.str || 1, b.agi || 1)) return 'tank';
     return 'melee';
   }
@@ -6239,8 +6251,8 @@ input.invalid{ border-color:var(--danger) !important; }
     return true;
   }
   // Best items per slot by their own score.
-  function suggestCandidates(lo, profile, level){
-    var w = SUGGEST_PROFILES[profile].w, cls = lo.charClass, out = {};
+  function suggestCandidates(lo, profile, level, w){
+    var cls = lo.charClass, out = {};
     SUGGEST_SLOTS.forEach(function(d){ out[d.key] = []; });
     state.db.items.forEach(function(it){
       if (it.isCard || !canEquip(it, cls) || (it.lv || 0) > level) return;
@@ -6309,9 +6321,9 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     return fixTwoHanded(slots);
   }
-  function runSuggest(lo, profile){
-    var level = activeStageData(lo).level || 1, w = SUGGEST_PROFILES[profile].w, cls = lo.charClass;
-    var cand = suggestCandidates(lo, profile, level);
+  function runSuggest(lo, profile, basic){
+    var level = activeStageData(lo).level || 1, w = suggestWeights(profile, basic), cls = lo.charClass;
+    var cand = suggestCandidates(lo, profile, level, w);
     var best = {};
     SUGGEST_SLOTS.forEach(function(d){
       var list = cand[d.key], pick = d.key === 'accRight' ? (list[1] || list[0]) : list[0];
@@ -6362,7 +6374,8 @@ input.invalid{ border-color:var(--danger) !important; }
   function openSuggest(){
     var lo = activeLoadout();
     if (!lo || !state.db || suggestMissing(lo).length) return;
-    suggestState = { profile: guessProfile(lo), pick: {} };
+    suggestState = { profile: guessProfile(lo), pick: {}, basic: false };
+    document.getElementById('suggestBasic').checked = false;
     var sel = document.getElementById('suggestProfile');
     clear(sel);
     Object.keys(SUGGEST_PROFILES).forEach(function(k){ sel.appendChild(el('option', { value: k, text: SUGGEST_PROFILES[k].label })); });
@@ -6391,7 +6404,9 @@ input.invalid{ border-color:var(--danger) !important; }
   function renderSuggest(){
     var lo = activeLoadout();
     if (!lo || !suggestState) return;
-    var res = runSuggest(lo, suggestState.profile);
+    var physical = suggestState.profile === 'melee' || suggestState.profile === 'ranged';
+    document.getElementById('suggestBasicWrap').hidden = !physical;
+    var res = runSuggest(lo, suggestState.profile, physical && suggestState.basic);
     suggestState.result = res;
     var cur = activeStageData(lo).slots, list = document.getElementById('suggestList');
     var level = activeStageData(lo).level || 1, changed = 0;
@@ -6433,6 +6448,11 @@ input.invalid{ border-color:var(--danger) !important; }
   document.getElementById('suggestProfile').addEventListener('change', function(e){
     if (!suggestState) return;
     suggestState.profile = e.target.value; suggestState.pick = {};
+    renderSuggest();
+  });
+  document.getElementById('suggestBasic').addEventListener('change', function(e){
+    if (!suggestState) return;
+    suggestState.basic = e.target.checked; suggestState.pick = {};
     renderSuggest();
   });
   document.getElementById('suggestApply').addEventListener('click', applySuggest);

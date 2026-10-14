@@ -14,7 +14,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 41 of 59 items confirmed.
+**Progress:** 42 of 59 items confirmed.
 
 ## Refine
 
@@ -126,7 +126,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 *Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). How to test: with no gear, enter the same level and stats as the character in the tool and compare each number in the Status window with the tool's Status tab.
 
-**Open (3)**
+**Open (2)**
 
 - [ ] `f7` **With a ranged weapon, does ATK use DEX instead of STR?**
   1. Equip a bow with no cards and no ATK rolls, and open the attributes window (Alt+Q).
@@ -139,23 +139,19 @@ We don't have access to the game files: the planner only knows what the server's
   2. Note the damage you take and DEF and MDEF from the attributes window (Alt+Q).
   3. Swap armor or shield to change DEF/MDEF and note the damage again; do at least 3 swaps.
   4. Send it written, for each try: name and refine of the armor or shield used → DEF / MDEF → damage taken. Along with the monster or skill, your class and your level.
-- [ ] `f11` **How does "Total Flee +X%" add to FLEE?**
-  1. Without Asprika (and no other "Flee +%" item), open the attributes window (Alt+Q) and note your character's FLEE.
-  2. Equip only Asprika and note FLEE again.
-  3. If you can, repeat at another AGI or level, to see whether the increase follows your total FLEE.
-  4. Send it written as: Asprika name and refine, FLEE without → FLEE with, your base AGI and LUK, your class and your level.
 
 <details>
-<summary>Confirmed (8)</summary>
+<summary>Confirmed (9)</summary>
 
 - [x] `f1` **HIT**: Corrigido: HIT = Level + 2×DEX + LUK÷5 + 200 (a ferramenta usava 175). Bateu em dois prints (307 e 405).
 - [x] `f2` **FLEE**: Confirmado: a fórmula bate. Os +70 que sobravam eram Improve Dodge 10 (+40) e Shadow Mastery 10 (+30).
-- [x] `f3` **Does the planner's Critical match the game's?**: Confirmado no jogo (2026-10-14): LUK 92 sem equipamento deu Critical 49 = 1 + 92÷3 + 2×9. "Total Critical Rate +X%" multiplica o Critical total: a Samurai Mask (+20%) levou 49 → 59 (49 × 1,2 arredondado).
+- [x] `f3` **Does the planner's Critical match the game's?**: Confirmado no jogo (2026-10-14): LUK 92 sem equipamento deu Critical 49 = 1 + 92÷3 + 2×9. "Total Critical Rate +X%" soma X% da parte que vem da LUK (sem skills e equipamento): a Samurai Mask (+20%) levou 49 → 59 (49 × 1,2 arredondado).
 - [x] `f4` **Perfect Dodge**: Confirmado: 1 + (AGI + LUK)÷10 (1 com tudo em 1; 11 com AGI 99). É o número depois do "+" no FLEE.
 - [x] `f5` **Status ATK and MATK**: Corrigido: ATK e MATK de status somam o nível base ÷ 4, e cada 10 de DEX dá +1 MATK. ATK = nível÷4 + STR + DEX÷5 + DEX÷20 + LUK÷3; MATK = nível÷4 + INT×1,5 + DEX÷5 + DEX÷10 + LUK÷3. Bateu em dois prints (27/27 e 39/45).
 - [x] `f6` **Soft DEF and MDEF**: Confirmado: DEF suave = nível + VIT (+5 a cada 10 de VIT, pelo tooltip) e MDEF suave = nível÷4 + INT + DEX÷5 + VIT÷5. Bateu com VIT 1 (106/27 e 106/39) e VIT 2 (107/37).
 - [x] `f8` **Bonus every 10 stat points**: Confirmado pelos tooltips do jogo (a cada 10 do total do atributo): STR +1 ATK; AGI +1 FLEE e +1 ASPD; VIT +5 DEF e MDEF (fixos); INT +1 MATK; DEX +1 ATK e MATK; LUK +2 Critical e +1% de dano crítico.
 - [x] `f9` **Casting and critical damage**: Confirmado pelos tooltips do jogo: o crítico dá 1,2× de dano (+1% a cada 10 de LUK) e ignora FLEE. Cada DEX reduz 0,25% do cast variável e cada INT 0,125%; DEX×2 + INT = 400 zera o cast variável. O cast fixo só cai com equipamento. A ferramenta mostra os dois no Status.
+- [x] `f11` **How does "Total Flee +X%" add to FLEE?**: Confirmado no jogo (2026-10-14, Legend Lv 105, AGI 99, LUK 92, Improve Dodge 10 e Shadow Mastery 10): FLEE 401 → 467 com a Asprika. O "Total Flee +20%" soma 20% só da parte de atributos e level (331 → +66), não das skills. O "Perfect Dodge: 020" da Asprika também conta (+20).
 
 </details>
 

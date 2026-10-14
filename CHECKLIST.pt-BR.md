@@ -14,7 +14,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 40 de 59 itens confirmados.
+**Progresso:** 41 de 59 itens confirmados.
 
 ## Refino
 
@@ -23,26 +23,26 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 **Em aberto (4)**
 
 - [ ] `r7` **Quanto DEF/MDEF o refino dá no escudo?**
-  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
-  2. Equipe só um escudo em +0 e anote o DEF e o MDEF de novo.
+  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q): o número depois do "+" no DEF e no MDEF deve estar em 0.
+  2. Equipe só um escudo em +0 e anote o DEF e o MDEF do equipamento (o número depois do "+").
   3. Repita com um escudo em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → Def +12 / Mdef +3), sua classe e seu level.
   - Resultado: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **Quanto DEF/MDEF o refino dá na capa?**
-  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
-  2. Equipe só uma capa em +0 e anote o DEF e o MDEF de novo.
+  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q): o número depois do "+" no DEF e no MDEF deve estar em 0.
+  2. Equipe só uma capa em +0 e anote o DEF e o MDEF do equipamento (o número depois do "+").
   3. Repita com uma capa em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → Def +12 / Mdef +3), sua classe e seu level.
 - [ ] `r9` **Quanto DEF/MDEF o refino dá no calçado?**
-  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
-  2. Equipe só um calçado em +0 e anote o DEF e o MDEF de novo.
+  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q): o número depois do "+" no DEF e no MDEF deve estar em 0.
+  2. Equipe só um calçado em +0 e anote o DEF e o MDEF do equipamento (o número depois do "+").
   3. Repita com um calçado em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → Def +12 / Mdef +3), sua classe e seu level.
 - [ ] `r10` **Quanto DEF/MDEF o refino dá no chapéu de cima?**
-  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q) e anote o DEF e o MDEF do seu personagem.
-  2. Equipe só um chapéu de cima em +0 e anote o DEF e o MDEF de novo.
+  1. Sem nenhum equipamento, abra a janela de atributos (Alt+Q): o número depois do "+" no DEF e no MDEF deve estar em 0.
+  2. Equipe só um chapéu de cima em +0 e anote o DEF e o MDEF do equipamento (o número depois do "+").
   3. Repita com um chapéu de cima em +1, +2 e +4 (pode ser outra cópia já refinada).
-  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → 12 / 3), sua classe e seu level.
+  4. Mande anotado: nome da peça e refino → DEF e MDEF (ex.: Buckler +0 → Def +12 / Mdef +3), sua classe e seu level.
 
 <details>
 <summary>Confirmados (7)</summary>
@@ -126,12 +126,8 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 *Prioridade média* · Vêm do Codex do site, que já errou uma vez (INT/SP). Como testar: sem equipamento, coloque na ferramenta o mesmo level e os mesmos atributos do personagem e compare cada número da janela de Status com a aba Status da ferramenta.
 
-**Em aberto (4)**
+**Em aberto (3)**
 
-- [ ] `f3` **O Critical do planner bate com o do jogo?**
-  1. Sem equipamento, abra a janela de atributos (Alt+Q) e anote a LUK base e o Critical do seu personagem.
-  2. Mude a LUK (com pontos novos ou um reset de atributos) e anote os dois de novo, em 2 ou 3 valores.
-  3. Mande anotado: LUK → Critical, sua classe e seu level.
 - [ ] `f7` **Com arma à distância, o ATK usa a DEX no lugar da STR?**
   1. Equipe um arco sem cartas e sem rolls de ATK, e abra a janela de atributos (Alt+Q).
   2. Anote o ATK (o número da esquerda, antes do "+") com estes atributos: STR 1 / DEX 1, STR 1 / DEX 50, STR 50 / DEX 1 e STR 50 / DEX 50 (com reset de atributos ou personagens diferentes).
@@ -150,10 +146,11 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   4. Mande anotado: nome e refino da Asprika, FLEE sem → FLEE com, sua AGI e LUK base, sua classe e seu level.
 
 <details>
-<summary>Confirmados (7)</summary>
+<summary>Confirmados (8)</summary>
 
 - [x] `f1` **HIT**: Corrigido: HIT = Level + 2×DEX + LUK÷5 + 200 (a ferramenta usava 175). Bateu em dois prints (307 e 405).
 - [x] `f2` **FLEE**: Confirmado: a fórmula bate. Os +70 que sobravam eram Improve Dodge 10 (+40) e Shadow Mastery 10 (+30).
+- [x] `f3` **O Critical do planner bate com o do jogo?**: Confirmado no jogo (2026-10-14): LUK 92 sem equipamento deu Critical 49 = 1 + 92÷3 + 2×9. "Total Critical Rate +X%" multiplica o Critical total: a Samurai Mask (+20%) levou 49 → 59 (49 × 1,2 arredondado).
 - [x] `f4` **Perfect Dodge**: Confirmado: 1 + (AGI + LUK)÷10 (1 com tudo em 1; 11 com AGI 99). É o número depois do "+" no FLEE.
 - [x] `f5` **ATK e MATK de status**: Corrigido: ATK e MATK de status somam o nível base ÷ 4, e cada 10 de DEX dá +1 MATK. ATK = nível÷4 + STR + DEX÷5 + DEX÷20 + LUK÷3; MATK = nível÷4 + INT×1,5 + DEX÷5 + DEX÷10 + LUK÷3. Bateu em dois prints (27/27 e 39/45).
 - [x] `f6` **DEF e MDEF suaves**: Confirmado: DEF suave = nível + VIT (+5 a cada 10 de VIT, pelo tooltip) e MDEF suave = nível÷4 + INT + DEX÷5 + VIT÷5. Bateu com VIT 1 (106/27 e 106/39) e VIT 2 (107/37).

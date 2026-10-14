@@ -14,7 +14,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 40 of 59 items confirmed.
+**Progress:** 41 of 59 items confirmed.
 
 ## Refine
 
@@ -23,26 +23,26 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (4)**
 
 - [ ] `r7` **How much DEF/MDEF does refine add to a shield?**
-  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
-  2. Equip only a shield at +0 and note DEF and MDEF again.
+  1. With no gear on, open the attributes window (Alt+Q): the number after the "+" in DEF and MDEF should be 0.
+  2. Equip only a shield at +0 and note the equipment DEF and MDEF (the number after the "+").
   3. Repeat with the same shield at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → Def +12 / Mdef +3), your class and your level.
   - Result: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **How much DEF/MDEF does refine add to a garment?**
-  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
-  2. Equip only a garment at +0 and note DEF and MDEF again.
+  1. With no gear on, open the attributes window (Alt+Q): the number after the "+" in DEF and MDEF should be 0.
+  2. Equip only a garment at +0 and note the equipment DEF and MDEF (the number after the "+").
   3. Repeat with the same garment at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → Def +12 / Mdef +3), your class and your level.
 - [ ] `r9` **How much DEF/MDEF does refine add to a pair of shoes?**
-  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
-  2. Equip only a pair of shoes at +0 and note DEF and MDEF again.
+  1. With no gear on, open the attributes window (Alt+Q): the number after the "+" in DEF and MDEF should be 0.
+  2. Equip only a pair of shoes at +0 and note the equipment DEF and MDEF (the number after the "+").
   3. Repeat with the same shoes at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → Def +12 / Mdef +3), your class and your level.
 - [ ] `r10` **How much DEF/MDEF does refine add to an upper headgear?**
-  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
-  2. Equip only an upper headgear at +0 and note DEF and MDEF again.
+  1. With no gear on, open the attributes window (Alt+Q): the number after the "+" in DEF and MDEF should be 0.
+  2. Equip only an upper headgear at +0 and note the equipment DEF and MDEF (the number after the "+").
   3. Repeat with the same headgear at +1, +2 and +4 (another copy already refined is fine).
-  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → 12 / 3), your class and your level.
+  4. Send it written as: piece name and refine → DEF and MDEF (e.g. Buckler +0 → Def +12 / Mdef +3), your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>
@@ -126,12 +126,8 @@ We don't have access to the game files: the planner only knows what the server's
 
 *Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). How to test: with no gear, enter the same level and stats as the character in the tool and compare each number in the Status window with the tool's Status tab.
 
-**Open (4)**
+**Open (3)**
 
-- [ ] `f3` **Does the planner's Critical match the game's?**
-  1. With no gear on, open the attributes window (Alt+Q) and note your character's base LUK and Critical.
-  2. Change LUK (with new points or a stat reset) and note both again, at 2 or 3 values.
-  3. Send it written as: LUK → Critical, your class and your level.
 - [ ] `f7` **With a ranged weapon, does ATK use DEX instead of STR?**
   1. Equip a bow with no cards and no ATK rolls, and open the attributes window (Alt+Q).
   2. Note ATK (the left number, before the "+") with these stats: STR 1 / DEX 1, STR 1 / DEX 50, STR 50 / DEX 1 and STR 50 / DEX 50 (with a stat reset or different characters).
@@ -150,10 +146,11 @@ We don't have access to the game files: the planner only knows what the server's
   4. Send it written as: Asprika name and refine, FLEE without → FLEE with, your base AGI and LUK, your class and your level.
 
 <details>
-<summary>Confirmed (7)</summary>
+<summary>Confirmed (8)</summary>
 
 - [x] `f1` **HIT**: Corrigido: HIT = Level + 2×DEX + LUK÷5 + 200 (a ferramenta usava 175). Bateu em dois prints (307 e 405).
 - [x] `f2` **FLEE**: Confirmado: a fórmula bate. Os +70 que sobravam eram Improve Dodge 10 (+40) e Shadow Mastery 10 (+30).
+- [x] `f3` **Does the planner's Critical match the game's?**: Confirmado no jogo (2026-10-14): LUK 92 sem equipamento deu Critical 49 = 1 + 92÷3 + 2×9. "Total Critical Rate +X%" multiplica o Critical total: a Samurai Mask (+20%) levou 49 → 59 (49 × 1,2 arredondado).
 - [x] `f4` **Perfect Dodge**: Confirmado: 1 + (AGI + LUK)÷10 (1 com tudo em 1; 11 com AGI 99). É o número depois do "+" no FLEE.
 - [x] `f5` **Status ATK and MATK**: Corrigido: ATK e MATK de status somam o nível base ÷ 4, e cada 10 de DEX dá +1 MATK. ATK = nível÷4 + STR + DEX÷5 + DEX÷20 + LUK÷3; MATK = nível÷4 + INT×1,5 + DEX÷5 + DEX÷10 + LUK÷3. Bateu em dois prints (27/27 e 39/45).
 - [x] `f6` **Soft DEF and MDEF**: Confirmado: DEF suave = nível + VIT (+5 a cada 10 de VIT, pelo tooltip) e MDEF suave = nível÷4 + INT + DEX÷5 + VIT÷5. Bateu com VIT 1 (106/27 e 106/39) e VIT 2 (107/37).

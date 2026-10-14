@@ -1012,6 +1012,21 @@ input.invalid{ border-color:var(--danger) !important; }
 .vsmob-note{ font-size:11px; color:var(--fg-faint); margin-top:6px; line-height:1.4; }
 .lv-odds{ display:flex; gap:12px; flex-wrap:wrap; font:600 11.5px var(--font-mono); margin:2px 0 4px; }
 .lv-odds .ok{ color:var(--stat-item); } .lv-odds .mid{ color:var(--mid); } .lv-odds .bad{ color:var(--danger); }
+.vsmob-stats{ font:600 11.5px var(--font-mono); color:var(--fg-dim); margin:2px 0 6px; }
+.vsmob-traits{ font-size:11.5px; color:var(--mid); margin:0 0 6px; }
+.vsmob-elem{ display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; margin:6px 0; font-size:12px; }
+.vsmob-chips{ display:flex; gap:4px; flex-wrap:wrap; margin:3px 0 4px; }
+.vchip{ font:600 11px var(--font-mono); padding:1px 7px; border-radius:6px; border:1px solid var(--border-soft); color:var(--fg-dim); }
+.vchip.up{ color:var(--stat-item); border-color:color-mix(in srgb, var(--stat-item) 40%, transparent); }
+.vchip.down{ color:var(--danger); border-color:color-mix(in srgb, var(--danger) 40%, transparent); }
+.vchip.fx{ color:var(--fx); border-color:color-mix(in srgb, var(--fx) 40%, transparent); }
+.jobq{ margin-top:18px; border-top:1px solid var(--border-soft); padding-top:12px; display:flex; flex-direction:column; gap:6px; }
+.jobq-title{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin:0 0 4px; }
+.jobq-cls{ border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:7px 10px; font-size:12.5px; }
+.jobq-cls summary{ cursor:pointer; font-weight:700; }
+.jobq-line{ font-size:12px; color:var(--fg-dim); margin:6px 0 0; }
+.codex-line{ font-size:12px; color:var(--fg-dim); line-height:1.45; margin-top:4px; }
+.rate-chip.respawn{ color:var(--fg-faint); }
 .kill-sec-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--fg-dim); margin:-6px 0 12px; }
 .kill-sec{ width:46px; height:26px; padding:0 4px; text-align:center; border-radius:6px; font:600 12px var(--font-mono); background:var(--surface-2); border:1px solid var(--border); color:var(--fg); -moz-appearance:textfield; }
 .kill-sec::-webkit-outer-spin-button, .kill-sec::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
@@ -2138,7 +2153,9 @@ input.invalid{ border-color:var(--danger) !important; }
         var zone = raw.zones[r[c.zone]] || '';
         var mob = { id: r[c.id], name: String(r[c.name] || ''), lv: r[c.lv] | 0, exp: r[c.exp] | 0, mvp: !!r[c.mvp], maps: [],
           hit: r[c.hit] | 0, flee: r[c.flee] | 0, race: (raw.races || [])[r[c.race]] || '', size: (raw.sizes || [])[r[c.size]] || '',
-          element: ((raw.elements || [])[r[c.element]] || '') + (r[c.elv] ? ' ' + r[c.elv] : '') };
+          element: ((raw.elements || [])[r[c.element]] || '') + (r[c.elv] ? ' ' + r[c.elv] : ''),
+          el: (raw.elements || [])[r[c.element]] || '', elv: r[c.elv] | 0, atk: r[c.atk] | 0, def: r[c.def] | 0, mdef: r[c.mdef] | 0,
+          traits: (Array.isArray(r[c.traits]) ? r[c.traits] : []).map(function(t){ return (raw.traitnames || [])[t]; }).filter(Boolean) };
         maps.forEach(function(mi, i){
           var name = raw.maps[mi]; if (!name) return;
           var count = (crowd[i] && crowd[i][0]) | 0;
@@ -2152,6 +2169,7 @@ input.invalid{ border-color:var(--danger) !important; }
       // Hit rules of this server, as the database publishes them: chance = base + HIT − FLEE,
       // kept between floor and ceiling (base 0, floor 10, ceiling 100 when this was written).
       var hr = raw.hitrate || {};
+      state.mobs_attr = { table: raw.attr || {}, order: raw.attrorder || [] };
       var hitRule = { base: typeof hr.base === 'number' ? hr.base : 0, floor: typeof hr.floor === 'number' ? hr.floor : 10, ceiling: typeof hr.ceiling === 'number' ? hr.ceiling : 100 };
       state.mobs = { byId: byId, byMap: byMap, mapZone: mapZone, mapCode: mapCode, hitRule: hitRule,
         byName: Object.keys(byId).reduce(function(o, id){ var m = byId[id]; var k = m.name.toLowerCase(); if (!o[k] || (o[k].mvp && !m.mvp)) o[k] = m; return o; }, {}) };
@@ -2207,8 +2225,97 @@ input.invalid{ border-color:var(--danger) !important; }
     box.appendChild(row(L('Ele te acerta', 'It hits you'), theirs, theirs <= r.floor,
       s.flee >= needFlee ? L('desvio no máximo; ele sempre acerta ', 'max dodge; it always lands ') + r.floor + '%'
                          : L('faltam ', 'needs ') + Math.ceil(needFlee - s.flee) + L(' de FLEE para desviar o máximo (', ' more FLEE to dodge the most (') + needFlee + ')'));
+    vsMobExtras(box, lo, mob);
     box.appendChild(el('div', { class:'vsmob-note', text:L('Regras de acerto da base do servidor (ainda não medidas no jogo). Perfect Dodge não entra.',
       "The server database's hit rules (not measured in game yet). Perfect Dodge is not included.") }));
+  }
+  // ---------- the server database's other pages: EXP curve and gap penalty, MVP respawn
+  // windows, job-change quests and the Codex glossary. Each part is optional: if one fails,
+  // the planner just doesn't show that part. All text goes in with textContent.
+  var SITE = 'https://rtm-database.pages.dev/';
+  state.server = { curve: null, mvp: {}, quests: {}, codex: [] };
+  function pageJson(html, id){
+    var m = new RegExp('id="' + id + '"[^>]*>([\\s\\S]*?)<\\/script>').exec(html);
+    return m ? JSON.parse(m[1]) : null;
+  }
+  function fetchText(url){ return fetch(url).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }); }
+  function fetchServerPages(){
+    var done = function(){ var lo = activeLoadout(); if (lo) render(); };
+    fetchText(SITE + 'leveling').then(function(h){ var c = pageJson(h, 'lvl-curve'); if (c && c.penalty && c.exp) state.server.curve = c; done(); }).catch(function(){});
+    fetchText(SITE + 'mvp-timer').then(function(h){
+      (pageJson(h, 'mvp-data') || []).forEach(function(m){ if (m && m.id && Array.isArray(m.spawn)) state.server.mvp[m.id] = { min: m.spawn[0] | 0, max: m.spawn[1] | 0, map: String(m.mapname || '') }; });
+      done();
+    }).catch(function(){});
+    fetchText(SITE + 'classes').then(function(h){
+      var doc = new DOMParser().parseFromString(h, 'text/html');
+      var texts = function(root, sel){ return Array.prototype.map.call(root.querySelectorAll(sel), function(n){ return n.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean); };
+      doc.querySelectorAll('li.cls').forEach(function(li){
+        var name = (li.querySelector('.cls-name') || {}).textContent;
+        if (!name) return;
+        state.server.quests[name.trim()] = { needs: texts(li, '.cls-needs li'), start: texts(li, '.cls-start').join(' '), steps: texts(li, '.cls-steps li'), gives: texts(li, '.cls-gives li') };
+      });
+      done();
+    }).catch(function(){});
+    fetch(SITE + 'assets/data/codex.json').then(function(r){ return r.json(); }).then(function(j){
+      state.server.codex = (j && Array.isArray(j.terms) ? j.terms : []).filter(function(t){ return Array.isArray(t) && t[0] && t[2]; })
+        .map(function(t){ return { name: String(t[0]).slice(0, 80), text: String(t[2]).slice(0, 400) }; });
+    }).catch(function(){});
+  }
+  // EXP the server pays for a kill, after the rate and the level-gap penalty (diff = monster − you).
+  function gapPenalty(diff){
+    var p = state.server.curve.penalty, v = p[String(diff)];
+    if (v === undefined) v = diff > 0 ? p['99'] : p['-99'];
+    return (v === undefined ? 100 : v) / 100;
+  }
+  function killExp(base, mobLv, level){
+    var c = state.server.curve;
+    return base * ((c.rate || 100) / 100) * gapPenalty(mobLv - level);
+  }
+  // Highest base level a class reaches (non-final classes stop earlier so you can change job).
+  function levelCap(cls){
+    var c = state.server.curve;
+    var cap = c && c.caps && cls ? c.caps[cls] : null;
+    return typeof cap === 'number' && cap > 0 ? Math.min(MAX_LEVEL, cap) : MAX_LEVEL;
+  }
+  var TRAIT_TEXT = {
+    aggro: ['agressivo: ataca sem ser provocado', 'aggressive: attacks on sight'], looter: ['pega itens do chão', 'picks up items'],
+    detector: ['vê quem está escondido (Hiding, Cloaking)', 'sees hidden players (Hiding, Cloaking)'], assist: ['chama os iguais para ajudar', 'calls its kind for help'],
+    castsensor: ['ataca quem conjura perto dele', 'attacks whoever casts near it'], still: ['não se move', "doesn't move"],
+    nostatus: ['imune a efeitos de status', 'immune to status effects'], noknock: ['não é empurrado', "can't be knocked back"]
+  };
+  // Monster's ATK/DEF/MDEF and behaviour, which element to hit it with, and your effects that apply to it.
+  function vsMobExtras(box, lo, mob){
+    var nf = function(n){ return Math.round(n).toLocaleString(L('pt-BR', 'en-US')); };
+    box.appendChild(el('div', { class:'vsmob-stats', text: 'ATK ' + nf(mob.atk) + ' · DEF ' + nf(mob.def) + ' · MDEF ' + nf(mob.mdef) }));
+    var traits = mob.traits.map(function(t){ return TRAIT_TEXT[t] ? L(TRAIT_TEXT[t][0], TRAIT_TEXT[t][1]) : null; }).filter(Boolean);
+    if (traits.length) box.appendChild(el('div', { class:'vsmob-traits', text: traits.join(' · ') }));
+    var at = state.mobs_attr, table = at && at.table[String(mob.elv || 1)], col = at ? at.order.indexOf(mob.el) : -1;
+    if (table && col !== -1){
+      var rows = at.order.map(function(name){ var line = table[name] || []; return { name: name, pct: line[col] == null ? 100 : line[col] }; })
+        .sort(function(a, b){ return b.pct - a.pct || a.name.localeCompare(b.name); });
+      var best = rows.filter(function(r){ return r.pct > 100; }).slice(0, 3), worst = rows.filter(function(r){ return r.pct < 100; }).slice(-3).reverse();
+      var line = el('div', { class:'vsmob-elem' });
+      line.appendChild(el('span', { class:'vsmob-k', text:L('Elemento do ataque', 'Attack element') }));
+      var chips = el('span', { class:'vsmob-chips' });
+      best.forEach(function(r){ chips.appendChild(el('span', { class:'vchip up', text: r.name + ' ' + r.pct + '%' })); });
+      worst.forEach(function(r){ chips.appendChild(el('span', { class:'vchip down', text: r.name + ' ' + r.pct + '%' })); });
+      if (!best.length && !worst.length) chips.appendChild(el('span', { class:'vchip', text:L('todos 100%', 'all 100%') }));
+      line.appendChild(chips);
+      box.appendChild(line);
+    }
+    // Your "other effects" that name this monster's race, element, size or kind.
+    var words = [mob.race, mob.el, mob.size, mob.mvp ? 'Boss' : 'Normal'].filter(Boolean).map(function(w){ return w.toLowerCase(); });
+    var fx = computeAllEffects(lo);
+    var hits = Object.keys(fx).map(function(k){ return fx[k]; }).filter(function(e){
+      var l = e.label.toLowerCase();
+      return Math.round(e.n * 100) && words.some(function(w){ return new RegExp('\\b' + w + '\\b').test(l); });
+    }).map(function(e){ var n = Math.round(e.n * 100) / 100; return e.label + ' ' + (n > 0 ? '+' : '') + n + e.unit; });
+    if (hits.length){
+      box.appendChild(el('div', { class:'vsmob-k', text:L('Seus efeitos que valem contra ele', 'Your effects that apply to it') }));
+      var fw = el('div', { class:'vsmob-chips' });
+      hits.forEach(function(t){ fw.appendChild(el('span', { class:'vchip fx', text: t })); });
+      box.appendChild(fw);
+    }
   }
   // Where a drop source can be farmed: its exact maps when the monster data loaded, else its area.
   function sourcePlaces(s){
@@ -3344,6 +3451,25 @@ input.invalid{ border-color:var(--danger) !important; }
     return pos;
   }
 
+  // How to get each class of the character's line (from the server's class guide).
+  function renderJobQuests(lo){
+    var box = document.getElementById('skillTree');
+    var quests = state.server && state.server.quests;
+    if (!box || !quests || !lo.charClass) return;
+    var line = classLine(lo.charClass).filter(function(c){ return c !== 'Orphan' && quests[c]; });
+    if (!line.length) return;
+    var wrap = el('div', { class:'jobq' }, [ el('h3', { class:'jobq-title', text:L('Como chegar em cada classe', 'How to get each class') }) ]);
+    line.forEach(function(cls){
+      var q = quests[cls];
+      var d = el('details', { class:'jobq-cls' });
+      d.appendChild(el('summary', { text: cls + (q.needs.length ? ' — ' + q.needs.join(', ') : '') }));
+      if (q.start) d.appendChild(el('p', { class:'jobq-line', text:L('Começa com: ', 'Starts with: ') + q.start }));
+      if (q.steps.length) d.appendChild(el('ol', { class:'ck-steps' }, q.steps.map(function(t){ return el('li', { text: t }); })));
+      if (q.gives.length) d.appendChild(el('p', { class:'jobq-line', text:L('Recompensa: ', 'Reward: ') + q.gives.join(', ') }));
+      wrap.appendChild(d);
+    });
+    box.appendChild(wrap);
+  }
   function renderSkillTree(lo){
     var box = document.getElementById('skillTree');
     if (!box) return;
@@ -3601,7 +3727,11 @@ input.invalid{ border-color:var(--danger) !important; }
       nameEl.classList.remove('invalid');
       document.getElementById('fNameHint').hidden = true;
     }
-    document.getElementById('fLevel').value = activeStageData(lo).level || 1;
+    var lvIn = document.getElementById('fLevel'), cap = levelCap(lo.charClass);
+    lvIn.max = String(cap);
+    lvIn.title = cap < MAX_LEVEL ? L(lo.charClass + ' vai até o level ' + cap + ', para trocar de classe', lo.charClass + ' goes up to level ' + cap + ', to change class') : L('Level desta fase', 'Level for this stage');
+    if ((activeStageData(lo).level || 1) > cap) activeStageData(lo).level = cap;
+    lvIn.value = activeStageData(lo).level || 1;
     populateClassOptions();
     document.getElementById('fClass').value = lo.charClass || '';
   }
@@ -3879,6 +4009,7 @@ input.invalid{ border-color:var(--danger) !important; }
     renderSlotGroup(lo, 'equip');
     renderSlotGroup(lo, 'shadow');
     renderSkillTree(lo);
+    renderJobQuests(lo);
     renderStatCalc(lo);
     renderStatusPanel(lo);
     renderCompare(lo);
@@ -4830,6 +4961,12 @@ input.invalid{ border-color:var(--danger) !important; }
       ttSec.appendChild(block);
     });
     body.appendChild(ttSec);
+    var terms = (state.server && state.server.codex || []).filter(function(t){ return it.desc.toLowerCase().indexOf(t.name.toLowerCase()) !== -1; });
+    if (terms.length){
+      var cx = el('div', { class:'detail-section' }, [ el('h4', { text:L('Termos do texto', 'Terms in the text') }) ]);
+      terms.slice(0, 8).forEach(function(t){ cx.appendChild(el('div', { class:'codex-line' }, [ el('strong', { text: t.name + ': ' }), document.createTextNode(t.text) ])); });
+      body.appendChild(cx);
+    }
 
     var srcSec = el('div', { class:'detail-section' }, [ el('h4', { text:L('Onde conseguir', 'Where to get it') }) ]);
     if (it.sources.length){
@@ -5627,7 +5764,15 @@ input.invalid{ border-color:var(--danger) !important; }
   function rateChip(s){
     var wrap = el('span', { class:'rate-chips' });
     wrap.appendChild(el('span', { class:'rate-chip', text: s.rate + '%' }));
-    if (s.mvp) wrap.appendChild(el('span', { class:'mvp-chip', text:'MVP' }));
+    if (s.mvp){
+      wrap.appendChild(el('span', { class:'mvp-chip', text:'MVP' }));
+      var sp = state.server && state.server.mvp[s.mobId];
+      if (sp && sp.max){
+        var mins = function(n){ return Math.round(n / 60); };
+        wrap.appendChild(el('span', { class:'rate-chip respawn', title:L('Tempo para o MVP voltar depois de morto', 'Time for the MVP to come back after it dies'),
+          text: '⟳ ' + (sp.min === sp.max ? mins(sp.max) : mins(sp.min) + '–' + mins(sp.max)) + ' min' }));
+      }
+    }
     return wrap;
   }
   function sourceList(it, max, withLv){
@@ -5989,14 +6134,18 @@ input.invalid{ border-color:var(--danger) !important; }
     return out;
   }
   function levelMaps(lo, targets, fd){
-    var level = activeStageData(lo).level || 1, places = levelPlaces();
+    var level = activeStageData(lo).level || 1, places = levelPlaces(), curve = state.server.curve;
     var pending = Object.keys(targets).filter(function(id){ return !isOwned(lo, id) && !fd.skip[id]; });
+    // With the server's curve: monsters that still pay at least half (the penalty drops to 1%
+    // ten levels below you and sixteen above). Without it: ±LEVEL_RANGE.
+    var keep = curve ? function(m){ return gapPenalty(m.lv - level) >= 0.5; } : function(m){ return Math.abs(m.lv - level) <= LEVEL_RANGE; };
+    var paid = function(m){ return curve ? killExp(m.exp, m.lv, level) : m.exp; };
     return Object.keys(places).map(function(map){
       var z = places[map];
-      var near = z.mobs.filter(function(m){ return Math.abs(m.lv - level) <= LEVEL_RANGE; }).sort(function(a, b){ return a.lv - b.lv; });
+      var near = z.mobs.filter(keep).sort(function(a, b){ return a.lv - b.lv; });
       var count = near.reduce(function(t, m){ return t + m.count; }, 0);
       // Average EXP per kill, weighted by how many of each monster the map has.
-      var avg = count ? near.reduce(function(t, m){ return t + m.count * m.exp; }, 0) / count : 0;
+      var avg = count ? near.reduce(function(t, m){ return t + m.count * paid(m); }, 0) / count : 0;
       var exp = Math.round(avg * 3600 / killSeconds());
       return { zone: map, near: near, count: count, exp: exp, drops: pending.filter(function(id){ return z.items[id]; }) };
     }).filter(function(m){ return m.near.length; }).sort(function(a, b){
@@ -6005,12 +6154,15 @@ input.invalid{ border-color:var(--danger) !important; }
   }
   function renderFarmLevel(lo, list, targets, fd){
     var level = activeStageData(lo).level || 1;
-    var withExp = !!state.mobs;
-    list.appendChild(el('p', { class:'panel-intro', text: L('Mapas com monstros entre Lv ', 'Maps with monsters between Lv ')
-      + Math.max(1, level - LEVEL_RANGE) + L(' e ', ' and ') + (level + LEVEL_RANGE) + L(' (level desta fase ±', " (this stage's level ±") + LEVEL_RANGE + '). '
+    var withExp = !!state.mobs, curve = state.server.curve;
+    var nf = function(n){ return Math.round(n).toLocaleString(L('pt-BR', 'en-US')); };
+    list.appendChild(el('p', { class:'panel-intro', text: (curve
+        ? L('Mapas com monstros que ainda pagam bem para o level desta fase (' + level + '): a EXP cai para 1% com monstros 10 levels abaixo de você ou 16 acima, e sobe até +20% com monstros de 6 a 15 levels acima. A EXP já tem a rate do servidor (' + (curve.rate || 100) + '%) e essa penalidade. ',
+            'Maps with monsters that still pay well at this stage level (' + level + '): EXP drops to 1% for monsters 10 levels below you or 16 above, and rises up to +20% for monsters 6 to 15 levels above. EXP already includes the server rate (' + (curve.rate || 100) + '%) and that penalty. ')
+        : L('Mapas com monstros entre Lv ' + Math.max(1, level - LEVEL_RANGE) + ' e ' + (level + LEVEL_RANGE) + '. ', 'Maps with monsters between Lv ' + Math.max(1, level - LEVEL_RANGE) + ' and ' + (level + LEVEL_RANGE) + '. '))
       + (withExp
-        ? L('EXP/h = EXP média por monstro do mapa (pesada por quantos de cada há lá) × abates por hora, pelo tempo que você leva por monstro (ajuste abaixo). EXP da base, sem bônus nem penalidade por diferença de level. MVPs ficam de fora.',
-            'EXP/h = the average EXP per monster (weighted by how many of each it has) × kills per hour, from how long you take per monster (set below). Database EXP, with no bonus or level-difference penalty. MVPs are left out.')
+        ? L('EXP/h = EXP média por monstro do mapa (pesada por quantos de cada há lá) × abates por hora, pelo tempo que você leva por monstro. Sem party. MVPs ficam de fora.',
+            'EXP/h = the average EXP per monster on the map (weighted by how many of each it has) × kills per hour, from how long you take per monster. Solo. MVPs are left out.')
         : L('Os dados de EXP ainda não carregaram; a ordem é pelo número de tipos de monstro.', 'EXP data has not loaded yet; ordered by the number of monster kinds.')) }));
     if (withExp){
       var secIn = el('input', { type:'number', min:'2', max:'600', value:String(killSeconds()), class:'kill-sec', 'aria-label':L('Segundos por monstro', 'Seconds per monster') });
@@ -6022,6 +6174,7 @@ input.invalid{ border-color:var(--danger) !important; }
     }
     var maps = levelMaps(lo, targets, fd);
     var me = withExp ? computeStatusSummary(lo) : null;
+    var need = curve && curve.exp ? curve.exp[String(level)] : 0;
     if (!maps.length){
       list.appendChild(el('div', { class:'empty-note', text: L('Nenhum mapa com monstros nessa faixa de level.', 'No map with monsters in that level range.') }));
       return;
@@ -6032,7 +6185,8 @@ input.invalid{ border-color:var(--danger) !important; }
       head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
       head.appendChild(el('h4', { text: m.zone }));
       if (state.mobs && state.mobs.mapCode[m.zone]) head.appendChild(el('span', { class:'farm-where', text: '/where ' + state.mobs.mapCode[m.zone] }));
-      if (withExp) head.appendChild(el('span', { class:'farm-stop-count', text: m.count + L(' monstros no mapa · ~', ' monsters on the map · ~') + m.exp.toLocaleString(L('pt-BR', 'en-US')) + L(' EXP/h', ' EXP/h') }));
+      if (withExp) head.appendChild(el('span', { class:'farm-stop-count', text: m.count + L(' monstros no mapa · ~', ' monsters on the map · ~') + nf(m.exp) + ' EXP/h'
+        + (need ? ' · ' + (Math.round(m.exp / need * 1000) / 10).toLocaleString(L('pt-BR', 'en-US')) + L('% do level/h', '% of the level/h') : '') }));
       var lo1 = m.near[0].lv, hi1 = m.near[m.near.length - 1].lv;
       head.appendChild(el('span', { class:'farm-lv ' + (hi1 <= level ? 'ok' : 'warn'), text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
       card.appendChild(head);
@@ -6050,7 +6204,9 @@ input.invalid{ border-color:var(--danger) !important; }
       card.appendChild(farmRouteLine(m.zone));
       var mobs = el('div', { class:'lv-mobs' });
       m.near.forEach(function(x){
-        mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv + (withExp ? ' · ' + x.count + L(' no mapa', ' on the map') + ' · ' + x.exp.toLocaleString(L('pt-BR', 'en-US')) + ' EXP' : '') }));
+        var pen = curve ? Math.round(gapPenalty(x.lv - level) * 100) : 100;
+        var each = curve ? killExp(x.exp, x.lv, level) : x.exp;
+        mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv + (withExp ? ' · ' + x.count + L(' no mapa', ' on the map') + ' · ' + nf(each) + ' EXP' + (pen !== 100 ? ' (' + (pen > 100 ? '+' : '') + (pen - 100) + '%)' : '') : '') }));
       });
       card.appendChild(mobs);
       if (m.drops.length){
@@ -6527,7 +6683,7 @@ input.invalid{ border-color:var(--danger) !important; }
   });
   document.getElementById('fLevel').addEventListener('input', function(e){
     var lo = activeLoadout(); if (!lo) return;
-    activeStageData(lo).level = Math.max(1, Math.min(MAX_LEVEL, Number(e.target.value) || 1));
+    activeStageData(lo).level = Math.max(1, Math.min(levelCap(lo.charClass), Number(e.target.value) || 1));
     saveLoadouts();
     renderStatusPanel(lo);
     renderCompare(lo);
@@ -7080,6 +7236,7 @@ input.invalid{ border-color:var(--danger) !important; }
   fetchDb();
   fetchPlaces();
   fetchMobs();
+  fetchServerPages();
   checkPassivesAgainstSite();
 })();
 </script>

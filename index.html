@@ -1004,6 +1004,8 @@ input.invalid{ border-color:var(--danger) !important; }
 .lv-mobs{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .lv-mob{ font:600 11px var(--font-mono); color:var(--fg-dim); background:var(--surface); border:1px solid var(--border-soft); border-radius:6px; padding:2px 7px; }
 .farm-where{ font:600 10.5px var(--font-mono); color:var(--fg-faint); border:1px solid var(--border-soft); border-radius:5px; padding:1px 6px; }
+.kill-sec-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--fg-dim); margin:-6px 0 12px; }
+.kill-sec{ width:64px; padding:4px 6px; }
 .lv-drops{ font-size:11.5px; color:var(--stat-item); margin-top:6px; }
 .farm-lv.ok{ color:var(--stat-item); } .farm-lv.warn{ color:var(--mid); } .farm-lv.hard{ color:var(--danger); }
 .farm-route{ font-size:11.5px; color:var(--fg-dim); margin:0 0 8px; overflow-wrap:anywhere; }
@@ -1092,6 +1094,9 @@ input.invalid{ border-color:var(--danger) !important; }
 .ck-item.done .ck-badge{ color:var(--stat-item); }
 .ck-item.done .ck-title{ color:var(--fg-dim); }
 .ck-how{ font-size:12px; color:var(--fg-dim); margin-top:4px; }
+.ck-caution{ border:1px solid color-mix(in srgb, var(--mid) 45%, transparent); background:color-mix(in srgb, var(--mid) 8%, transparent); border-radius:var(--radius-sm); padding:8px 12px; margin:0 0 14px; font-size:12px; color:var(--fg-dim); }
+.ck-caution summary{ cursor:pointer; font-weight:700; color:var(--mid); }
+.ck-caution ul{ margin:6px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:3px; line-height:1.45; }
 .ck-steps{ font-size:12px; color:var(--fg-dim); margin:6px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:3px; line-height:1.45; }
 .ck-note{ font-size:12px; color:var(--fg-faint); margin-top:4px; white-space:pre-line; overflow-wrap:anywhere; }
 
@@ -5416,6 +5421,27 @@ input.invalid{ border-color:var(--danger) !important; }
     if (CHECKLIST_THREAD) head.appendChild(el('a', { class:'primary-btn ck-send', href: CHECKLIST_THREAD, target:'_blank', rel:'noopener noreferrer', text:L('Enviar na thread do Discord', 'Send in the Discord thread') }));
     box.appendChild(head);
     box.appendChild(el('p', { class:'panel-intro', text:L('O planner não tem acesso aos arquivos do jogo, então o que não está publicado na base precisa ser medido. Escolha um item em aberto, siga o passo a passo e mande o resultado na thread "Refuge Build Planner" do Discord, com um print da janela de Status (classe, level, atributos e equipamento com refino) e o código do item (ex.: r7). Nunca envie login, senha ou dados pessoais.', "The planner has no access to the game files, so what isn't published in the database has to be measured. Pick an open item, follow the steps and post the result in the \"Refuge Build Planner\" thread on Discord, with a screenshot of the Status window (class, level, stats and gear with refine) and the item code (e.g. r7). Never send your login, password or personal data.") }));
+    // Cautions shown before any test, so a measured number isn't thrown off by something else.
+    var CK_CAUTIONS = LANG === 'en' ? [
+      'Test "naked": take off all gear, cards, shadow gear and costumes, unless the test asks for a piece.',
+      'No buffs: wait for skills, potions, food and NPC or event buffs to end (or relog).',
+      'Leave your party and check for guild or event bonuses that add stats.',
+      'Change one thing at a time and take a screenshot before and after.',
+      'Note class, base level and base stats (the number before the "+") in every screenshot.',
+      'If a number looks odd, repeat the measurement before sending it.',
+      'Never send your login, password, email or personal data.'
+    ] : [
+      'Teste "pelado": tire todo o equipamento, cartas, shadow e visuais, a não ser que o teste peça uma peça.',
+      'Sem buffs: espere acabarem skills, poções, comidas e buffs de NPC ou evento (ou relogue).',
+      'Saia da party e confira se não há bônus de guild ou de evento somando atributos.',
+      'Mude uma coisa por vez e tire um print antes e depois.',
+      'Em todo print, deixe visíveis a classe, o level base e os atributos base (o número antes do "+").',
+      'Se um número parecer estranho, repita a medição antes de mandar.',
+      'Nunca mande login, senha, e-mail ou dados pessoais.'
+    ];
+    var caution = el('details', { class:'ck-caution', open:'' }, [ el('summary', { text:L('Antes de testar', 'Before testing') }),
+      el('ul', {}, CK_CAUTIONS.map(function(t){ return el('li', { text: t }); })) ]);
+    box.appendChild(caution);
     var bar2 = el('div', { class:'farm-filters' });
     [['open', L('Em aberto', 'Open')], ['done', L('Confirmados', 'Confirmed')], ['all', L('Todos', 'All')]].forEach(function(f){
       var b = el('button', { type:'button', class:'farm-filter' + (checkFilter === f[0] ? ' on' : ''), 'aria-pressed': String(checkFilter === f[0]), text: f[1] });
@@ -5861,7 +5887,14 @@ input.invalid{ border-color:var(--danger) !important; }
   // Mobs come from the item drop lists (every mob there drops something), grouped by map.
   // The database has no EXP per mob, so this only says where the mobs match your level,
   // never which map gives the most EXP. MVPs are left out.
-  var LEVEL_RANGE = 10, LEVEL_MAPS = 10;
+  // EXP per hour = average EXP per kill × kills per hour, with the seconds per kill set by the
+  // player (default 30 s: weaker classes kill much slower than 1 every 10 s, player 2026-10-14).
+  var LEVEL_RANGE = 10, LEVEL_MAPS = 10, KILL_SEC_KEY = 'rtm-hud-killsec', KILL_SEC_DEFAULT = 30;
+  function killSeconds(){
+    var n = KILL_SEC_DEFAULT;
+    try { n = Number(localStorage.getItem(KILL_SEC_KEY)) || KILL_SEC_DEFAULT; } catch(e){}
+    return Math.max(2, Math.min(600, Math.round(n)));
+  }
   // Per map: its regular (non-MVP) monsters as { name, lv, exp, count } and which item ids drop there.
   function levelPlaces(){
     if (state.db.levelPlaces && state.db.levelPlaces.mobs === state.mobs) return state.db.levelPlaces.out;
@@ -5892,7 +5925,9 @@ input.invalid{ border-color:var(--danger) !important; }
       var z = places[map];
       var near = z.mobs.filter(function(m){ return Math.abs(m.lv - level) <= LEVEL_RANGE; }).sort(function(a, b){ return a.lv - b.lv; });
       var count = near.reduce(function(t, m){ return t + m.count; }, 0);
-      var exp = near.reduce(function(t, m){ return t + m.count * m.exp; }, 0);
+      // Average EXP per kill, weighted by how many of each monster the map has.
+      var avg = count ? near.reduce(function(t, m){ return t + m.count * m.exp; }, 0) / count : 0;
+      var exp = Math.round(avg * 3600 / killSeconds());
       return { zone: map, near: near, count: count, exp: exp, drops: pending.filter(function(id){ return z.items[id]; }) };
     }).filter(function(m){ return m.near.length; }).sort(function(a, b){
       return b.exp - a.exp || b.near.length - a.near.length || b.drops.length - a.drops.length || a.zone.localeCompare(b.zone);
@@ -5904,9 +5939,17 @@ input.invalid{ border-color:var(--danger) !important; }
     list.appendChild(el('p', { class:'panel-intro', text: L('Mapas com monstros entre Lv ', 'Maps with monsters between Lv ')
       + Math.max(1, level - LEVEL_RANGE) + L(' e ', ' and ') + (level + LEVEL_RANGE) + L(' (level desta fase ±', " (this stage's level ±") + LEVEL_RANGE + '). '
       + (withExp
-        ? L('Ordem pela EXP base somada de todos esses monstros do mapa (quantidade × EXP de cada um). É a EXP da base, sem bônus nem penalidade por diferença de level. MVPs ficam de fora.',
-            'Ordered by the base EXP of all those monsters on the map added up (count × EXP of each). Database EXP, with no bonus or level-difference penalty. MVPs are left out.')
+        ? L('EXP/h = EXP média por monstro do mapa (pesada por quantos de cada há lá) × abates por hora, pelo tempo que você leva por monstro (ajuste abaixo). EXP da base, sem bônus nem penalidade por diferença de level. MVPs ficam de fora.',
+            'EXP/h = the average EXP per monster (weighted by how many of each it has) × kills per hour, from how long you take per monster (set below). Database EXP, with no bonus or level-difference penalty. MVPs are left out.')
         : L('Os dados de EXP ainda não carregaram; a ordem é pelo número de tipos de monstro.', 'EXP data has not loaded yet; ordered by the number of monster kinds.')) }));
+    if (withExp){
+      var secIn = el('input', { type:'number', min:'2', max:'600', value:String(killSeconds()), class:'kill-sec', 'aria-label':L('Segundos por monstro', 'Seconds per monster') });
+      secIn.addEventListener('change', function(){
+        try { localStorage.setItem(KILL_SEC_KEY, String(Math.max(2, Math.min(600, Math.round(Number(secIn.value) || KILL_SEC_DEFAULT))))); } catch(e){}
+        renderFarm(lo);
+      });
+      list.appendChild(el('label', { class:'kill-sec-row' }, [ document.createTextNode(L('Quanto tempo você leva por monstro: ', 'How long you take per monster: ')), secIn, document.createTextNode(L(' segundos', ' seconds')) ]));
+    }
     var maps = levelMaps(lo, targets, fd);
     if (!maps.length){
       list.appendChild(el('div', { class:'empty-note', text: L('Nenhum mapa com monstros nessa faixa de level.', 'No map with monsters in that level range.') }));
@@ -5918,14 +5961,14 @@ input.invalid{ border-color:var(--danger) !important; }
       head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
       head.appendChild(el('h4', { text: m.zone }));
       if (state.mobs && state.mobs.mapCode[m.zone]) head.appendChild(el('span', { class:'farm-where', text: '/where ' + state.mobs.mapCode[m.zone] }));
-      if (withExp) head.appendChild(el('span', { class:'farm-stop-count', text: m.count + L(' monstros · ', ' monsters · ') + m.exp.toLocaleString(L('pt-BR', 'en-US')) + L(' EXP base', ' base EXP') }));
+      if (withExp) head.appendChild(el('span', { class:'farm-stop-count', text: m.count + L(' monstros no mapa · ~', ' monsters on the map · ~') + m.exp.toLocaleString(L('pt-BR', 'en-US')) + L(' EXP/h', ' EXP/h') }));
       var lo1 = m.near[0].lv, hi1 = m.near[m.near.length - 1].lv;
       head.appendChild(el('span', { class:'farm-lv ' + (hi1 <= level ? 'ok' : 'warn'), text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
       card.appendChild(head);
       card.appendChild(farmRouteLine(m.zone));
       var mobs = el('div', { class:'lv-mobs' });
       m.near.forEach(function(x){
-        mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv + (withExp ? ' · ' + x.count + '× · ' + x.exp + ' EXP' : '') }));
+        mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv + (withExp ? ' · ' + x.count + L(' no mapa', ' on the map') + ' · ' + x.exp.toLocaleString(L('pt-BR', 'en-US')) + ' EXP' : '') }));
       });
       card.appendChild(mobs);
       if (m.drops.length){
@@ -6464,6 +6507,29 @@ input.invalid{ border-color:var(--danger) !important; }
       });
     });
   });
+  // The language switch reloads the page: it leaves the open tabs and scroll position here,
+  // and they are put back once the page has content tall enough to scroll to.
+  var LANG_BACK_KEY = 'rtm-hud-langback';
+  function rememberPlace(){
+    var main = document.querySelector('.tabs[data-group=main] .tab-btn.active');
+    var side = document.querySelector('.tabs[data-group=side] .tab-btn.active');
+    try { sessionStorage.setItem(LANG_BACK_KEY, JSON.stringify({ main: main && main.dataset.tab, side: side && side.dataset.tab, y: window.scrollY })); } catch(e){}
+  }
+  (function restorePlace(){
+    var back = null;
+    try { back = JSON.parse(sessionStorage.getItem(LANG_BACK_KEY) || 'null'); sessionStorage.removeItem(LANG_BACK_KEY); } catch(e){ back = null; }
+    if (!back) return;
+    [back.main, back.side].forEach(function(tab){
+      if (typeof tab !== 'string' || !/^[a-z]+$/.test(tab)) return;
+      var b = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+      if (b) b.click();
+    });
+    var y = Math.max(0, Number(back.y) || 0), tries = 0;
+    (function scrollWhenReady(){
+      if (document.documentElement.scrollHeight >= y + window.innerHeight || ++tries > 50){ window.scrollTo(0, y); return; }
+      setTimeout(scrollWhenReady, 100);
+    })();
+  })();
 
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalBackdrop').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeModal(); });
@@ -6899,6 +6965,7 @@ input.invalid{ border-color:var(--danger) !important; }
   });
   document.getElementById('langToggle').addEventListener('click', function(){
     try{ localStorage.setItem(LANG_KEY, LANG === 'en' ? 'pt' : 'en'); } catch(e){}
+    rememberPlace();
     location.reload();
   });
   (function initTheme(){

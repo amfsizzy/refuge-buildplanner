@@ -4,6 +4,15 @@ English: [CHECKLIST.md](CHECKLIST.md)
 
 Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de itens pública** do servidor disponibiliza. Tudo abaixo não está publicado lá, então precisa ser medido no jogo. Escolha um item **em aberto**, siga o passo a passo e mande o resultado na **[thread Refuge Build Planner](https://discord.com/channels/1500898812942745602/1557950291347771462)** do Discord do servidor, com um print da janela de Status (classe, level, atributos base e equipamento com refino). Informe o código do item (ex.: `r2`).
 
+### Antes de testar
+
+- Teste "pelado": tire todo o equipamento, cartas, shadow e visuais, a não ser que o teste peça uma peça.
+- Sem buffs: espere acabarem skills, poções, comidas e buffs de NPC ou evento (ou relogue).
+- Saia da party e confira se não há bônus de guild ou de evento somando atributos.
+- Mude uma coisa por vez e tire um print antes e depois.
+- Em todo print, deixe visíveis a classe, o level base e os atributos base (o número antes do "+").
+- Se um número parecer estranho, repita a medição antes de mandar.
+
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
 **Progresso:** 40 de 58 itens confirmados.

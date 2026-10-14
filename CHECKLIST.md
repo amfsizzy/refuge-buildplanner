@@ -4,6 +4,15 @@ Português: [CHECKLIST.pt-BR.md](CHECKLIST.pt-BR.md)
 
 We don't have access to the game files: the planner only knows what the server's **public item database** makes available. Everything below isn't published there, so it has to be measured in game. Pick an **open** item, follow its steps and post your result in the **[Refuge Build Planner thread](https://discord.com/channels/1500898812942745602/1557950291347771462)** on the server's Discord, with a screenshot of your Status window (class, level, base stats and gear with refine levels). Mention the item code (e.g. `r2`).
 
+### Before testing
+
+- Test "naked": take off all gear, cards, shadow gear and costumes, unless the test asks for a piece.
+- No buffs: wait for skills, potions, food and NPC or event buffs to end (or relog).
+- Leave your party and check for guild or event bonuses that add stats.
+- Change one thing at a time and take a screenshot before and after.
+- Keep class, base level and base stats (the number before the "+") visible in every screenshot.
+- If a number looks odd, repeat the measurement before sending it.
+
 ⚠️ Never post your account login, password, email or any personal information.
 
 **Progress:** 40 of 58 items confirmed.

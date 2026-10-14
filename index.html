@@ -1000,6 +1000,13 @@ input.invalid{ border-color:var(--danger) !important; }
 .vs-stats td:nth-child(n+2){ font-family:var(--font-mono); text-align:right; white-space:nowrap; }
 .vs-d.up{ color:var(--stat-item); font-weight:700; } .vs-d.down{ color:var(--danger); font-weight:700; } .vs-d.same{ color:var(--fg-faint); }
 @media (max-width:640px){ .vs-pick{ grid-template-columns:1fr; } .vs-vs{ text-align:center; } }
+
+/* ---- build image ---- */
+.card-panel{ max-width:980px; }
+.card-preview canvas{ display:block; width:100%; height:auto; border-radius:10px; }
+.card-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.card-actions .primary-btn{ padding:9px 18px; }
+.card-status{ margin-top:8px; font-size:12.5px; color:var(--fg-dim); }
 </style>
 </head>
 <body>
@@ -1052,6 +1059,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <div class="icon-btn-row">
         <button class="icon-btn" id="shareBtn" type="button" title="Compartilhar" data-en="Share" data-en-title="Share">Compartilhar</button>
         <button class="icon-btn" id="vsBtn" type="button" title="Comparar com outro loadout" data-en="Compare loadouts" data-en-title="Compare with another loadout">Comparar loadouts</button>
+        <button class="icon-btn" id="cardBtn" type="button" title="Gerar uma imagem da build para compartilhar" data-en="Build image" data-en-title="Make an image of the build to share">Imagem da build</button>
         <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
         <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
       </div>
@@ -4565,6 +4573,196 @@ input.invalid{ border-color:var(--danger) !important; }
   }
   document.addEventListener('keydown', function(e){ if (vs && e.key === 'Escape'){ e.preventDefault(); closeVersus(); } });
 
+  // ---------- build image (to share on Discord) ----------
+  // Draws the active loadout's stage on a canvas: gear and shadow with their icons, stats,
+  // the main status numbers, skills with points, and the planner's address at the bottom.
+  // Always the dark look, so it reads the same in any chat app.
+  var CARD_W = 1200;
+  var CARD = { bg:'#0b0812', panel:'#151020', line:'rgba(255,255,255,0.08)', fg:'#efedf5', dim:'#a8a2b6', faint:'#7d7689',
+    accent:'#a95cff', accent2:'#c79bff', item:'#45d99a', card:'#c49bff', roll:'#f0b429' };
+  var PLANNER_URL = 'amfsizzy.github.io/refuge-buildplanner';
+  function cssFont(v, fallback){ return (getComputedStyle(document.documentElement).getPropertyValue(v) || '').trim() || fallback; }
+  // Icons come from the database with CORS allowed; a separate URL keeps the browser from
+  // reusing a copy cached without CORS (which would block saving the image).
+  function loadIcon(url){
+    return new Promise(function(resolve){
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function(){ resolve(img); };
+      img.onerror = function(){ resolve(null); };
+      img.src = url + (url.indexOf('?') === -1 ? '?card=1' : '&card=1');
+    });
+  }
+  function fitText(ctx, text, max){
+    if (ctx.measureText(text).width <= max) return text;
+    var t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
+    return t + '…';
+  }
+  function drawBuildCard(lo){
+    var sd = activeStageData(lo), s = computeStatusSummary(lo);
+    var fDisplay = cssFont('--font-display', 'Georgia, serif'), fBody = cssFont('--font-body', 'sans-serif'), fMono = cssFont('--font-mono', 'monospace');
+    var gear = EQUIP_SLOTS.map(function(d){ return { def:d, v:sd.slots[d.key] }; });
+    var shadow = SHADOW_SLOTS.map(function(d){ return { def:d, v:sd.slots[d.key] }; });
+    var model = skillDb && lo.charClass && NO_TREE.indexOf(lo.charClass) === -1 ? treeModel(lo) : null;
+    var learned = [];
+    if (model) model.classes.forEach(function(c){ c.skills.forEach(function(sk){ var lv = treeLv(model.tree, sk); if (lv) learned.push(sk.name + ' ' + lv); }); });
+    var urls = {};
+    gear.concat(shadow).forEach(function(g){ if (g.v && !g.v.manual) urls[g.v.itemId] = ICON(g.v.itemId); });
+    var ids = Object.keys(urls);
+    return Promise.all(ids.map(function(id){ return loadIcon(urls[id]); })).then(function(imgs){
+      var icons = {}; ids.forEach(function(id, i){ icons[id] = imgs[i]; });
+      var ROW = 58, top = 150;
+      var listH = Math.max(gear.length, shadow.length) * ROW;
+      var skillLines = Math.ceil(learned.length / 4);
+      var H = top + listH + 40 + 150 + (learned.length ? 60 + skillLines * 24 : 0) + 70;
+      var cv = document.createElement('canvas');
+      var scale = 2;
+      cv.width = CARD_W * scale; cv.height = H * scale;
+      var ctx = cv.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.imageSmoothingEnabled = false;
+      // background
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#1a0f2b'); g.addColorStop(0.35, CARD.bg); g.addColorStop(1, CARD.bg);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CARD_W, H);
+      ctx.strokeStyle = 'rgba(169,92,255,0.45)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, H - 2);
+      // header
+      ctx.fillStyle = CARD.accent2; ctx.font = '600 15px ' + fBody;
+      ctx.fillText('REFUGE BUILD PLANNER', 40, 44);
+      ctx.fillStyle = CARD.fg; ctx.font = '42px ' + fDisplay;
+      ctx.fillText(fitText(ctx, lo.name || L('Sem nome', 'Unnamed'), CARD_W - 80), 40, 94);
+      ctx.fillStyle = CARD.dim; ctx.font = '18px ' + fBody;
+      ctx.fillText([lo.charClass || L('sem classe', 'no class'), stageLabel(lo.activeStage), 'Lv ' + (sd.level || 1)].join('  ·  '), 40, 126);
+      // gear columns
+      function column(title, list, x, w){
+        ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
+        ctx.fillText(title.toUpperCase(), x, top - 8);
+        list.forEach(function(g2, i){
+          var y = top + i * ROW;
+          ctx.fillStyle = CARD.panel; ctx.fillRect(x, y, w, ROW - 8);
+          ctx.fillStyle = 'rgba(169,92,255,0.6)'; ctx.fillRect(x, y, 3, ROW - 8);
+          ctx.fillStyle = CARD.faint; ctx.font = '11px ' + fBody;
+          ctx.fillText(g2.def.label.toUpperCase(), x + 62, y + 15);
+          var v = g2.v;
+          if (!v){ ctx.fillStyle = CARD.faint; ctx.font = '15px ' + fBody; ctx.fillText('—', x + 62, y + 36); return; }
+          var ic = !v.manual && icons[v.itemId];
+          if (ic) ctx.drawImage(ic, x + 12, y + 1, 48, 48);
+          ctx.fillStyle = CARD.fg; ctx.font = '700 16px ' + fBody;
+          var name = (v.refine ? '+' + v.refine + ' ' : '') + v.itemName;
+          ctx.fillText(fitText(ctx, name, w - 74), x + 62, y + 34);
+          var extra = [];
+          (v.cards || []).forEach(function(c){ if (c) extra.push(c.itemName); });
+          if (extra.length || (v.extras && v.extras.length)){
+            ctx.font = '12px ' + fBody;
+            var cardTxt = extra.join(', ');
+            ctx.fillStyle = CARD.card;
+            var shown = cardTxt ? fitText(ctx, cardTxt, w - 74) : '';
+            if (shown) ctx.fillText(shown, x + 62, y + 47);
+            if (v.extras && v.extras.length){
+              ctx.fillStyle = CARD.roll;
+              var off = shown ? ctx.measureText(shown + '  ').width : 0;
+              ctx.fillText(fitText(ctx, v.extras.join(', '), w - 74 - off), x + 62 + off, y + 47);
+            }
+          }
+        });
+      }
+      column(L('Equipamento', 'Equipment'), gear, 40, 540);
+      column('Shadow', shadow, 620, 540);
+      // stats + status
+      var y0 = top + listH + 30;
+      ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
+      ctx.fillText(L('ATRIBUTOS', 'STATS'), 40, y0);
+      ctx.fillText('STATUS', 620, y0);
+      function chips(list, x, y, w){
+        var cx = x, cy = y;
+        list.forEach(function(c){
+          ctx.font = '600 15px ' + fMono;
+          var tw = ctx.measureText(c[0] + ' ' + c[1]).width + 22;
+          if (cx + tw > x + w){ cx = x; cy += 40; }
+          ctx.fillStyle = CARD.panel; ctx.fillRect(cx, cy, tw, 30);
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.strokeRect(cx + 0.5, cy + 0.5, tw - 1, 29);
+          ctx.fillStyle = CARD.dim; ctx.fillText(c[0], cx + 11, cy + 20);
+          ctx.fillStyle = c[2] || CARD.fg; ctx.fillText(String(c[1]), cx + 11 + ctx.measureText(c[0] + ' ').width, cy + 20);
+          cx += tw + 8;
+        });
+      }
+      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 40, y0 + 14, 540);
+      chips([['ATK', Math.round(s.atk)], ['MATK', Math.round(s.matkMax)], ['HIT', Math.round(s.hit)], ['FLEE', Math.round(s.flee)],
+        ['CRIT', Math.round(s.crit)], ['DEF', Math.round(s.itemDef) + '+' + Math.round(s.softDef)], ['MDEF', Math.round(s.itemMdef) + '+' + Math.round(s.softMdef)],
+        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, y0 + 14, 540);
+      // skills
+      var y1 = y0 + 150;
+      if (learned.length){
+        ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
+        var pools = model.pools.map(function(p){ return p.name + ' ' + p.used + (p.cap !== null ? '/' + p.cap : ''); }).join('   ·   ');
+        ctx.fillText('SKILLS', 40, y1);
+        ctx.fillStyle = CARD.faint; ctx.font = '13px ' + fBody;
+        ctx.fillText(fitText(ctx, pools, CARD_W - 140), 110, y1);
+        ctx.font = '14px ' + fBody; ctx.fillStyle = CARD.dim;
+        learned.forEach(function(t, i){
+          var col = i % 4, row = Math.floor(i / 4);
+          ctx.fillText(fitText(ctx, t, 265), 40 + col * 280, y1 + 28 + row * 24);
+        });
+      }
+      // footer
+      ctx.fillStyle = CARD.line; ctx.fillRect(40, H - 54, CARD_W - 80, 1);
+      ctx.fillStyle = CARD.accent2; ctx.font = '600 16px ' + fBody;
+      ctx.fillText(L('Monte a sua: ', 'Plan yours: ') + PLANNER_URL, 40, H - 24);
+      ctx.fillStyle = CARD.faint; ctx.font = '13px ' + fBody;
+      var note = L('Planner feito por fãs · não oficial', 'Fan-made planner · unofficial');
+      ctx.fillText(note, CARD_W - 40 - ctx.measureText(note).width, H - 24);
+      return cv;
+    });
+  }
+  function openBuildCard(){
+    var lo = activeLoadout(); if (!lo || !state.db) return;
+    var bd = el('div', { class:'vs-backdrop', id:'cardBackdrop' });
+    var panel = el('div', { class:'vs-panel card-panel', role:'dialog', 'aria-modal':'true', 'aria-label':L('Imagem da build', 'Build image') });
+    var x = el('button', { type:'button', class:'close-x', 'aria-label':L('Fechar', 'Close'), text:'×' });
+    function close(){ bd.remove(); document.removeEventListener('keydown', onKey); var b = document.getElementById('cardBtn'); if (b) b.focus(); }
+    function onKey(e){ if (e.key === 'Escape'){ e.preventDefault(); close(); } }
+    x.addEventListener('click', close);
+    bd.addEventListener('click', function(e){ if (e.target === bd) close(); });
+    document.addEventListener('keydown', onKey);
+    panel.appendChild(el('div', { class:'vs-head' }, [ el('h2', { text:L('Imagem da build', 'Build image') }), x ]));
+    var status = el('div', { class:'card-status', role:'status', 'aria-live':'polite', text:L('Montando a imagem…', 'Drawing the image…') });
+    var holder = el('div', { class:'card-preview' });
+    var actions = el('div', { class:'card-actions' });
+    panel.appendChild(holder); panel.appendChild(actions); panel.appendChild(status);
+    bd.appendChild(panel); document.body.appendChild(bd);
+    x.focus();
+    drawBuildCard(lo).then(function(cv){
+      holder.appendChild(cv);
+      status.textContent = L('Pronto. Baixe ou copie e cole no Discord.', 'Ready. Download it or copy and paste it in Discord.');
+      var file = (lo.name || 'build').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'build';
+      var dl = el('button', { type:'button', class:'primary-btn', text:L('Baixar PNG', 'Download PNG') });
+      dl.addEventListener('click', function(){
+        cv.toBlob(function(blob){
+          if (!blob){ status.textContent = L('Não foi possível gerar o arquivo.', "Couldn't create the file."); return; }
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob); a.download = file + '.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+        }, 'image/png');
+      });
+      actions.appendChild(dl);
+      if (navigator.clipboard && window.ClipboardItem){
+        var cp = el('button', { type:'button', class:'ghost-btn', text:L('Copiar imagem', 'Copy image') });
+        cp.addEventListener('click', function(){
+          cv.toBlob(function(blob){
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function(){
+              status.textContent = L('Imagem copiada. Cole no Discord com Ctrl+V.', 'Image copied. Paste it in Discord with Ctrl+V.');
+            }).catch(function(){ status.textContent = L('O navegador não deixou copiar; use Baixar PNG.', "The browser didn't allow copying; use Download PNG."); });
+          }, 'image/png');
+        });
+        actions.appendChild(cp);
+      }
+    }).catch(function(err){
+      status.textContent = L('Não foi possível montar a imagem: ', "Couldn't draw the image: ") + (err && err.message ? err.message : err);
+    });
+  }
+
   // ---------- routes to a place: server (from db-places) + original game (hand-written) ----------
   function posText(p){ return NUMPAD_POS[p] || ''; }
   function routeBlock(zoneName){
@@ -5284,6 +5482,7 @@ input.invalid{ border-color:var(--danger) !important; }
     renderSummary(lo);
   });
   document.getElementById('vsBtn').addEventListener('click', openVersus);
+  document.getElementById('cardBtn').addEventListener('click', openBuildCard);
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;
     function reset(){

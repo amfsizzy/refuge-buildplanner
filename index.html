@@ -1053,6 +1053,18 @@ input.invalid{ border-color:var(--danger) !important; }
 .ck-item.done .ck-title{ color:var(--fg-dim); }
 .ck-how{ font-size:12px; color:var(--fg-dim); margin-top:4px; }
 .ck-note{ font-size:12px; color:var(--fg-faint); margin-top:4px; white-space:pre-line; overflow-wrap:anywhere; }
+
+/* ---- History tab ---- */
+.hist-list{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.hist-row{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:start; padding:9px 12px; border:1px solid var(--border-soft); border-radius:10px; background:var(--surface); }
+.hist-row.latest{ border-color:color-mix(in srgb, var(--accent) 55%, transparent); }
+.hist-time{ font:600 12px var(--font-mono); color:var(--fg-faint); padding-top:1px; white-space:nowrap; }
+.hist-desc{ font-size:12.5px; color:var(--fg); overflow-wrap:anywhere; }
+.hist-desc > div + div{ color:var(--fg-dim); }
+.hist-more{ font-size:11px; color:var(--fg-faint) !important; }
+.hist-now{ font-size:11px; font-weight:700; color:var(--accent-strong); padding-top:2px; }
+.hist-back{ padding:4px 10px; font-size:11.5px; white-space:nowrap; }
+@media (max-width:560px){ .hist-row{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -1130,6 +1142,7 @@ input.invalid{ border-color:var(--danger) !important; }
           <button class="tab-btn" data-tab="skills" type="button">Skills</button>
           <button class="tab-btn" data-tab="farm" type="button">Farm</button>
           <button class="tab-btn" data-tab="notes" type="button" data-en="Notes">Notas</button>
+          <button class="tab-btn" data-tab="history" type="button" data-en="History">Histórico</button>
           <button class="tab-btn tab-quiet" data-tab="checklist" type="button">Checklist</button>
         </nav>
         <div class="stage-bar" id="stageBar" hidden>
@@ -1182,6 +1195,10 @@ input.invalid{ border-color:var(--danger) !important; }
 
       <section class="tab-panel" id="panel-checklist" hidden>
         <div id="checklistBox"></div>
+      </section>
+
+      <section class="tab-panel" id="panel-history" hidden>
+        <div id="historyBox"></div>
       </section>
     </div>
 
@@ -1516,9 +1533,139 @@ input.invalid{ border-color:var(--danger) !important; }
       undoStack.push(lastSnap);
       if (undoStack.length > UNDO_MAX) undoStack.shift();
       redoStack = [];
+      logChange(lastSnap, cur);
     }
     lastSnap = cur;
     syncHistoryButtons();
+  }
+
+  // ---------- History tab: every saved change, described, kept in the browser ----------
+  // Each entry keeps the state right after the change, so "Go back here" can restore it.
+  var HISTORY_KEY = 'rtm-hud-history-v1', HISTORY_MAX = 50, HISTORY_CHARS = 1500000;
+  var historyLog = (function(){
+    try { var v = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); return Array.isArray(v) ? v.filter(function(e){ return e && typeof e.after === 'string'; }) : []; }
+    catch(e){ return []; }
+  })();
+  function saveHistoryLog(){
+    while (historyLog.length > HISTORY_MAX) historyLog.shift();
+    // Keep it well under the browser's storage limit: the oldest entries go first.
+    var text = JSON.stringify(historyLog);
+    while (text.length > HISTORY_CHARS && historyLog.length > 1){ historyLog.shift(); text = JSON.stringify(historyLog); }
+    try { localStorage.setItem(HISTORY_KEY, text); }
+    catch(e){
+      historyLog = historyLog.slice(-10);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(historyLog)); } catch(err){ /* storage full: the history lives in this tab only */ }
+    }
+  }
+  function logChange(before, after){
+    var desc;
+    try { desc = describeChange(JSON.parse(before), JSON.parse(after)); } catch(e){ desc = []; }
+    if (!desc.length) return; // nothing a person would call a change (e.g. empty fields filled in)
+    historyLog.push({ t: Date.now(), desc: desc, after: after });
+    saveHistoryLog();
+    renderHistory();
+  }
+  // A map of marks/levels as text, ignoring empty or zero entries the page creates by itself.
+  function marks(o){ return Object.keys(o || {}).filter(function(k){ return o[k]; }).sort().map(function(k){ return k + ":" + o[k]; }).join(","); }
+  // Farm marks as text, ignoring empty groups the page fills in by itself.
+  function farmMarks(f){
+    if (!f) return '';
+    return ['prio', 'skip', 'mats'].map(function(k){ return Object.keys(f[k] || {}).filter(function(id){ return f[k][id]; }).sort().join(','); }).join('|');
+  }
+  // Plain-language list of what changed between two saved states.
+  function describeChange(a, b){
+    var out = [];
+    var A = {}, B = {};
+    (a.loadouts || []).forEach(function(l){ A[l.id] = l; });
+    (b.loadouts || []).forEach(function(l){ B[l.id] = l; });
+    Object.keys(B).forEach(function(id){ if (!A[id]) out.push(L('Loadout "' + B[id].name + '" criado', 'Loadout "' + B[id].name + '" created')); });
+    Object.keys(A).forEach(function(id){ if (!B[id]) out.push(L('Loadout "' + A[id].name + '" excluído', 'Loadout "' + A[id].name + '" deleted')); });
+    Object.keys(B).forEach(function(id){
+      var x = A[id], y = B[id]; if (!x) return;
+      var who = y.name;
+      if (x.name !== y.name) out.push(L('Nome: "' + x.name + '" → "' + y.name + '"', 'Name: "' + x.name + '" → "' + y.name + '"'));
+      if ((x.charClass || '') !== (y.charClass || '')) out.push(who + ' · ' + L('classe: ', 'class: ') + (x.charClass || '—') + ' → ' + (y.charClass || '—'));
+      if ((x.notes || '') !== (y.notes || '')) out.push(who + ' · ' + L('notas editadas', 'notes edited'));
+      if (farmMarks(x.farm) !== farmMarks(y.farm)) out.push(who + ' · Farm: ' + L('prioridade, "não vou farmar" ou materiais', 'priority, "won’t farm" or materials'));
+      STAGE_KEYS.forEach(function(k){
+        var s = (x.stages || {})[k] || {}, t = (y.stages || {})[k] || {};
+        var where = who + ' · ' + stageLabel(k);
+        if ((s.level || 1) !== (t.level || 1)) out.push(where + ' · Level ' + (s.level || 1) + ' → ' + (t.level || 1));
+        STAT_KEYS.forEach(function(st){
+          var p = (s.baseStats || {})[st.key] || 1, q = (t.baseStats || {})[st.key] || 1;
+          if (p !== q) out.push(where + ' · ' + st.label + ' ' + p + ' → ' + q);
+        });
+        EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){
+          var p = (s.slots || {})[d.key] || null, q = (t.slots || {})[d.key] || null;
+          if (JSON.stringify(p) === JSON.stringify(q)) return;
+          var at = where + ' · ' + d.label + ': ';
+          if (!p) out.push(at + L('equipado ', 'equipped ') + q.itemName);
+          else if (!q) out.push(at + p.itemName + L(' removido', ' removed'));
+          else if (p.itemName !== q.itemName) out.push(at + p.itemName + ' → ' + q.itemName);
+          else {
+            if ((p.refine || 0) !== (q.refine || 0)) out.push(at + q.itemName + ' +' + (p.refine || 0) + ' → +' + (q.refine || 0));
+            if (JSON.stringify(p.cards || []) !== JSON.stringify(q.cards || [])) out.push(at + L('cartas alteradas', 'cards changed'));
+            if (JSON.stringify(p.extras || []) !== JSON.stringify(q.extras || [])) out.push(at + L('rolls alterados', 'rolls changed'));
+          }
+        });
+        var tr = Object.keys(Object.assign({}, s.tree || {}, t.tree || {})).filter(function(key){ return ((s.tree || {})[key] || 0) !== ((t.tree || {})[key] || 0); });
+        if (tr.length){
+          var names = tr.slice(0, 3).map(function(key){
+            var sk = skillDb && skillDb.byKey[key];
+            return (sk ? sk.name : key.split('/')[1]) + ' ' + ((s.tree || {})[key] || 0) + '→' + ((t.tree || {})[key] || 0);
+          });
+          out.push(where + ' · Skills: ' + names.join(', ') + (tr.length > 3 ? ' (+' + (tr.length - 3) + ')' : ''));
+        }
+        if (marks(s.skills) !== marks(t.skills)) out.push(where + ' · ' + L('passivas', 'passives'));
+        if (marks(s.buffs) !== marks(t.buffs)) out.push(where + ' · ' + L('skills de suporte ligadas/desligadas', 'support skills switched'));
+        if (marks(s.owned) !== marks(t.owned)) out.push(where + ' · Farm: ' + L('"já tenho" marcado', '"I have it" ticked'));
+        if ((s.manualAspdBonus || 0) !== (t.manualAspdBonus || 0)) out.push(where + ' · ' + L('bônus manual de ASPD', 'manual ASPD bonus'));
+      });
+    });
+    return out;
+  }
+  function renderHistory(){
+    var box = document.getElementById('historyBox');
+    if (!box) return;
+    clear(box);
+    var head = el('div', { class:'ck-head' }, [ el('div', {}, [
+      el('div', { class:'farm-title', text:L('Histórico de alterações', 'Change history') }),
+      el('div', { class:'ck-progress-text', text:L('As últimas ' + HISTORY_MAX + ' alterações, guardadas neste navegador. "Voltar até aqui" restaura o planner como estava logo depois daquela alteração (e dá para desfazer).', 'The last ' + HISTORY_MAX + ' changes, kept in this browser. "Go back here" restores the planner as it was right after that change (and can be undone).') })
+    ]) ]);
+    if (historyLog.length){
+      var clr = el('button', { type:'button', class:'ghost-btn', text:L('Limpar histórico', 'Clear history') });
+      clr.addEventListener('click', function(){ historyLog = []; saveHistoryLog(); renderHistory(); });
+      head.appendChild(clr);
+    }
+    box.appendChild(head);
+    if (!historyLog.length){ box.appendChild(el('div', { class:'empty-note', text:L('Nenhuma alteração ainda.', 'No changes yet.') })); return; }
+    var list = el('div', { class:'hist-list' });
+    var today = new Date().toDateString();
+    historyLog.slice().reverse().forEach(function(e, i){
+      var d = new Date(e.t);
+      var when = (d.toDateString() === today ? '' : d.toLocaleDateString(L('pt-BR', 'en-US')) + ' ') + d.toLocaleTimeString(L('pt-BR', 'en-US'), { hour:'2-digit', minute:'2-digit' });
+      var isNow = e.after === lastSnap;
+      var row = el('div', { class:'hist-row' + (isNow ? ' latest' : '') });
+      row.appendChild(el('span', { class:'hist-time', text: when }));
+      var txt = el('div', { class:'hist-desc' });
+      (e.desc || []).slice(0, 4).forEach(function(t){ txt.appendChild(el('div', { text: t })); });
+      if ((e.desc || []).length > 4) txt.appendChild(el('div', { class:'hist-more', text:'+' + (e.desc.length - 4) + L(' alterações', ' changes') }));
+      row.appendChild(txt);
+      if (isNow) row.appendChild(el('span', { class:'hist-now', text:L('atual', 'current') }));
+      else {
+        var back = el('button', { type:'button', class:'ghost-btn hist-back', text:L('Voltar até aqui', 'Go back here') });
+        back.addEventListener('click', function(){
+          clearTimeout(saveTimer); trackHistory();
+          undoStack.push(lastSnap); if (undoStack.length > UNDO_MAX) undoStack.shift();
+          redoStack = [];
+          restoreSnapshot(e.after);
+          alertInline(L('Planner voltou para ' + when + '. Use Desfazer para voltar.', 'Planner restored to ' + when + '. Use Undo to go back.'));
+        });
+        row.appendChild(back);
+      }
+      list.appendChild(row);
+    });
+    box.appendChild(list);
   }
   function restoreSnapshot(snap){
     var o = JSON.parse(snap);
@@ -5943,6 +6090,7 @@ input.invalid{ border-color:var(--danger) !important; }
   lastSnap = snapshot(); // undo starts from what was loaded
   importFromLink();
   renderChecklist();
+  renderHistory();
   fetchDb();
   fetchPlaces();
   checkPassivesAgainstSite();

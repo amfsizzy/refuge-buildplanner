@@ -5543,6 +5543,44 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     btn.addEventListener('blur', reset);
   })();
+  // The first-visit example: a Legend with a starter set at level 50 (Early) and a full build at
+  // level 130 (Late), so every tab — and the comparison — has something to show.
+  function sampleLoadout(){
+    var lo = blankLoadout(L('Exemplo — Legend', 'Example — Legend'));
+    lo.charClass = 'Legend';
+    lo.activeStage = 'late';
+    var e = lo.stages.early, t = lo.stages.late;
+    e.level = 50;
+    e.baseStats = { str:20, agi:60, vit:1, int:1, dex:25, luk:15 };
+    e.slots.weapon = { itemId:1214, itemName:'Gemstone Knife', refine:4 };
+    e.slots.armor = { itemId:2313, itemName:'Padded Armor', refine:4 };
+    e.slots.garment = { itemId:2504, itemName:'Muffler', refine:2 };
+    e.slots.shoes = { itemId:2406, itemName:'Boots', refine:2 };
+    e.slots.headUpper = { itemId:2208, itemName:'Ribbon', refine:0 };
+    t.level = 130;
+    t.baseStats = { str:40, agi:99, vit:10, int:1, dex:60, luk:40 };
+    t.slots.headUpper = { itemId:5653, itemName:'Darkness Helm', refine:7 };
+    t.slots.headMid = { itemId:5068, itemName:'Evil Wing Ears', refine:0 };
+    t.slots.headLower = { itemId:5767, itemName:'Samurai Mask', refine:0 };
+    t.slots.armor = { itemId:15391, itemName:'Power Dragon Plate', refine:4, extras:['DEF +2', 'FLEE +3'] };
+    t.slots.weapon = { itemId:13094, itemName:'Murder Knife', refine:10, cards:[{ itemId:4043, itemName:'Andre Card' }], extras:['STR +3'] };
+    t.slots.garment = { itemId:2541, itemName:'Asprika', refine:0 };
+    t.slots.shoes = { itemId:15417, itemName:'Metal Boots MK I', refine:0 };
+    t.slots.accLeft = { itemId:2671, itemName:'Arch Ring' };
+    t.slots.accRight = { itemId:16153, itemName:'Corsair Ring' };
+    t.slots.shadowArmor = { itemId:24278, itemName:'Ancient Tomb Armor', refine:7 };
+    t.slots.shadowGloves = { itemId:24279, itemName:'Ancient Tomb Gloves', refine:7 };
+    t.slots.shadowShoes = { itemId:24280, itemName:'Ancient Tomb Shoes', refine:5 };
+    t.slots.shadowAccLeft = { itemId:24281, itemName:'Ancient Tomb Pendant', refine:5 };
+    t.slots.shadowAccRight = { itemId:24018, itemName:'Agility Manual' };
+    var orphan = ['area-loot', 'heal', 'orphan-skills', 'hiding', 'increase-agility', 'morroc-s-mark', 'sense', 'teleport', 'warp-portal'];
+    e.tree = {}; orphan.forEach(function(k){ e.tree['orphan/' + k] = 1; });
+    e.tree['vagabond/improve-dodge'] = 10;
+    t.tree = JSON.parse(JSON.stringify(e.tree));
+    t.tree['vagabond/frenzy'] = 1;
+    lo.notes = L('Loadout de exemplo: troque à vontade, ou apague. Ele só aparece na primeira visita.', 'Example loadout: change it freely or delete it. It only shows up on the first visit.');
+    return lo;
+  }
   function mostRecent(){
     return state.loadouts.slice().sort(function(a,b){ return b.updatedAt - a.updatedAt; })[0];
   }
@@ -5808,13 +5846,16 @@ input.invalid{ border-color:var(--danger) !important; }
 
   // ---------- boot ----------
   state.loadouts = loadLoadouts();
-  if (state.loadouts.length === 0){
-    state.loadouts.push(blankLoadout(L('Exemplo — Mago Mid Game', 'Example — Mage Mid Game')));
-  }
+  // A ready-made example only on the very first visit; once someone has used the planner,
+  // deleting every loadout leaves the list empty instead of bringing the example back.
+  var SEEDED_KEY = 'rtm-hud-seeded-v1', seeded = false;
+  try { seeded = localStorage.getItem(SEEDED_KEY) === '1'; } catch(e){}
+  if (state.loadouts.length === 0 && !seeded){ state.loadouts.push(sampleLoadout()); saveLoadouts(); }
+  try { localStorage.setItem(SEEDED_KEY, '1'); } catch(e){}
   // Reopen the loadout that was open last time; fall back to the most recently edited one.
   var lastActive = null;
   try { lastActive = localStorage.getItem(ACTIVE_KEY); } catch(e){}
-  state.activeId = state.loadouts.some(function(l){ return l.id === lastActive; }) ? lastActive : mostRecent().id;
+  state.activeId = state.loadouts.some(function(l){ return l.id === lastActive; }) ? lastActive : (state.loadouts.length ? mostRecent().id : null);
   try { render(); } catch(e){
     console.warn('Render failed at boot:', e);
     alertInline(L('Um loadout salvo não pôde ser exibido. Os outros continuam disponíveis.', 'A saved loadout could not be shown. The others are still available.'));

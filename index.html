@@ -5090,6 +5090,17 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     ctx.restore();
   }
+  // Bottom y of a row of chips drawn by drawBuildCard's chips() (same font and wrapping).
+  function chipsLayout(c2, list, y, w, fMono){
+    var cx = 0, cy = y;
+    c2.font = '600 15px ' + fMono;
+    list.forEach(function(c){
+      var tw = c2.measureText(c[0] + ' ' + c[1]).width + 22;
+      if (cx + tw > w){ cx = 0; cy += 40; }
+      cx += tw + 8;
+    });
+    return cy + 30;
+  }
   function drawBuildCard(lo, sex){
     var sd = activeStageData(lo), s = computeStatusSummary(lo);
     var fDisplay = cssFont('--font-display', 'Georgia, serif'), fBody = cssFont('--font-body', 'sans-serif'), fMono = cssFont('--font-mono', 'monospace');
@@ -5108,10 +5119,17 @@ input.invalid{ border-color:var(--danger) !important; }
       var ROW = 62, COLW = 400, MID = CARD_W / 2;
       var top = 172;
       var eqH = 5 * ROW, shTop = top + eqH + 46, shH = 3 * ROW;
+      // Bottom half: stats and status on the left, main skills on the right (2 per row).
       var stTop = shTop + shH + 40;
-      var skTop = stTop + 118;
-      var skRows = Math.ceil(skills.length / 4);
-      var H = skTop + (skills.length ? 36 + skRows * 52 : 0) + 76;
+      var statChips = STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; });
+      var statusChips = [['ATK', Math.round(s.atk)], ['MATK', Math.round(s.matkMax)], ['HIT', Math.round(s.hit)], ['FLEE', Math.round(s.flee)],
+        ['CRIT', Math.round(s.crit)], ['DEF', Math.round(s.itemDef) + '+' + Math.round(s.softDef)], ['MDEF', Math.round(s.itemMdef) + '+' + Math.round(s.softMdef)],
+        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]];
+      var mctx = document.createElement('canvas').getContext('2d');
+      var statusTop = chipsLayout(mctx, statChips, stTop + 14, COLW + 120, fMono) + 34;
+      var leftBottom = chipsLayout(mctx, statusChips, statusTop + 14, COLW + 120, fMono);
+      var rightBottom = skills.length ? stTop + 14 + Math.ceil(skills.length / 2) * 52 : stTop;
+      var H = Math.max(leftBottom, rightBottom) + 76;
       var cv = document.createElement('canvas');
       var scale = 2;
       cv.width = CARD_W * scale; cv.height = H * scale;
@@ -5180,16 +5198,15 @@ input.invalid{ border-color:var(--danger) !important; }
         });
       }
       heading(L('Atributos', 'Stats'), 40, stTop);
-      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 40, stTop + 14, 520);
-      heading('Status', 620, stTop);
-      chips([['ATK', Math.round(s.atk)], ['MATK', Math.round(s.matkMax)], ['HIT', Math.round(s.hit)], ['FLEE', Math.round(s.flee)],
-        ['CRIT', Math.round(s.crit)], ['DEF', Math.round(s.itemDef) + '+' + Math.round(s.softDef)], ['MDEF', Math.round(s.itemMdef) + '+' + Math.round(s.softMdef)],
-        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, stTop + 14, 540);
+      chips(statChips, 40, stTop + 14, COLW + 120);
+      heading('Status', 40, statusTop);
+      chips(statusChips, 40, statusTop + 14, COLW + 120);
       if (skills.length){
-        heading(L('Skills principais', 'Main skills'), 40, skTop);
+        var skX = CARD_W - 40 - 2 * 270 - 12;
+        heading(L('Skills principais', 'Main skills'), skX, stTop);
         skills.forEach(function(k, i){
-          var col = i % 4, row = Math.floor(i / 4);
-          var x = 40 + col * 282, y = skTop + 14 + row * 52;
+          var col = i % 2, row = Math.floor(i / 2);
+          var x = skX + col * 282, y = stTop + 14 + row * 52;
           ctx.fillStyle = CARD.panel; ctx.fillRect(x, y, 270, 42);
           var ic = icons['s' + k.s.key];
           if (ic) ctx.drawImage(ic, x + 9, y + 9, 24, 24);

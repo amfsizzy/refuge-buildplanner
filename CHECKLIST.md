@@ -2,13 +2,12 @@
 
 Português: [CHECKLIST.pt-BR.md](CHECKLIST.pt-BR.md)
 
-We don't have access to the game files: the planner only knows what the server's **public item database** makes available. Everything below isn't published there, so it has to be measured in game. Pick an **open** item, follow its steps and post your result in the **[Refuge Build Planner thread](https://discord.com/channels/1500898812942745602/1557950291347771462)** on the server's Discord, with a screenshot of your Status window (class, level, base stats and gear with refine levels). Mention the item code (e.g. `r2`).
+We don't have access to the game files: the planner only knows what the server's **public item database** makes available. Everything below isn't published there, so it has to be measured in game. Pick an **open** item, follow its steps and post your result in the **[Refuge Build Planner thread](https://discord.com/channels/1500898812942745602/1557950291347771462)** on the server's Discord, with a screenshot of your attributes window (Alt+Q). Mention the item code (e.g. `r2`).
 
 ### Before testing
 
 - Test "naked": take off all gear, cards, shadow gear and costumes, unless the test asks for a piece.
 - No buffs: wait for skills, potions, food and NPC or event buffs to end (or relog).
-- Leave your party and check for guild or event bonuses that add stats.
 - Change one thing at a time and take a screenshot before and after.
 - Keep class, base level and base stats (the number before the "+") visible in every screenshot.
 - If a number looks odd, repeat the measurement before sending it.
@@ -24,26 +23,26 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (4)**
 
 - [ ] `r7` **How much DEF/MDEF does refine add to a shield?**
-  1. Equip a shield at +0 and open the Status window (Alt+A).
-  2. Note DEF and MDEF (the left number, before the "+").
-  3. Repeat with the same piece at +1, +2 and +4 (another copy of it is fine).
-  4. Send the screenshots with the piece name and the refine of each.
+  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
+  2. Equip only a shield at +0 and note DEF and MDEF again.
+  3. Repeat with the same shield at +1, +2 and +4 (another copy already refined is fine).
+  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
   - Result: A pista diz uma regra geral para "armadura" (+1 DEF a cada 2 refinos), sem separar por peça. Um teste com escudo confirma; se bater, aplico nos quatro (escudo, capa, calçado e chapéu).
 - [ ] `r8` **How much DEF/MDEF does refine add to a garment?**
-  1. Equip a garment at +0 and open the Status window (Alt+A).
-  2. Note DEF and MDEF (the left number, before the "+").
-  3. Repeat with the same piece at +1, +2 and +4 (another copy of it is fine).
-  4. Send the screenshots with the piece name and the refine of each.
+  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
+  2. Equip only a garment at +0 and note DEF and MDEF again.
+  3. Repeat with the same garment at +1, +2 and +4 (another copy already refined is fine).
+  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
 - [ ] `r9` **How much DEF/MDEF does refine add to a pair of shoes?**
-  1. Equip a pair of shoes at +0 and open the Status window (Alt+A).
-  2. Note DEF and MDEF (the left number, before the "+").
-  3. Repeat with the same piece at +1, +2 and +4 (another copy of it is fine).
-  4. Send the screenshots with the piece name and the refine of each.
+  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
+  2. Equip only a pair of shoes at +0 and note DEF and MDEF again.
+  3. Repeat with the same shoes at +1, +2 and +4 (another copy already refined is fine).
+  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
 - [ ] `r10` **How much DEF/MDEF does refine add to an upper headgear?**
-  1. Equip an upper headgear at +0 and open the Status window (Alt+A).
-  2. Note DEF and MDEF (the left number, before the "+").
-  3. Repeat with the same piece at +1, +2 and +4 (another copy of it is fine).
-  4. Send the screenshots with the piece name and the refine of each.
+  1. With no gear on, open the attributes window (Alt+Q) and note your character's DEF and MDEF.
+  2. Equip only an upper headgear at +0 and note DEF and MDEF again.
+  3. Repeat with the same headgear at +1, +2 and +4 (another copy already refined is fine).
+  4. Send it written as: refine → DEF and MDEF (e.g. +0 → 12 / 3), the piece name, your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>
@@ -65,10 +64,10 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (1)**
 
 - [ ] `a3` **How much does each weapon type change ASPD?**
-  1. Take the weapon off and note the ASPD from the Status window (no buffs or ASPD items).
-  2. Equip one weapon of each type your class can use (dagger, sword, bow, staff…), with no ASPD cards or options, and note the ASPD of each.
+  1. With no weapon, open the attributes window (Alt+Q) and note your character's ASPD.
+  2. Equip one weapon of each type your class uses (dagger, sword, bow…), with no cards and no ASPD rolls, and note the ASPD with each.
   3. Don't change AGI or DEX between swaps.
-  4. Send your class, base AGI and DEX, and the list "weapon type → ASPD".
+  4. Send it written as: weapon → ASPD (including "no weapon"), your class, your level and your base AGI and DEX.
   - Result: Primeiro dado: a adaga (com Blade Mastery 10) fica de 6 a 0 abaixo de "sem arma" conforme a AGI sobe (ver a1). Falta comparar outros tipos de arma.
 
 <details>
@@ -106,15 +105,15 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (2)**
 
 - [ ] `h1` **What are each class's base max HP and SP at each level?**
-  1. Take all gear off and wait for buffs to end.
-  2. Open the Status window and note max HP and SP, class, base level, VIT and INT.
-  3. If you can, repeat at other levels (e.g. 1, 30, 60, 99, 120 and 150) or with friends of other classes.
-  4. Send the screenshots.
+  1. Take all gear off.
+  2. Note your character's max HP and SP, and base VIT and INT from the attributes window (Alt+Q).
+  3. If you can, repeat at other levels (e.g. 1, 30, 60, 99, 120 and 150).
+  4. Send it written as: level → max HP / max SP, your class and your base VIT and INT.
   - Result: Nenhuma das duas bases tem tabela de HP/SP por classe. Caminho: prints da janela de status (HP/SP máximos) sem equipamento, por classe, em alguns níveis (ex.: 1, 50, 99, 120, 150).
 - [ ] `h2` **How much max HP does each point of VIT add?**
-  1. With no gear, note max HP and base VIT.
-  2. Raise VIT (or use a stat reset) and note HP again at two or more values (e.g. VIT 1, 30 and 60).
-  3. Send your class, level and the pairs "VIT → max HP".
+  1. With no gear on, note your character's max HP and base VIT (attributes window, Alt+Q).
+  2. Change VIT (with new points or a stat reset) and note max HP again at two or more values (e.g. VIT 1, 30 and 60).
+  3. Send it written as: VIT → max HP, your class and your level.
 
 <details>
 <summary>Confirmed (1)</summary>
@@ -130,20 +129,20 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (3)**
 
 - [ ] `f3` **Does the planner's Critical match the game's?**
-  1. With no gear, note base LUK and Critical from the Status window.
-  2. Change LUK (or equip an item with LUK) and note it again, at 2 or 3 values.
-  3. Send the screenshots. The planner uses: 1 + LUK ÷ 3 + 2 per 10 LUK.
+  1. With no gear on, open the attributes window (Alt+Q) and note your character's base LUK and Critical.
+  2. Change LUK (with new points or a stat reset) and note both again, at 2 or 3 values.
+  3. Send it written as: LUK → Critical, your class and your level.
 - [ ] `f7` **With a ranged weapon, does ATK use DEX instead of STR?**
-  1. Equip a bow and note the status ATK (the number before the "+").
-  2. Repeat for STR 1/DEX 1, STR 1/DEX 50, STR 50/DEX 1 and STR 50/DEX 50 (with a stat reset or different characters).
+  1. Equip a bow with no cards and no ATK rolls, and open the attributes window (Alt+Q).
+  2. Note ATK (the left number, before the "+") with these stats: STR 1 / DEX 1, STR 1 / DEX 50, STR 50 / DEX 1 and STR 50 / DEX 50 (with a stat reset or different characters).
   3. If you can, repeat with a whip or a deck.
-  4. Send the screenshots with the stats of each.
+  4. Send it written as: STR / DEX → ATK, the weapon, your class and your level.
   - Result: Confirmado pelo jogador: armas que não precisam ficar a 1 quadrado do mob são à distância e usam DEX: arco, arco pesado, revólver, deck, chicote, codex, corrente e shuriken (luva e taco de golfe são corpo a corpo). Aplicado como espelho do corpo a corpo: DEX vira o atributo principal e STR o secundário. Falta só um print com arco para conferir os números.
 - [ ] `f10` **How much damage do DEF and MDEF reduce?**
-  1. Have someone (or the same monster) hit you with the same attack or skill every time.
-  2. Note the damage taken with different DEF and MDEF (swap armor or shield between tries).
-  3. Send the damage of each try with DEF and MDEF from the Status window.
-  4. Defenses tooltip reference: 100 DEF ≈ 18%, 275 ≈ 1/3, 500 = 50%; 50 MDEF ≈ 30%, 100 MDEF ≈ 55%.
+  1. Pick a monster that always uses the same attack, or ask someone to use the same skill on you every time.
+  2. Note the damage you take and DEF and MDEF from the attributes window (Alt+Q).
+  3. Swap armor or shield to change DEF/MDEF and note the damage again; do at least 3 swaps.
+  4. Send it written as: DEF / MDEF → damage taken, the monster or skill, your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>
@@ -165,25 +164,25 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (4)**
 
 - [ ] `s1` **Does a Long Sword count for Blade Mastery?**
-  1. Build the same character in the planner (class, level, stats, gear and skills).
-  2. In game, equip a Long Sword and note ATK and HIT from the Status window.
-  3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts.
-  4. Send the screenshot and the Blade Mastery level.
-- [ ] `s2` **Does each of them (Two-Handed Sword, Knight Sword, Bone Sword) count for Blade Mastery?**
-  1. Build the same character in the planner (class, level, stats, gear and skills).
-  2. In game, equip each of them (Two-Handed Sword, Knight Sword, Bone Sword) and note ATK and HIT from the Status window.
-  3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts.
-  4. Send the screenshot and the Blade Mastery level.
+  1. With points in Blade Mastery, equip a Long Sword, open the attributes window (Alt+Q) and note ATK and HIT.
+  2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the ATK and HIT it shows.
+  3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts for the skill.
+  4. Send it written as: weapon → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
+- [ ] `s2` **Do Two-Handed Sword, Knight Sword and Bone Sword count for Blade Mastery?**
+  1. With points in Blade Mastery, equip each of them (one at a time), open the attributes window (Alt+Q) and note ATK and HIT.
+  2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the ATK and HIT it shows.
+  3. If the game shows exactly the Blade Mastery bonus on top, the weapon counts for the skill.
+  4. Send it written as: weapon → ATK and HIT in game and in the planner, the Blade Mastery level, your class and your level.
 - [ ] `s3` **Does a Heavy Bow count for Bow Mastery?**
-  1. Build the same character in the planner (class, level, stats, gear and skills).
-  2. In game, equip a Heavy Bow and note DEX from the Status window.
-  3. If the game shows exactly the Bow Mastery bonus on top, the weapon counts.
-  4. Send the screenshot and the Bow Mastery level.
+  1. With points in Bow Mastery, equip a Heavy Bow, open the attributes window (Alt+Q) and note DEX.
+  2. Build the same character in the planner (class, level, stats, the weapon and skills) and check the DEX it shows.
+  3. If the game shows exactly the Bow Mastery bonus on top, the weapon counts for the skill.
+  4. Send it written as: weapon → DEX in game and in the planner, the Bow Mastery level, your class and your level.
 - [ ] `s4` **Does Perfection Mastery's extra MATK apply only at level 5, or from 5 up?**
-  1. With a one-handed sword, note MATK with Perfection Mastery at level 5.
+  1. With a one-handed sword and Perfection Mastery at level 5, open the attributes window (Alt+Q) and note MATK.
   2. Raise the skill to level 6 and note MATK again.
   3. If MATK drops from 5 to 6, the "+25" is level 5 only; if it goes up by 15, it applies from 5 up.
-  4. Send both screenshots.
+  4. Send it written as: skill level → MATK, your class and your level.
   - Result: Confirmado no jogo: com espada de uma mão, Critical +25 e +3 por nível, HIT -300, MATK +15 por nível (igual à descrição do site; a outra fórmula, 30 + 2/nível, estava desatualizada). · Falta: o "+25 more at Lv 5" do MATK vale só no nível 5 ou do 5 em diante? Comparar o MATK nos níveis 5 e 6.
 
 <details>
@@ -200,14 +199,13 @@ We don't have access to the game files: the planner only knows what the server's
 **Open (2)**
 
 - [ ] `e1` **Does the Grand Peco Card set bonus (DEF +5) work?**
-  1. Equip the Grand Peco Card together with its partner card (Peco Peco Card).
-  2. Compare DEF in the Status window with and without the Peco Peco Card.
-  3. Send both screenshots.
+  1. With the Grand Peco Card equipped (without the Peco Peco Card), open the attributes window (Alt+Q) and note DEF.
+  2. Also equip the Peco Peco Card and note DEF again.
+  3. Send it written as: DEF without the Peco Peco Card → DEF with it, your class and your level.
 - [ ] `e2` **On Metal Boots, which stat gets the "STR, INT or DEX +2"?**
-  1. Without Metal Boots, note the STR, INT and DEX bonus (the number after the "+").
-  2. Equip Metal Boots and see which of the three went up by 2.
-  3. If you can, test with another class (the bonus may depend on the class).
-  4. Send the screenshots.
+  1. Without Metal Boots, open the attributes window (Alt+Q) and note the STR, INT and DEX bonus (the number after the "+").
+  2. Equip Metal Boots and note the three again.
+  3. Send which of the three went up by 2, your class and your level. If you can, repeat with another class.
 
 <details>
 <summary>Confirmed (1)</summary>
@@ -249,12 +247,12 @@ We don't have access to the game files: the planner only knows what the server's
 
 - [ ] `o1` **At Orphanage level 60, do Juperos, Crystal Caves, Thanatos Tower and Kiel Hyre show up at Skia Nerius?**
   1. With the Orphanage at level 60, talk to Skia Nerius (Dungeon Caravan).
-  2. Check whether those four destinations are on the list.
-  3. Send a screenshot of the list.
+  2. Check which of those four destinations are on the list.
+  3. Send a screenshot of the list and the Orphanage level.
 - [ ] `o2` **At Orphanage level 105, do Abyss Lake and Sky Garden open up?**
   1. With the Orphanage at level 105, talk to Skia Nerius (Dungeon Caravan).
   2. Check whether Abyss Lake and Sky Garden are on the list.
-  3. Send a screenshot of the list.
+  3. Send a screenshot of the list and the Orphanage level.
 
 ---
 

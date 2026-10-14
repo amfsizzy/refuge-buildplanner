@@ -1846,9 +1846,9 @@ input.invalid{ border-color:var(--danger) !important; }
   // "<Name> Set Bonus:", "While wearing X:" ...). Summing every "STR+N" in the raw text would
   // apply refine/set/conditional bonuses unconditionally, so the tooltip is split into typed
   // blocks once at load and each block is only counted when its condition holds.
-  var RE_PER_REFINE = /^per\s+(?:(\d+)\s+)?refines?:$/i;
-  var RE_IF_REFINE = /^if\s+refine\s+(?:is\s+)?\+?(\d+)\+?:$/i;
-  var RE_REFINE_OR_HIGHER = /^refine\s+(\d+)\s+or\s+higher:$/i;
+  var RE_PER_REFINE = /^(?:per\s+(?:(\d+)\s+)?refines?|every\s+refine):$/i;
+  var RE_IF_REFINE = /^(?:if\s+refine\s+(?:is\s+)?|refine\s+\+)\+?(\d+)\+?:$/i;
+  var RE_REFINE_OR_HIGHER = /^refine\s+\+?(\d+)\s+or\s+higher:$/i;
   var RE_SET_REFINE = /^(set refine\b|per (?:\d+ )?total set refines?:|per set refines?:)/i;
   // Shadow sets scale on the refine of all their pieces added up ("total set refine"):
   // "Set refine 9+: ASPD Limit +1" (threshold, the effect may follow on the same line) and
@@ -1879,9 +1879,10 @@ input.invalid{ border-color:var(--danger) !important; }
     var out = blankBonus();
     lines.forEach(function(l){
       var line = isRefineScaled ? l.replace(RE_INLINE_REFINE, '') : l;
-      if (/\bper\b/i.test(line) || /\bor\b/i.test(line)) return;
-      var all = /All Stats\s*\+\s*(\d+)/i.exec(line);
-      if (all) STAT_KEYS.forEach(function(s){ out[s.key] += parseInt(all[1], 10) || 0; });
+      // A colon inside the line ("Refine 9: All Stats +3") is a condition, not a fixed bonus.
+      if (/\bper\b/i.test(line) || /\bor\b/i.test(line) || /:/.test(line)) return;
+      var all = /All Stats\s*([+\-])\s*(\d+)/i.exec(line);
+      if (all) STAT_KEYS.forEach(function(s){ out[s.key] += (all[1] === '-' ? -1 : 1) * (parseInt(all[2], 10) || 0); });
       STAT_KEYS.forEach(function(s){ out[s.key] += parseStatBonus(line, s.label); });
       DERIVED_LABELS.forEach(function(d){ out[d.key] += d.pct ? parsePctBonus(line, d.pattern) : parseStatBonus(line, d.pattern); });
     });
@@ -1982,7 +1983,7 @@ input.invalid{ border-color:var(--danger) !important; }
         continue;
       }
       if (awaitingSetName){ cur.setName = l; cur.pieces = l; awaitingSetName = false; continue; }
-      if (RE_PIECE_BONUS.test(l)){ open({ kind:'base', header:l }); continue; }
+      if (RE_PIECE_BONUS.test(l) || /^(?:Innate\s*|Core):$/i.test(l)){ open({ kind:'base', header:l }); continue; }
       if (RE_SET_REFINE.test(l) || (cur.kind === 'set' && (RE_PER_REFINE.test(l) || RE_IF_REFINE.test(l) || RE_REFINE_OR_HIGHER.test(l)))){
         var sb = { kind:'setRefine', header:l, setName: cur.setName || null, mode:null };
         if ((m = RE_SET_REFINE_AT.exec(l))){ sb.mode = 'at'; sb.min = parseInt(m[1], 10); }
@@ -2061,7 +2062,11 @@ input.invalid{ border-color:var(--danger) !important; }
       var desc = String(r[idx.desc] || '').split('\n').slice(0, 200).map(function(l){ return l.slice(0, 500); }).join('\n');
       // Each item's fixed bonuses are written "Perfect Dodge: 020" / "Critical Damage Bonus: 25%";
       // read them as "Perfect Dodge +20" (Asprika's 020 added 20 Perfect Dodge in game, 2026-10-14).
-      var blocks = parseTooltip(desc.replace(/^([A-Za-z][A-Za-z .]*[A-Za-z]):[ \t]*0*(\d+)(%?)[ \t]*$/gm, '$1 +$2$3'));
+      // "Aggressive Orphan Set" / "Bonus:" is one header split in two; "HP Bonus: +10%" is Max HP +10%.
+      var parseable = desc.replace(/^([A-Za-z][A-Za-z .]*[A-Za-z]):[ \t]*0*(\d+)(%?)[ \t]*$/gm, '$1 +$2$3')
+        .replace(/^(.+? Set)[ \t]*\n[ \t]*Bonus:[ \t]*$/gm, '$1 Bonus:')
+        .replace(/^(HP|SP) Bonus:[ \t]*([+\-]\d+%?)[ \t]*$/gm, 'Max $1 $2');
+      var blocks = parseTooltip(parseable);
       var sources = (Array.isArray(r[idx.src]) ? r[idx.src] : []).map(function(s){
         return { mobId: s[0], mob: mobNames[s[1]] || ('#' + s[0]), mobLv: s[2], zone: zoneNames[s[3]] || '—', rate: s[4], mvp: !!s[5] };
       }).sort(function(a, b){ return b.rate - a.rate; });
@@ -3828,17 +3833,18 @@ input.invalid{ border-color:var(--danger) !important; }
   function parseStatBonus(desc, statLabel){
     if (!desc) return 0;
     // "(?!\.?\d)" skips decimals ("+1.5") but keeps a value that ends a sentence ("+1.").
-    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)(?!\\.?\\d)(?!\\s*%)', 'gi');
+    // Penalties count too ("ATK -5"): leaving them out made builds look stronger than they are.
+    var re = new RegExp('\\b' + statLabel + '\\s*([+\\-])\\s*(\\d+)(?!\\.?\\d)(?!\\s*%)', 'gi');
     var total = 0, m;
-    while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
+    while ((m = re.exec(desc))){ total += (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) || 0); }
     return total;
   }
   // Same as parseStatBonus, for percent lines only ("ASPD +5%").
   function parsePctBonus(desc, statLabel){
     if (!desc) return 0;
-    var re = new RegExp('\\b' + statLabel + '\\s*\\+\\s*(\\d+)\\s*%', 'gi');
+    var re = new RegExp('\\b' + statLabel + '\\s*([+\\-])\\s*(\\d+)\\s*%', 'gi');
     var total = 0, m;
-    while ((m = re.exec(desc))){ total += parseInt(m[1], 10) || 0; }
+    while ((m = re.exec(desc))){ total += (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) || 0); }
     return total;
   }
   // Calls fn(item, refine, slotVal, isCard) for every equipped DB item and card of the active stage.

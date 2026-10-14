@@ -989,6 +989,9 @@ input.invalid{ border-color:var(--danger) !important; }
 .farm-stop-n{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:700 11px var(--font-mono); color:var(--accent-strong); border:1px solid var(--accent); }
 .farm-stop-count{ font-size:11.5px; color:var(--fg-faint); }
 .farm-lv{ margin-left:auto; font:600 11px var(--font-mono); padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+.lv-mobs{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.lv-mob{ font:600 11px var(--font-mono); color:var(--fg-dim); background:var(--surface); border:1px solid var(--border-soft); border-radius:6px; padding:2px 7px; }
+.lv-drops{ font-size:11.5px; color:var(--stat-item); margin-top:6px; }
 .farm-lv.ok{ color:var(--stat-item); } .farm-lv.warn{ color:var(--mid); } .farm-lv.hard{ color:var(--danger); }
 .farm-route{ font-size:11.5px; color:var(--fg-dim); margin:0 0 8px; overflow-wrap:anywhere; }
 .farm-route.muted{ color:var(--fg-faint); }
@@ -5445,7 +5448,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // stars and "won't farm" are per loadout. The Route view groups what is still missing by the
   // map where most of it drops together, best first, with the way to get there.
   var FARM_VIEW_KEY = 'rtm-hud-farmview-v1';
-  var farmView = (function(){ try { var v = localStorage.getItem(FARM_VIEW_KEY); return v === 'items' || v === 'mats' ? v : 'route'; } catch(e){ return 'route'; } })();
+  var farmView = (function(){ try { var v = localStorage.getItem(FARM_VIEW_KEY); return v === 'items' || v === 'mats' || v === 'level' ? v : 'route'; } catch(e){ return 'route'; } })();
   var farmFilter = 'pending';
 
   function farmData(lo){
@@ -5478,7 +5481,7 @@ input.invalid{ border-color:var(--danger) !important; }
     prog.appendChild(document.createTextNode(L(' itens obtidos', ' items obtained')));
 
     var tabs = el('div', { class:'farm-views', role:'tablist', 'aria-label':L('Visão', 'View') });
-    [['route', L('Rota', 'Route')], ['items', L('Itens', 'Items')], ['mats', L('Materiais', 'Materials')]].forEach(function(v){
+    [['route', L('Rota', 'Route')], ['items', L('Itens', 'Items')], ['mats', L('Materiais', 'Materials')], ['level', L('Onde upar', 'Where to level')]].forEach(function(v){
       var b = el('button', { type:'button', role:'tab', class:'farm-view', 'aria-selected': String(farmView === v[0]), text: v[1] });
       b.addEventListener('click', function(){
         farmView = v[0];
@@ -5489,6 +5492,7 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     list.appendChild(tabs);
 
+    if (farmView === 'level'){ renderFarmLevel(lo, list, targets, fd); return; }
     if (!ids.length){
       list.appendChild(el('div', { class:'empty-note', text:L('Nada equipado nesta fase ainda. Equipe itens nas abas Equipamento/Shadow e eles aparecem aqui.', 'Nothing equipped in this stage yet. Equip items in the Equipment/Shadow tabs and they show up here.') }));
       return;
@@ -5629,6 +5633,69 @@ input.invalid{ border-color:var(--danger) !important; }
       list.appendChild(oc);
     }
     farmDoneList(lo, list, targets, fd);
+  }
+  // ---- Where to level: maps whose regular mobs are close to this stage's level ----
+  // Mobs come from the item drop lists (every mob there drops something), grouped by map.
+  // The database has no EXP per mob, so this only says where the mobs match your level,
+  // never which map gives the most EXP. MVPs are left out.
+  var LEVEL_RANGE = 10, LEVEL_MAPS = 10;
+  function mobsByZone(){
+    if (state.db.mobsByZone) return state.db.mobsByZone;
+    var out = {};
+    state.db.items.forEach(function(it){
+      it.sources.forEach(function(s){
+        if (s.mvp || !s.zone || s.zone === '—' || !s.mobLv) return;
+        var z = out[s.zone] = out[s.zone] || { mobs: {}, items: {} };
+        z.mobs[s.mob] = s.mobLv;
+        z.items[it.id] = true;
+      });
+    });
+    state.db.mobsByZone = out;
+    return out;
+  }
+  function levelMaps(lo, targets, fd){
+    var level = activeStageData(lo).level || 1, zones = mobsByZone();
+    var pending = Object.keys(targets).filter(function(id){ return !isOwned(lo, id) && !fd.skip[id]; });
+    return Object.keys(zones).map(function(zone){
+      var z = zones[zone];
+      var near = Object.keys(z.mobs).filter(function(m){ return Math.abs(z.mobs[m] - level) <= LEVEL_RANGE; })
+        .map(function(m){ return { name: m, lv: z.mobs[m] }; }).sort(function(a, b){ return a.lv - b.lv; });
+      var gap = near.reduce(function(t, m){ return t + Math.abs(m.lv - level); }, 0) / (near.length || 1);
+      return { zone: zone, near: near, gap: gap, drops: pending.filter(function(id){ return z.items[id]; }) };
+    }).filter(function(m){ return m.near.length; }).sort(function(a, b){
+      return b.near.length - a.near.length || b.drops.length - a.drops.length || a.gap - b.gap || a.zone.localeCompare(b.zone);
+    }).slice(0, LEVEL_MAPS);
+  }
+  function renderFarmLevel(lo, list, targets, fd){
+    var level = activeStageData(lo).level || 1;
+    list.appendChild(el('p', { class:'panel-intro', text: L('Mapas com mais monstros entre Lv ', 'Maps with the most monsters between Lv ')
+      + Math.max(1, level - LEVEL_RANGE) + L(' e ', ' and ') + (level + LEVEL_RANGE) + L(' (level desta fase ±', " (this stage's level ±") + LEVEL_RANGE
+      + L('). A base não tem a EXP de cada monstro, então isto mostra onde os monstros são do seu nível, não qual mapa dá mais EXP. MVPs ficam de fora. Em empate, sobe o mapa onde caem mais itens que faltam neste loadout.',
+        "). The database has no EXP per monster, so this shows where the monsters match your level, not which map gives the most EXP. MVPs are left out. On a tie, the map where more of this loadout's missing items drop comes first.") }));
+    var maps = levelMaps(lo, targets, fd);
+    if (!maps.length){
+      list.appendChild(el('div', { class:'empty-note', text: L('Nenhum mapa com monstros nessa faixa de level.', 'No map with monsters in that level range.') }));
+      return;
+    }
+    maps.forEach(function(m, i){
+      var card = el('section', { class:'farm-stop' });
+      var head = el('div', { class:'farm-stop-head' });
+      head.appendChild(el('span', { class:'farm-stop-n', text: String(i + 1) }));
+      head.appendChild(el('h4', { text: m.zone }));
+      head.appendChild(el('span', { class:'farm-stop-count', text: m.near.length + (m.near.length === 1 ? L(' monstro', ' monster') : L(' monstros', ' monsters')) }));
+      var lo1 = m.near[0].lv, hi1 = m.near[m.near.length - 1].lv;
+      head.appendChild(el('span', { class:'farm-lv ' + (hi1 <= level ? 'ok' : 'warn'), text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
+      card.appendChild(head);
+      card.appendChild(farmRouteLine(m.zone));
+      var mobs = el('div', { class:'lv-mobs' });
+      m.near.forEach(function(x){ mobs.appendChild(el('span', { class:'lv-mob', text: x.name + ' · Lv' + x.lv })); });
+      card.appendChild(mobs);
+      if (m.drops.length){
+        card.appendChild(el('div', { class:'lv-drops', text: L('Também cai aqui: ', 'Also drops here: ')
+          + m.drops.map(function(id){ return targets[id].item.name; }).join(', ') }));
+      }
+      list.appendChild(card);
+    });
   }
   // "How to get there" in one line: the route players confirmed, else the one from the site.
   function farmRouteLine(zone){

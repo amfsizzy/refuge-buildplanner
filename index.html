@@ -745,6 +745,8 @@ input.invalid{ border-color:var(--danger) !important; }
 .dname .ref{ color:var(--accent); font-family:var(--font-mono); font-size:12px; margin-right:4px; }
 .dsub{ font-size:11px; color:var(--fg-faint); }
 .dslot.empty .dname{ color:var(--fg-dim); font-weight:600; }
+.dslot.locked{ opacity:.55; cursor:not-allowed; }
+.dslot.locked .dicon{ background:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--fg-faint) 25%, transparent) 6px 8px); }
 
 .pips{ display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
 .pip{
@@ -1115,8 +1117,8 @@ input.invalid{ border-color:var(--danger) !important; }
       <h1>Refuge <span>Build Planner</span></h1>
     </div>
     <div class="top-actions">
-    <button class="lang-toggle" id="langToggle" type="button" title="Switch to English" aria-label="Switch to English"
-      data-en="PT" data-en-title="Mudar para português" data-en-aria-label="Mudar para português">EN</button>
+    <button class="lang-toggle" id="langToggle" type="button" title="Idioma: português · clique para inglês" aria-label="Idioma: português. Mudar para inglês"
+      data-en="EN" data-en-title="Language: English · click for Portuguese" data-en-aria-label="Language: English. Switch to Portuguese">PT</button>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema"
       data-en-aria-label="Toggle light/dark theme" data-en-title="Toggle theme">
       <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -1873,6 +1875,7 @@ input.invalid{ border-color:var(--danger) !important; }
         if (!unit && COUNTED_FLAT.test(label)) continue;          // already in the simulator
         if (unit === '%' && /^ASPD$/i.test(label)) continue;      // already summed as ASPD %
         if (/^HP$/i.test(label)) label = 'Max HP';
+        if (/^Melee Attack$/i.test(label)) label = 'Melee Damage'; // same bonus, two names in the tooltips (player, 2026-10-14)
         if (/^SP$/i.test(label)) label = 'Max SP';
         var n = parseFloat(m[3]) * (m[2] === '-' ? -1 : 1);
         var key = label.toLowerCase() + '|' + unit;
@@ -2403,7 +2406,10 @@ input.invalid{ border-color:var(--danger) !important; }
     if (dollPinned[group] && !sd.slots[dollPinned[group]]) dollPinned[group] = null;
     function col(keys, cls){
       var c = el('div', { class:'doll-col ' + cls });
-      keys.forEach(function(k){ c.appendChild(dollTile(lo, group, slotDefByKey(k), sd.slots[k], setNames)); });
+      keys.forEach(function(k){
+        if (k === 'offhand' && offhandBlocked(sd.slots)){ c.appendChild(lockedTile(slotDefByKey(k))); return; }
+        c.appendChild(dollTile(lo, group, slotDefByKey(k), sd.slots[k], setNames));
+      });
       return c;
     }
     grid.appendChild(col(layout.left, 'left'));
@@ -2430,6 +2436,15 @@ input.invalid{ border-color:var(--danger) !important; }
     var chip = el('span', { class: cls + (s !== t ? ' abbr' : ''), text: s });
     chip.title = t; // full text on hover, also when a long chip is cut short
     return chip;
+  }
+  // The off-hand while a two-handed weapon is equipped: shown, but nothing goes in it.
+  function lockedTile(def){
+    var tile = el('div', { class:'dslot empty locked', title:L('A arma equipada usa as duas mãos', 'The equipped weapon takes both hands') });
+    tile.appendChild(el('div', { class:'slot-tag', text: def.label }));
+    tile.appendChild(el('div', { class:'dicon' }));
+    tile.appendChild(el('div', { class:'dmain' }, [ el('div', { class:'dname', text:L('Ocupado pela arma', 'Taken by the weapon') }),
+      el('div', { class:'dsub', text:L('Arma de duas mãos', 'Two-handed weapon') }) ]));
+    return tile;
   }
   function dollTile(lo, group, def, val, setNames){
     var p = slotParts(val);
@@ -3034,9 +3049,12 @@ input.invalid{ border-color:var(--danger) !important; }
   //   classes – the line, root first (prerequisites are looked up through it);
   //   pools   – point pools in spending order: Orphan, 1st class, 2nd class + specialization, final;
   //   tabs    – what the page shows: [Orphan + 1st class], [2nd class + specialization], [final].
+  // Everyone past Orphan has every Orphan skill (player, 2026-10-14), so they are filled in.
+  function orphanLocked(lo, s){ return s.cls === 'Orphan' && classLine(lo.charClass).length > 1; }
   function treeModel(lo){
     var line = classLine(lo.charClass);
     var tree = stageTree(lo);
+    if (line.length > 1 && skillDb) (skillDb.byClass.Orphan || []).forEach(function(s){ if ((tree[s.key] | 0) !== s.max) tree[s.key] = s.max; });
     var classes = line.map(function(cls, i){
       return { cls: cls, idx: i, skills: (skillDb && skillDb.byClass[cls]) || [] };
     });
@@ -3091,6 +3109,7 @@ input.invalid{ border-color:var(--danger) !important; }
     return plan;
   }
   function trySetSkill(lo, s, target){
+    if (orphanLocked(lo, s)) return L('As skills de Orphan já vêm completas para quem tem classe.', 'Orphan skills come maxed once you have a class.');
     var model = treeModel(lo);
     var cur = treeLv(model.tree, s);
     target = Math.max(0, Math.min(s.max, target));
@@ -3474,9 +3493,10 @@ input.invalid{ border-color:var(--danger) !important; }
     var t = { atk:0, matk:0, def:0, mdef:0, weight:0 };
     if (!state.db) return t;
     var slots = activeStageData(lo).slots;
+    var noOffhand = offhandBlocked(slots);
     EQUIP_SLOTS.forEach(function(s){
       var v = slots[s.key];
-      if (!v || v.manual) return;
+      if (!v || v.manual || (s.key === 'offhand' && noOffhand)) return;
       var it = itemById(v.itemId);
       if (!it) return;
       t.atk += it.atk||0; t.matk += it.matk||0; t.def += it.def||0; t.mdef += it.mdef||0; t.weight += it.weight||0;
@@ -3523,9 +3543,10 @@ input.invalid{ border-color:var(--danger) !important; }
   function forEachEquipped(lo, fn){
     if (!state.db) return;
     var slots = activeStageData(lo).slots;
+    var noOffhand = offhandBlocked(slots);
     EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(def){
       var val = slots[def.key];
-      if (!val) return;
+      if (!val || (def.key === 'offhand' && noOffhand)) return;
       if (!val.manual){
         var it = itemById(val.itemId);
         if (it) fn(it, val.refine || 0, val, false);
@@ -3553,7 +3574,8 @@ input.invalid{ border-color:var(--danger) !important; }
   // Random options rolled on a specific copy of an item ("ATK +3", "Max SP +3%"), typed in by
   // the player. Only flat bonuses the parser knows are summed; the rest is shown as text.
   var EXTRA_SUGGESTIONS = ['STR +', 'AGI +', 'VIT +', 'INT +', 'DEX +', 'LUK +', 'All Stats +', 'ATK +', 'MATK +',
-    'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD +', 'ASPD +%', 'ASPD Limit +', 'Max HP +', 'Max SP +'];
+    'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD +', 'ASPD +%', 'ASPD Limit +', 'Max HP +', 'Max SP +',
+    'Penetration +', 'Defense Penetration +', 'Base ASPD +', 'Short-Range Damage +', 'Long-Range Damage +'];
   (function fillExtraSuggestions(){
     var dl = document.getElementById('extraSuggestions');
     if (dl) EXTRA_SUGGESTIONS.forEach(function(s){ var o = document.createElement('option'); o.value = s; dl.appendChild(o); });
@@ -3822,6 +3844,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var val = { itemId:item.id, itemName:item.name, manual:false };
     if (m.cardIndex === null){
       slots[m.slotDef.key] = val;
+      if (m.slotDef.key === 'weapon' && isTwoHanded(item)) slots.offhand = null;
     } else {
       var slotVal = slots[m.slotDef.key];
       if (!slotVal) return;
@@ -4029,7 +4052,14 @@ input.invalid{ border-color:var(--danger) !important; }
     if (!v || v.manual || !state.db) return null;
     return itemById(v.itemId);
   }
-  function isTwoHanded(it){ return (it.locs || []).indexOf('Weapon (two-handed)') !== -1; }
+  // Decks take both hands even when the database lists one as one-handed (player, 2026-10-14).
+  var TWO_HANDED_CATS = ['Deck'];
+  function isTwoHanded(it){ return (it.locs || []).indexOf('Weapon (two-handed)') !== -1 || TWO_HANDED_CATS.indexOf(it.cat) !== -1; }
+  function offhandBlocked(slots){
+    var w = slots.weapon;
+    var it = w && !w.manual && itemById(w.itemId);
+    return !!(it && isTwoHanded(it));
+  }
   // Returns { ok:true } or { ok:false, why:'...' } for one weapon requirement.
   function checkNeed(lo, need){
     var w = weaponItem(lo, 'weapon');

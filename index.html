@@ -1004,6 +1004,14 @@ input.invalid{ border-color:var(--danger) !important; }
 .lv-mobs{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .lv-mob{ font:600 11px var(--font-mono); color:var(--fg-dim); background:var(--surface); border:1px solid var(--border-soft); border-radius:6px; padding:2px 7px; }
 .farm-where{ font:600 10.5px var(--font-mono); color:var(--fg-faint); border:1px solid var(--border-soft); border-radius:5px; padding:1px 6px; }
+.vsmob-input{ margin:0 0 8px; padding:6px 9px; font-size:12px; }
+.vsmob-mob{ font-size:12px; color:var(--fg); font-weight:700; margin-bottom:6px; }
+.vsmob-row{ display:grid; grid-template-columns:92px 46px 1fr; gap:6px; align-items:baseline; font-size:12px; padding:3px 0; }
+.vsmob-k{ color:var(--fg-dim); } .vsmob-d{ color:var(--fg-faint); font-size:11.5px; }
+.vsmob-v{ font:700 13px var(--font-mono); } .vsmob-v.ok{ color:var(--stat-item); } .vsmob-v.warn{ color:var(--mid); }
+.vsmob-note{ font-size:11px; color:var(--fg-faint); margin-top:6px; line-height:1.4; }
+.lv-odds{ display:flex; gap:12px; flex-wrap:wrap; font:600 11.5px var(--font-mono); margin:2px 0 4px; }
+.lv-odds .ok{ color:var(--stat-item); } .lv-odds .mid{ color:var(--mid); } .lv-odds .bad{ color:var(--danger); }
 .kill-sec-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--fg-dim); margin:-6px 0 12px; }
 .kill-sec{ width:46px; height:26px; padding:0 4px; text-align:center; border-radius:6px; font:600 12px var(--font-mono); background:var(--surface-2); border:1px solid var(--border); color:var(--fg); -moz-appearance:textfield; }
 .kill-sec::-webkit-outer-spin-button, .kill-sec::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
@@ -1277,6 +1285,7 @@ input.invalid{ border-color:var(--danger) !important; }
         <h2 data-en="Simulator">Simulador</h2>
         <div class="sim-grid" id="simGrid"></div>
         <div class="aspd-box" id="aspdBox"></div>
+        <div class="aspd-box vsmob-box" id="vsMobBox"></div>
       </div>
 
       <div class="sets-box" id="effectsBox"></div>
@@ -1293,6 +1302,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <datalist id="extraSuggestions"></datalist>
+<datalist id="mobNames"></datalist>
 
 <div class="modal-backdrop" id="modalBackdrop" hidden>
   <div class="modal">
@@ -2126,7 +2136,9 @@ input.invalid{ border-color:var(--danger) !important; }
       raw.rows.forEach(function(r){
         var maps = Array.isArray(r[c.maps]) ? r[c.maps] : [], crowd = r[c.crowd] || [], codes = r[c.codes] || [];
         var zone = raw.zones[r[c.zone]] || '';
-        var mob = { id: r[c.id], name: String(r[c.name] || ''), lv: r[c.lv] | 0, exp: r[c.exp] | 0, mvp: !!r[c.mvp], maps: [] };
+        var mob = { id: r[c.id], name: String(r[c.name] || ''), lv: r[c.lv] | 0, exp: r[c.exp] | 0, mvp: !!r[c.mvp], maps: [],
+          hit: r[c.hit] | 0, flee: r[c.flee] | 0, race: (raw.races || [])[r[c.race]] || '', size: (raw.sizes || [])[r[c.size]] || '',
+          element: ((raw.elements || [])[r[c.element]] || '') + (r[c.elv] ? ' ' + r[c.elv] : '') };
         maps.forEach(function(mi, i){
           var name = raw.maps[mi]; if (!name) return;
           var count = (crowd[i] && crowd[i][0]) | 0;
@@ -2137,9 +2149,66 @@ input.invalid{ border-color:var(--danger) !important; }
         });
         byId[mob.id] = mob;
       });
-      state.mobs = { byId: byId, byMap: byMap, mapZone: mapZone, mapCode: mapCode };
+      // Hit rules of this server, as the database publishes them: chance = base + HIT − FLEE,
+      // kept between floor and ceiling (base 0, floor 10, ceiling 100 when this was written).
+      var hr = raw.hitrate || {};
+      var hitRule = { base: typeof hr.base === 'number' ? hr.base : 0, floor: typeof hr.floor === 'number' ? hr.floor : 10, ceiling: typeof hr.ceiling === 'number' ? hr.ceiling : 100 };
+      state.mobs = { byId: byId, byMap: byMap, mapZone: mapZone, mapCode: mapCode, hitRule: hitRule,
+        byName: Object.keys(byId).reduce(function(o, id){ var m = byId[id]; var k = m.name.toLowerCase(); if (!o[k] || (o[k].mvp && !m.mvp)) o[k] = m; return o; }, {}) };
+      fillMobNames();
+      var curLo = activeLoadout(); if (curLo) renderVsMob(curLo);
       if (activeLoadout()) renderFarm(activeLoadout());
     }).catch(function(){ state.mobs = null; });
+  }
+  // Chance (%) that an attacker with `hit` lands on a target with `flee`, by the server's rule.
+  function hitChance(hit, flee){
+    var r = state.mobs.hitRule;
+    return Math.max(r.floor, Math.min(r.ceiling, Math.round(r.base + hit - flee)));
+  }
+  var VS_MOB_KEY = 'rtm-hud-vsmob';
+  function fillMobNames(){
+    var dl = document.getElementById('mobNames');
+    if (!dl || dl.firstChild) return;
+    Object.keys(state.mobs.byName).sort().forEach(function(k){ dl.appendChild(el('option', { value: state.mobs.byName[k].name })); });
+  }
+  // Status panel: your hit chance on one monster and its hit chance on you.
+  function renderVsMob(lo){
+    var box = document.getElementById('vsMobBox');
+    if (!box) return;
+    clear(box);
+    box.appendChild(el('h3', { text:L('Contra um monstro', 'Against a monster') }));
+    var saved = '';
+    try { saved = localStorage.getItem(VS_MOB_KEY) || ''; } catch(e){}
+    var input = el('input', { type:'search', class:'search-input vsmob-input', list:'mobNames', maxlength:'60', value: saved,
+      placeholder:L('Nome do monstro (ex.: Mummy)', 'Monster name (e.g. Mummy)'), 'aria-label':L('Monstro', 'Monster') });
+    input.addEventListener('change', function(){
+      try { localStorage.setItem(VS_MOB_KEY, input.value.trim().slice(0, 60)); } catch(e){}
+      renderVsMob(lo);
+    });
+    box.appendChild(input);
+    if (!state.mobs){ box.appendChild(el('div', { class:'vsmob-note', text:L('Carregando os monstros…', 'Loading monsters…') })); return; }
+    var mob = saved ? state.mobs.byName[saved.toLowerCase()] : null;
+    if (!saved) return;
+    if (!mob){ box.appendChild(el('div', { class:'vsmob-note', text:L('Monstro não encontrado. Escolha um nome da lista.', 'Monster not found. Pick a name from the list.') })); return; }
+    var s = computeStatusSummary(lo), r = state.mobs.hitRule;
+    var mine = hitChance(s.hit, mob.flee), theirs = hitChance(mob.hit, s.flee);
+    var needHit = mob.flee + r.ceiling - r.base, needFlee = mob.hit + r.base - r.floor;
+    box.appendChild(el('div', { class:'vsmob-mob', text: [mob.name, 'Lv ' + mob.lv, mob.race, mob.element, mob.size].filter(Boolean).join(' · ') + (mob.mvp ? ' · MVP' : '') }));
+    function row(label, pct, good, detail){
+      return el('div', { class:'vsmob-row' }, [
+        el('span', { class:'vsmob-k', text: label }),
+        el('span', { class:'vsmob-v ' + (good ? 'ok' : 'warn'), text: pct + '%' }),
+        el('span', { class:'vsmob-d', text: detail })
+      ]);
+    }
+    box.appendChild(row(L('Você acerta', 'You hit'), mine, mine >= r.ceiling,
+      s.hit >= needHit ? L('nunca erra (HIT ', 'never misses (HIT ') + Math.round(s.hit) + ' / ' + needHit + ')'
+                       : L('faltam ', 'needs ') + Math.ceil(needHit - s.hit) + L(' de HIT para nunca errar (', ' more HIT to never miss (') + needHit + ')'));
+    box.appendChild(row(L('Ele te acerta', 'It hits you'), theirs, theirs <= r.floor,
+      s.flee >= needFlee ? L('desvio no máximo; ele sempre acerta ', 'max dodge; it always lands ') + r.floor + '%'
+                         : L('faltam ', 'needs ') + Math.ceil(needFlee - s.flee) + L(' de FLEE para desviar o máximo (', ' more FLEE to dodge the most (') + needFlee + ')'));
+    box.appendChild(el('div', { class:'vsmob-note', text:L('Regras de acerto da base do servidor (ainda não medidas no jogo). Perfect Dodge não entra.',
+      "The server database's hit rules (not measured in game yet). Perfect Dodge is not included.") }));
   }
   // Where a drop source can be farmed: its exact maps when the monster data loaded, else its area.
   function sourcePlaces(s){
@@ -4396,6 +4465,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var sd = activeStageData(lo);
     var s = computeStatusSummary(lo);
     var derived = s.derived, activeSets = s.activeSets;
+    renderVsMob(lo);
 
     function signed(n){ return (n > 0 ? '+' : '') + n; }
     function cell(label, total, key){
@@ -5902,7 +5972,7 @@ input.invalid{ border-color:var(--danger) !important; }
     if (state.mobs){
       Object.keys(state.mobs.byMap).forEach(function(map){
         out[map] = { mobs: state.mobs.byMap[map].filter(function(e){ return !e.mob.mvp && e.mob.lv; })
-          .map(function(e){ return { name: e.mob.name, lv: e.mob.lv, exp: e.mob.exp, count: e.count }; }), items: {} };
+          .map(function(e){ return { name: e.mob.name, lv: e.mob.lv, exp: e.mob.exp, count: e.count, hit: e.mob.hit, flee: e.mob.flee }; }), items: {} };
       });
     }
     state.db.items.forEach(function(it){
@@ -5951,6 +6021,7 @@ input.invalid{ border-color:var(--danger) !important; }
       list.appendChild(el('label', { class:'kill-sec-row' }, [ document.createTextNode(L('Quanto tempo você leva por monstro: ', 'How long you take per monster: ')), secIn, document.createTextNode(L(' segundos', ' seconds')) ]));
     }
     var maps = levelMaps(lo, targets, fd);
+    var me = withExp ? computeStatusSummary(lo) : null;
     if (!maps.length){
       list.appendChild(el('div', { class:'empty-note', text: L('Nenhum mapa com monstros nessa faixa de level.', 'No map with monsters in that level range.') }));
       return;
@@ -5965,6 +6036,17 @@ input.invalid{ border-color:var(--danger) !important; }
       var lo1 = m.near[0].lv, hi1 = m.near[m.near.length - 1].lv;
       head.appendChild(el('span', { class:'farm-lv ' + (hi1 <= level ? 'ok' : 'warn'), text: 'Lv ' + (lo1 === hi1 ? lo1 : lo1 + '–' + hi1) }));
       card.appendChild(head);
+      if (me && m.near.some(function(x){ return x.hit || x.flee; })){
+        // Worst case on this map: the monster you hit least and the one that hits you most.
+        var mine = m.near.map(function(x){ return hitChance(me.hit, x.flee); }), theirs = m.near.map(function(x){ return hitChance(x.hit, me.flee); });
+        var lowMine = Math.min.apply(null, mine), highMine = Math.max.apply(null, mine);
+        var lowTheirs = Math.min.apply(null, theirs), highTheirs = Math.max.apply(null, theirs);
+        var range = function(a, b){ return a === b ? a + '%' : a + '–' + b + '%'; };
+        card.appendChild(el('div', { class:'lv-odds' }, [
+          el('span', { class: lowMine >= 95 ? 'ok' : lowMine >= 75 ? 'mid' : 'bad', text: L('Você acerta ', 'You hit ') + range(lowMine, highMine) }),
+          el('span', { class: highTheirs <= 30 ? 'ok' : highTheirs <= 60 ? 'mid' : 'bad', text: L('Eles te acertam ', 'They hit you ') + range(lowTheirs, highTheirs) })
+        ]));
+      }
       card.appendChild(farmRouteLine(m.zone));
       var mobs = el('div', { class:'lv-mobs' });
       m.near.forEach(function(x){

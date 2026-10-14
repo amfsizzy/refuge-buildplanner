@@ -216,6 +216,11 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   display:flex; gap:6px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft);
 }
 .sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:10px; }
+.side-wide{ display:block; width:100%; margin-bottom:12px; }
+.history-actions{ border-bottom:none; padding-bottom:0; margin-bottom:8px; }
+.history-actions .ghost-btn{ flex:1; }
+.ghost-btn:disabled{ opacity:.4; cursor:default; }
+.ghost-btn:disabled:hover{ border-color:var(--border); color:inherit; }
 #loadoutList{ flex:0 1 auto; max-height:45vh; overflow-y:auto; }
 .new-btn{
   width:100%; background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-sm);
@@ -1039,6 +1044,11 @@ input.invalid{ border-color:var(--danger) !important; }
       <button class="ghost-btn" id="importBtn" type="button" data-en="Import">Importar</button>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
+    <div class="sidebar-actions history-actions">
+      <button class="ghost-btn" id="undoBtn" type="button" title="Desfazer (Ctrl+Z)" data-en="↶ Undo" data-en-title="Undo (Ctrl+Z)" disabled>↶ Desfazer</button>
+      <button class="ghost-btn" id="redoBtn" type="button" title="Refazer (Ctrl+Y)" data-en="↷ Redo" data-en-title="Redo (Ctrl+Y)" disabled>↷ Refazer</button>
+    </div>
+    <button class="ghost-btn side-wide" id="vsBtn" type="button" title="Comparar dois loadouts lado a lado" data-en="⇄ Compare loadouts" data-en-title="Compare two loadouts side by side">⇄ Comparar loadouts</button>
     <h2>Loadouts</h2>
     <div id="loadoutList"></div>
     <section class="lo-summary" id="loSummary" hidden aria-label="Resumo do loadout ativo" data-en-aria-label="Active loadout summary"></section>
@@ -1058,7 +1068,6 @@ input.invalid{ border-color:var(--danger) !important; }
       </div>
       <div class="icon-btn-row">
         <button class="icon-btn" id="shareBtn" type="button" title="Compartilhar" data-en="Share" data-en-title="Share">Compartilhar</button>
-        <button class="icon-btn" id="vsBtn" type="button" title="Comparar com outro loadout" data-en="Compare loadouts" data-en-title="Compare with another loadout">Comparar loadouts</button>
         <button class="icon-btn" id="cardBtn" type="button" title="Gerar uma imagem da build para compartilhar" data-en="Build image" data-en-title="Make an image of the build to share">Imagem da build</button>
         <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
         <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
@@ -1440,7 +1449,52 @@ input.invalid{ border-color:var(--danger) !important; }
           'Could not save in the browser (storage full or blocked). Use Export to keep a backup.'));
         saveWarned = true;
       }
+      trackHistory();
     }, 180);
+  }
+
+  // ---------- undo / redo ----------
+  // Each saved change keeps the state before it (up to 50 steps, in this tab only), so a
+  // cleared slot, a reset skill tree or a deleted loadout can be brought back.
+  var UNDO_MAX = 50, undoStack = [], redoStack = [], lastSnap = null;
+  function snapshot(){ return JSON.stringify({ loadouts: state.loadouts, activeId: state.activeId }); }
+  function trackHistory(){
+    var cur = snapshot();
+    if (lastSnap !== null && cur !== lastSnap){
+      undoStack.push(lastSnap);
+      if (undoStack.length > UNDO_MAX) undoStack.shift();
+      redoStack = [];
+    }
+    lastSnap = cur;
+    syncHistoryButtons();
+  }
+  function restoreSnapshot(snap){
+    var o = JSON.parse(snap);
+    state.loadouts = sanitizeLoadouts(o.loadouts, true);
+    state.activeId = state.loadouts.some(function(l){ return l.id === o.activeId; }) ? o.activeId : (state.loadouts[0] ? state.loadouts[0].id : null);
+    lastSnap = snapshot(); // the restored state is the new baseline, not a new step
+    saveLoadouts();
+    render();
+    syncHistoryButtons();
+  }
+  function undo(){
+    if (!undoStack.length) return;
+    clearTimeout(saveTimer); trackHistory(); // a change still waiting to be saved counts as a step
+    if (!undoStack.length) return;
+    redoStack.push(lastSnap);
+    restoreSnapshot(undoStack.pop());
+    alertInline(L('Desfeito.', 'Undone.'));
+  }
+  function redo(){
+    if (!redoStack.length) return;
+    undoStack.push(lastSnap);
+    restoreSnapshot(redoStack.pop());
+    alertInline(L('Refeito.', 'Redone.'));
+  }
+  function syncHistoryButtons(){
+    var u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
+    if (u) u.disabled = !undoStack.length;
+    if (r) r.disabled = !redoStack.length;
   }
 
   function blankSlots(){
@@ -3558,7 +3612,9 @@ input.invalid{ border-color:var(--danger) !important; }
   // and survival" sections), confirmed 2026-10 against this server — EXCEPT the Codex's claim
   // that INT raises max SP, which the player confirmed is wrong in the live game, so SP/HP
   // (which need unpublished per-class base tables anyway) are intentionally left out.
-  var RANGED_ATK_CATS = ['bow','heavy bow','revolver']; // other weapon types: see the checklist
+  // Weapons that don't need to stand next to the target (confirmed by the player 2026-10-13);
+  // gloves and golf clubs are melee.
+  var RANGED_ATK_CATS = ['bow', 'heavy bow', 'revolver', 'deck', 'whip', 'codex', 'chain', 'huuma shuriken'];
   var DERIVED_LABELS = [
     { key:'hit', pattern:'HIT' }, { key:'flee', pattern:'FLEE' },
     { key:'crit', pattern:'Critical(?: Rate)?' }, { key:'pdodge', pattern:'Perfect Dodge' },
@@ -5483,6 +5539,17 @@ input.invalid{ border-color:var(--danger) !important; }
     renderSummary(lo);
   });
   document.getElementById('vsBtn').addEventListener('click', openVersus);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+  // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields, so typing keeps its own undo.
+  document.addEventListener('keydown', function(e){
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    var k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)){ e.preventDefault(); redo(); }
+  });
   document.getElementById('cardBtn').addEventListener('click', openBuildCard);
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;
@@ -5652,6 +5719,7 @@ input.invalid{ border-color:var(--danger) !important; }
     console.warn('Render failed at boot:', e);
     alertInline(L('Um loadout salvo não pôde ser exibido. Os outros continuam disponíveis.', 'A saved loadout could not be shown. The others are still available.'));
   }
+  lastSnap = snapshot(); // undo starts from what was loaded
   fetchDb();
   fetchPlaces();
   checkPassivesAgainstSite();

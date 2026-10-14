@@ -225,10 +225,11 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
   display:flex; gap:6px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft);
 }
 .sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:10px; }
-.sidebar .side-wide{ display:block; width:100%; flex:0 0 auto; margin:-4px 0 12px; }
-/* Undo/redo sit in the tabs row, right after the tabs. */
-.hist-mini{ display:flex; gap:4px; align-self:center; margin-right:auto; }
-.hist-mini .ghost-btn{ flex:0 0 auto; padding:5px 10px; font-size:14px; line-height:1; }
+.import-row{ border-bottom:none; padding-bottom:0; margin-bottom:10px; }
+.sidebar .side-wide{ display:block; width:100%; flex:0 0 auto; margin:0 0 12px; }
+/* Undo/redo sit in the Equipment and Shadow panel tools. */
+.hist-mini{ display:flex; gap:4px; }
+.hist-mini .ghost-btn{ flex:0 0 auto; padding:6px 11px; font-size:15px; line-height:1; }
 .ghost-btn:disabled{ opacity:.4; cursor:default; }
 .ghost-btn:disabled:hover{ border-color:var(--border); color:inherit; }
 #loadoutList{ flex:0 1 auto; max-height:45vh; overflow-y:auto; }
@@ -514,10 +515,13 @@ input.invalid{ border-color:var(--danger) !important; }
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 .slot-body:focus-visible, .card-slot:focus-visible, .loadout-item:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
 .panel-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.sex-toggle{ display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
-.sex-btn{ background:transparent; border:0; color:var(--fg-dim); padding:6px 10px; font-size:13px; line-height:1; cursor:pointer; }
-.sex-btn + .sex-btn{ border-left:1px solid var(--border); }
-.sex-btn[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
+.head-left{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.sex-switch{ display:inline-flex; align-items:center; gap:8px; font-size:17px; line-height:1; }
+.sex-switch .sx-l{ color:#6aa8ff; } .sex-switch .sx-r{ color:#ff7ac0; }
+.sx-track{ position:relative; width:46px; height:24px; border-radius:999px; border:1px solid var(--border-strong); background:color-mix(in srgb, #6aa8ff 30%, var(--surface)); cursor:pointer; padding:0; transition:background .2s; }
+.sx-track[aria-checked="true"]{ background:color-mix(in srgb, #ff7ac0 30%, var(--surface)); }
+.sx-knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--fg); transition:transform .2s; }
+.sx-track[aria-checked="true"] .sx-knob{ transform:translateX(22px); }
 .suggest-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .suggest-modal{ max-width:560px; }
 .sg-note{ font-size:11.5px; color:var(--mid); line-height:1.5; margin:0; }
@@ -1126,7 +1130,7 @@ input.invalid{ border-color:var(--danger) !important; }
 <div class="layout">
   <aside class="sidebar">
     <button class="new-btn" id="newLoadoutBtn" type="button" data-en="+ New Loadout">+ Novo Loadout</button>
-    <div class="sidebar-actions">
+    <div class="sidebar-actions import-row">
       <button class="ghost-btn" id="importBtn" type="button" data-en="Import">Importar</button>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
@@ -1178,10 +1182,6 @@ input.invalid{ border-color:var(--danger) !important; }
           <button class="tab-btn" data-tab="history" type="button" data-en="History">Histórico</button>
           <button class="tab-btn tab-quiet" data-tab="checklist" type="button">Checklist</button>
         </nav>
-        <div class="hist-mini">
-          <button class="ghost-btn" id="undoBtn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button>
-          <button class="ghost-btn" id="redoBtn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button>
-        </div>
         <div class="stage-bar" id="stageBar" hidden>
           <div class="stage-toggle">
             <button class="stage-btn active" data-stage="early" type="button">Early</button>
@@ -1196,16 +1196,16 @@ input.invalid{ border-color:var(--danger) !important; }
 
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
-          <div class="stat-strip" id="statStrip"></div>
-          <div class="panel-tools"><div class="sex-toggle" role="group" aria-label="Boneco" data-en-aria-label="Character"><button type="button" class="sex-btn" data-sex="m" title="Masculino" aria-label="Masculino" data-en-title="Male" data-en-aria-label="Male">♂</button><button type="button" class="sex-btn" data-sex="f" title="Feminino" aria-label="Feminino" data-en-title="Female" data-en-aria-label="Female">♀</button></div><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="head-left"><div class="sex-switch"><span class="sx-l" aria-hidden="true">♂</span><button type="button" class="sx-track" role="switch" aria-checked="false" aria-label="Boneco feminino" data-en-aria-label="Female character" title="Masculino / feminino" data-en-title="Male / female"><span class="sx-knob"></span></button><span class="sx-r" aria-hidden="true">♀</span></div><div class="stat-strip" id="statStrip"></div></div>
+          <div class="panel-tools"><div class="hist-mini"><button class="ghost-btn undo-btn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button><button class="ghost-btn redo-btn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button></div><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="equipGrid"></div>
       </section>
 
       <section class="tab-panel" id="panel-shadow" hidden>
         <div class="panel-head">
-          <span></span>
-          <div class="panel-tools"><div class="sex-toggle" role="group" aria-label="Boneco" data-en-aria-label="Character"><button type="button" class="sex-btn" data-sex="m" title="Masculino" aria-label="Masculino" data-en-title="Male" data-en-aria-label="Male">♂</button><button type="button" class="sex-btn" data-sex="f" title="Feminino" aria-label="Feminino" data-en-title="Female" data-en-aria-label="Female">♀</button></div><button class="ghost-btn suggest-btn" id="setFillBtn" type="button" disabled data-en="Complete set">Completar conjunto</button><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="sex-switch"><span class="sx-l" aria-hidden="true">♂</span><button type="button" class="sx-track" role="switch" aria-checked="false" aria-label="Boneco feminino" data-en-aria-label="Female character" title="Masculino / feminino" data-en-title="Male / female"><span class="sx-knob"></span></button><span class="sx-r" aria-hidden="true">♀</span></div>
+          <div class="panel-tools"><div class="hist-mini"><button class="ghost-btn undo-btn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button><button class="ghost-btn redo-btn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button></div><button class="ghost-btn suggest-btn" id="setFillBtn" type="button" disabled data-en="Complete set">Completar conjunto</button><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="shadowGrid"></div>
       </section>
@@ -1756,9 +1756,8 @@ input.invalid{ border-color:var(--danger) !important; }
     alertInline(L('Refeito.', 'Redone.'));
   }
   function syncHistoryButtons(){
-    var u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
-    if (u) u.disabled = !undoStack.length;
-    if (r) r.disabled = !redoStack.length;
+    document.querySelectorAll('.undo-btn').forEach(function(b){ b.disabled = !undoStack.length; });
+    document.querySelectorAll('.redo-btn').forEach(function(b){ b.disabled = !redoStack.length; });
   }
 
   function blankSlots(){
@@ -6214,8 +6213,8 @@ input.invalid{ border-color:var(--danger) !important; }
     renderSummary(lo);
   });
   document.getElementById('vsBtn').addEventListener('click', openVersus);
-  document.getElementById('undoBtn').addEventListener('click', undo);
-  document.getElementById('redoBtn').addEventListener('click', redo);
+  document.querySelectorAll('.undo-btn').forEach(function(b){ b.addEventListener('click', undo); });
+  document.querySelectorAll('.redo-btn').forEach(function(b){ b.addEventListener('click', redo); });
   // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields, so typing keeps its own undo.
   document.addEventListener('keydown', function(e){
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -6296,11 +6295,11 @@ input.invalid{ border-color:var(--danger) !important; }
   function charSex(){ try { return localStorage.getItem(SEX_KEY) === 'f' ? 'f' : 'm'; } catch(e){ return 'm'; } }
   function syncSexButtons(){
     var sex = charSex();
-    document.querySelectorAll('.sex-btn').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.sex === sex)); });
+    document.querySelectorAll('.sx-track').forEach(function(b){ b.setAttribute('aria-checked', String(sex === 'f')); });
   }
-  document.querySelectorAll('.sex-btn').forEach(function(b){
+  document.querySelectorAll('.sx-track').forEach(function(b){
     b.addEventListener('click', function(){
-      try { localStorage.setItem(SEX_KEY, b.dataset.sex); } catch(e){}
+      try { localStorage.setItem(SEX_KEY, charSex() === 'f' ? 'm' : 'f'); } catch(e){}
       render();
     });
   });

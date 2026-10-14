@@ -586,7 +586,6 @@ input.invalid{ border-color:var(--danger) !important; }
 .tt-badge.info{ background:rgba(169,92,255,.15); color:var(--accent); }
 .src-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
 .src-row:last-child{ border-bottom:none; }
-.src-row .src-rate{ font-family:var(--font-mono); color:var(--accent); white-space:nowrap; }
 .mvp-tag{ font-size:9.5px; font-weight:700; color:var(--mid); border:1px solid var(--mid); border-radius:999px; padding:0 6px; margin-left:4px; }
 /* drop chance and MVP, easy to spot wherever a source is listed */
 .rate-chips{ display:inline-flex; gap:4px; align-items:center; vertical-align:middle; }
@@ -2033,14 +2032,14 @@ input.invalid{ border-color:var(--danger) !important; }
     var own = it ? itemOwnBonuses(it, refine) : blankBonus();
     var cards = ((val && val.cards) || []).map(function(c){ return c && !c.manual ? itemById(c.itemId) : null; });
     var cardB = blankBonus();
-    cards.forEach(function(ci){ if (ci) addBonus(cardB, itemOwnBonuses(ci, 0)); });
+    cards.forEach(function(ci){ if (ci) addBonus(cardB, itemOwnBonuses(ci, refine)); });
     var extras = val && Array.isArray(val.extras) ? val.extras : [];
     var rollB = extras.length ? parseLines(extras, false) : blankBonus();
     // Effects beyond the simulator's flat stats, kept per source. Stat-like ones ("ATK +5%",
     // "Max HP +3%") are shown in green with the stats; the rest ("DMG vs Earth +3%") in blue.
     var itemFx = splitFx(it ? itemOwnEffects(it, refine) : {});
     var cardFxAll = {};
-    cards.forEach(function(ci){ if (ci) addEffects(cardFxAll, itemOwnEffects(ci, 0)); });
+    cards.forEach(function(ci){ if (ci) addEffects(cardFxAll, itemOwnEffects(ci, refine)); });
     var cardFx = splitFx(cardFxAll);
     var rollFx = splitFx(extras.length ? parseEffects(extras, false) : {});
     var fxOther = {};
@@ -2216,7 +2215,7 @@ input.invalid{ border-color:var(--danger) !important; }
     else if (c) pip.appendChild(el('span', { text:'?' }));
     pip.addEventListener('click', function(ev){ ev.stopPropagation(); hideTip(); openModal(group, def, ci); });
     pip.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
-    if (cardIt) attachTip(pip, cardIt, function(){ return 0; });
+    if (cardIt) attachTip(pip, cardIt, function(){ return val.refine || 0; });
     return pip;
   }
 
@@ -2391,9 +2390,9 @@ input.invalid{ border-color:var(--danger) !important; }
         }
         var t = el('div', {}, [ el('div', { text:c.itemName }) ]);
         if (ci){
-          var cfx = splitFx(itemOwnEffects(ci, 0));
+          var cfx = splitFx(itemOwnEffects(ci, val.refine || 0));
           var cl = el('div', { class:'sc-lines' });
-          statLines(itemOwnBonuses(ci, 0), cfx.stat).forEach(function(x){ cl.appendChild(el('span', { class:'c-card', text:x })); });
+          statLines(itemOwnBonuses(ci, val.refine || 0), cfx.stat).forEach(function(x){ cl.appendChild(el('span', { class:'c-card', text:x })); });
           effectLines(cfx.other).forEach(function(x){ cl.appendChild(el('span', { class:'c-fx', text:x })); });
           lockedLines(ci).forEach(function(x){ cl.appendChild(el('span', { class:'c-locked', title:L('Ainda não ativo no level desta fase', 'Not active yet at this stage\'s level'), text:x })); });
           if (cl.childNodes.length) t.appendChild(cl);
@@ -3385,7 +3384,8 @@ input.invalid{ border-color:var(--danger) !important; }
       (val.cards || []).forEach(function(c){
         if (!c || c.manual) return;
         var ci = itemById(c.itemId);
-        if (ci) fn(ci, 0, val, true);
+        // A card's "per refine" bonus follows the refine of the equipment it sits in (confirmed in game).
+        if (ci) fn(ci, val.refine || 0, val, true);
       });
     });
   }
@@ -4221,7 +4221,10 @@ input.invalid{ border-color:var(--danger) !important; }
     box.appendChild(el('div', { class:'empty-note', text:L('Coloque o nível de cada passiva que o personagem tem nesta fase. Só entram as que dão bônus fixo que o simulador calcula (ATK, HIT, FLEE, atributos…); HP, SP, % de ASPD e dano de skill ficam de fora. Todas as passivas do site foram conferidas em 05/10/2026.', 'Enter the level of each passive the character has in this stage. Only flat bonuses the simulator computes count (ATK, HIT, FLEE, stats…); HP, SP, ASPD % and skill damage are left out. Every passive on the site was checked on 2026-10-05.') }));
     if (passiveCheck === null) box.appendChild(el('div', { class:'skill-warn', text:L('Conferindo as descrições com o site…', 'Checking descriptions against the site…') }));
     var cls = lo.charClass || '';
-    var mine = PASSIVES.filter(function(p){ return cls && p.cls.indexOf(cls) !== -1; });
+    // The character's passives are those of every class in its line (Night Raven also has the
+    // Thief's and Assassin's), not just the last one; other classes' stay folded away.
+    var line = classLine(cls);
+    var mine = PASSIVES.filter(function(p){ return p.cls.some(function(c){ return line.indexOf(c) !== -1; }); });
     var others = PASSIVES.filter(function(p){ return mine.indexOf(p) === -1; });
     function row(p){
       var ev = evalPassive(lo, p);
@@ -4262,13 +4265,13 @@ input.invalid{ border-color:var(--danger) !important; }
       mine.forEach(function(p){ box.appendChild(row(p)); });
     } else {
       box.appendChild(el('div', { class:'empty-note', text: cls
-        ? L('A classe ' + cls + ' não tem passiva própria que mexa nesses números. Passivas herdadas (ex.: Improve Dodge do Thief) estão abaixo.', cls + ' has no passive of its own that changes these numbers. Inherited passives (e.g. Thief\'s Improve Dodge) are below.')
+        ? L('Nenhuma classe da linha de ' + cls + ' tem passiva que mexa nesses números.', 'No class in the ' + cls + ' line has a passive that changes these numbers.')
         : L('Escolha a classe do loadout para ver as passivas dela primeiro.', "Choose the loadout's class to see its passives first.") }));
     }
     var det = el('details', { class:'skill-others' });
     var anyOtherLv = others.some(function(p){ return skillLevel(lo, p) > 0; });
-    if (anyOtherLv || !mine.length) det.open = true;
-    det.appendChild(el('summary', { text:L('Passivas de outras classes (' + others.length + ') — use as que o personagem herdou', 'Passives from other classes (' + others.length + ') — use the ones the character inherited') }));
+    if (anyOtherLv || !cls) det.open = true;
+    det.appendChild(el('summary', { text:L('Passivas de outras classes (' + others.length + ')', 'Passives from other classes (' + others.length + ')') }));
     others.forEach(function(p){ det.appendChild(row(p)); });
     box.appendChild(det);
   }
@@ -4381,10 +4384,8 @@ input.invalid{ border-color:var(--danger) !important; }
     if (it.sources.length){
       it.sources.forEach(function(s){
         var row = el('div', { class:'src-row' });
-        var left = el('span', { text: sourceText(s) });
-        if (s.mvp) left.appendChild(el('span', { class:'mvp-tag', text:'MVP' }));
-        row.appendChild(left);
-        row.appendChild(el('span', { class:'src-rate', text: s.rate + '%' }));
+        row.appendChild(el('span', { text: sourceText(s) }));
+        row.appendChild(rateChip(s));
         srcSec.appendChild(row);
       });
     }
@@ -4541,11 +4542,6 @@ input.invalid{ border-color:var(--danger) !important; }
     return wrap;
   }
 
-  function bestSourceText(it){
-    if (!it || !it.sources.length) return '';
-    var s = it.sources[0];
-    return s.mob + ' · ' + s.zone + ' · ' + s.rate + '%' + (s.mvp ? ' · MVP' : '');
-  }
   // Where something drops, drop chance first: "Sarah Irine · Sky Garden Okolnir [25%]", MVP in
   // yellow, up to `max` sources (best chance first).
   function rateChip(s){

@@ -1861,6 +1861,9 @@ input.invalid{ border-color:var(--danger) !important; }
   var RE_SET_HEADER = /^(.+?\bSet):$/i;
   var RE_PIECE_BONUS = /^Piece Bonus:$/i;
   var RE_BASE_LEVEL = /^base level\s+(\d+)\s+or higher:$/i;
+  // Refine condition and bonus on one line: "Refine 9+: INT +5", "Refine +9 or higher: STR +5",
+  // "+4 refine: Total DEF +5%." — counted like the header form once the refine reaches N.
+  var RE_REFINE_LINE = /^(?:refine\s+\+?(\d+)\+?(?:\s+or\s+higher)?|\+(\d+)\s+refine)\s*:\s*(\S.*)$/i;
   var RE_INLINE_REFINE = /\bper\s+(?:(\d+)\s+)?refines?\b\.?/i;
 
   function blankBonus(){
@@ -1873,14 +1876,27 @@ input.invalid{ border-color:var(--danger) !important; }
     var m = (mult === undefined) ? 1 : mult;
     for (var k in from) into[k] += from[k] * m;
   }
+  // A colon inside a line ("Refine 9: All Stats +3", "Effect: STR +3") is a condition or another
+  // mechanic, not a fixed bonus, so those lines are skipped; only a closed list of labels is
+  // known to be plain always-on bonuses. "Special" / "Added" (a patch note) just prefix the
+  // bonus; the others take a signed value ("Total DEF: +15%"). "HP Bonus" / "SP Bonus" are
+  // rewritten to Max HP / Max SP before parsing (see the item loader).
+  var RE_BONUS_LABEL = /^(?:(Special|Added)|(Total DEF|Fixed Cast Time|Range|Splash Range|SP Consumption))\s*:\s*(.*)$/i;
+  function unlabel(line){
+    var m = RE_BONUS_LABEL.exec(line);
+    if (!m) return /:/.test(line) ? null : line;
+    if (m[1]) return /:/.test(m[3]) ? null : m[3];
+    if (!/^[+\-]\s?\d[^:]*$/.test(m[3])) return null;
+    return m[2] + ' ' + (/^\d/.test(m[3]) ? '+' : '') + m[3];
+  }
   // Conservative: lines with "per" (scaling on something we can't know) or "or" (a choice)
   // are never summed; refine-scaled lines strip their own "per refine" phrase first.
   function parseLines(lines, isRefineScaled){
     var out = blankBonus();
     lines.forEach(function(l){
       var line = isRefineScaled ? l.replace(RE_INLINE_REFINE, '') : l;
-      // A colon inside the line ("Refine 9: All Stats +3") is a condition, not a fixed bonus.
-      if (/\bper\b/i.test(line) || /\bor\b/i.test(line) || /:/.test(line)) return;
+      line = unlabel(line);
+      if (line === null || /\bper\b/i.test(line) || /\bor\b/i.test(line)) return;
       var all = /All Stats\s*([+\-])\s*(\d+)/i.exec(line);
       if (all) STAT_KEYS.forEach(function(s){ out[s.key] += (all[1] === '-' ? -1 : 1) * (parseInt(all[2], 10) || 0); });
       STAT_KEYS.forEach(function(s){ out[s.key] += parseStatBonus(line, s.label); });
@@ -1900,7 +1916,8 @@ input.invalid{ border-color:var(--danger) !important; }
     var out = {};
     lines.forEach(function(l){
       var line = isRefineScaled ? l.replace(RE_INLINE_REFINE, '') : l;
-      if (/\bper\b/i.test(line) || /\bor\b/i.test(line) || /:/.test(line) || /\/\s*upgrade/i.test(line)) return;
+      line = unlabel(line);
+      if (line === null || /\bper\b/i.test(line) || /\bor\b/i.test(line) || /\/\s*upgrade/i.test(line)) return;
       EFFECT_RE.lastIndex = 0;
       var m;
       while ((m = EFFECT_RE.exec(line))){
@@ -1972,11 +1989,14 @@ input.invalid{ border-color:var(--danger) !important; }
     var lines = joinContinuations((desc || '').split('\n'));
     var blocks = [];
     var cur = null;
-    var pendingSetName = null, awaitingSetName = false;
+    var pendingSetName = null, awaitingSetName = false, lastInline = null;
     function open(b){ b.lines = []; blocks.push(b); cur = b; }
     open({ kind:'base' });
     for (var i = 0; i < lines.length; i++){
       var l = lines[i].trim(), m;
+      // "Refine 6+: Magic Defense" / "Penetration +5": a wrapped bonus stays with its condition.
+      var wrapOf = lastInline; lastInline = null;
+      if (wrapOf && l && !/\d/.test(wrapOf.lines[wrapOf.lines.length - 1]) && !/:$/.test(l)){ wrapOf.lines[wrapOf.lines.length - 1] += ' ' + l; lastInline = wrapOf; continue; }
       if (!l){
         if (cur.kind !== 'base' || cur.header) open({ kind:'base' });
         pendingSetName = null; awaitingSetName = false;
@@ -1984,6 +2004,11 @@ input.invalid{ border-color:var(--danger) !important; }
       }
       if (awaitingSetName){ cur.setName = l; cur.pieces = l; awaitingSetName = false; continue; }
       if (RE_PIECE_BONUS.test(l) || /^(?:Innate\s*|Core):$/i.test(l)){ open({ kind:'base', header:l }); continue; }
+      if (cur.kind !== 'set' && !RE_SET_REFINE.test(l) && (m = RE_REFINE_LINE.exec(l))){
+        lastInline = { kind:'refineAt', min: parseInt(m[1] || m[2], 10), inline:true, lines:[m[3]] };
+        blocks.push(lastInline);
+        continue;
+      }
       if (RE_SET_REFINE.test(l) || (cur.kind === 'set' && (RE_PER_REFINE.test(l) || RE_IF_REFINE.test(l) || RE_REFINE_OR_HIGHER.test(l)))){
         var sb = { kind:'setRefine', header:l, setName: cur.setName || null, mode:null };
         if ((m = RE_SET_REFINE_AT.exec(l))){ sb.mode = 'at'; sb.min = parseInt(m[1], 10); }
@@ -2062,10 +2087,11 @@ input.invalid{ border-color:var(--danger) !important; }
       var desc = String(r[idx.desc] || '').split('\n').slice(0, 200).map(function(l){ return l.slice(0, 500); }).join('\n');
       // Each item's fixed bonuses are written "Perfect Dodge: 020" / "Critical Damage Bonus: 25%";
       // read them as "Perfect Dodge +20" (Asprika's 020 added 20 Perfect Dodge in game, 2026-10-14).
-      // "Aggressive Orphan Set" / "Bonus:" is one header split in two; "HP Bonus: +10%" is Max HP +10%.
-      var parseable = desc.replace(/^([A-Za-z][A-Za-z .]*[A-Za-z]):[ \t]*0*(\d+)(%?)[ \t]*$/gm, '$1 +$2$3')
-        .replace(/^(.+? Set)[ \t]*\n[ \t]*Bonus:[ \t]*$/gm, '$1 Bonus:')
-        .replace(/^(HP|SP) Bonus:[ \t]*([+\-]\d+%?)[ \t]*$/gm, 'Max $1 $2');
+      // "Aggressive Orphan Set" / "Bonus:" is one header split in two; "HP Bonus: +50" / "20%" is Max HP
+      // +50 / +20% (same for SP), the text the simulator already reads from "Max HP +20%".
+      var parseable = desc.replace(/^(HP|SP) Bonus:[ \t]*\+?(\d+%?)[ \t]*$/gm, 'Max $1 +$2')
+        .replace(/^([A-Za-z][A-Za-z .]*[A-Za-z]):[ \t]*0*(\d+)(%?)[ \t]*$/gm, '$1 +$2$3')
+        .replace(/^(.+? Set)[ \t]*\n[ \t]*Bonus:[ \t]*$/gm, '$1 Bonus:');
       var blocks = parseTooltip(parseable);
       var sources = (Array.isArray(r[idx.src]) ? r[idx.src] : []).map(function(s){
         return { mobId: s[0], mob: mobNames[s[1]] || ('#' + s[0]), mobLv: s[2], zone: zoneNames[s[3]] || '—', rate: s[4], mvp: !!s[5] };

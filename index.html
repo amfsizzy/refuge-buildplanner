@@ -314,6 +314,7 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .menu{ position:absolute; right:0; top:calc(100% + 6px); z-index:60; min-width:230px; display:flex; flex-direction:column; padding:5px;
   background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 16px 40px -12px rgba(0,0,0,.6); }
 .menu button{ text-align:left; background:transparent; border:0; color:var(--fg); font-size:13px; padding:8px 10px; border-radius:7px; cursor:pointer; }
+.menu-hint{ display:block; font-size:11px; color:var(--fg-faint); margin-top:2px; }
 .menu button:hover, .menu button:focus-visible{ background:var(--surface-3); color:var(--accent-strong); outline:none; }
 .sidebar-actions .ghost-btn{ flex:1; }
 .share-icon{ display:grid; place-items:center; padding:6px 10px; }
@@ -1160,7 +1161,7 @@ input.invalid{ border-color:var(--danger) !important; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
           </button>
           <div class="menu" id="shareMenu" role="menu" hidden>
-            <button type="button" role="menuitem" data-act="link" data-en="Copy link for Discord">Copiar link para o Discord</button>
+            <button type="button" role="menuitem" data-act="link"><span data-en="Copy link for Discord">Copiar link para o Discord</span><small class="menu-hint" data-en="In Discord only the build name shows, clickable">No Discord aparece só o nome da build, clicável</small></button>
             <button type="button" role="menuitem" data-act="image" data-en="Build image">Imagem da build</button>
             <button type="button" role="menuitem" data-act="code" data-en="Share code">Código de compartilhamento</button>
             <button type="button" role="menuitem" data-act="export" data-en="Export backup (.json)">Exportar backup (.json)</button>
@@ -1458,6 +1459,8 @@ input.invalid{ border-color:var(--danger) !important; }
       var id = Number(v.itemId);
       if (!isFinite(id) || id < 0 || id > 1e8) return null;
       o.itemId = Math.floor(id);
+      // Short share codes (RTM2) leave the name out; the item database has it.
+      if (!o.itemName){ var known = itemById(o.itemId); if (known) o.itemName = known.name; }
     }
     return o;
   }
@@ -2202,6 +2205,7 @@ input.invalid{ border-color:var(--danger) !important; }
       statusEl.textContent = state.db.items.length.toLocaleString(L('pt-BR', 'en-US')) + L(' itens carregados da base de itens pública.', ' items loaded from the public item database.');
       statusEl.classList.remove('err');
       populateClassOptions();
+      fillMissingNames();
       render();
     }).catch(function(err){
       var cached = tryCache(), db = null;
@@ -2211,6 +2215,7 @@ input.invalid{ border-color:var(--danger) !important; }
         statusEl.textContent = L('Offline: usando cópia salva da base de itens (pode estar desatualizada).', 'Offline: using a saved copy of the item database (may be out of date).');
         statusEl.classList.remove('err');
         populateClassOptions();
+        fillMissingNames();
         render();
       } else {
         state.dbError = true;
@@ -5922,7 +5927,38 @@ input.invalid{ border-color:var(--danger) !important; }
     });
   }
 
+  // A build opened from a short code before the item database loaded has empty item names.
+  function fillMissingNames(){
+    var changed = false;
+    function fix(v){ if (v && !v.manual && !v.itemName){ var it = itemById(v.itemId); if (it){ v.itemName = it.name; changed = true; } } }
+    state.loadouts.forEach(function(lo){
+      STAGE_KEYS.forEach(function(k){
+        var sl = lo.stages[k] && lo.stages[k].slots; if (!sl) return;
+        Object.keys(sl).forEach(function(key){ var v = sl[key]; fix(v); if (v && v.cards) v.cards.forEach(fix); });
+      });
+    });
+    if (changed) saveLoadouts();
+  }
+
   // ---------- share codes (single loadout, gzip+base64 when supported) ----------
+  // RTM2 (short): empty fields, item names (the database has them), ids and dates are left
+  // out, then deflate + URL-safe base64, so a link has no %-escapes. Array slots (cards) keep
+  // their places. RTM1/RTM0 codes still open.
+  function packForCode(v, top){
+    if (Array.isArray(v)) return v.map(function(x){ var p = packForCode(x); return p === undefined ? null : p; });
+    if (!isObj(v)) return (v === null || v === false || v === '') ? undefined : v;
+    var out = {}, any = false;
+    Object.keys(v).forEach(function(k){
+      if (top && (k === 'id' || k === 'updatedAt')) return;
+      if (k === 'itemName' && v.manual !== true) return;
+      var p = packForCode(v[k]);
+      if (p === undefined || (isObj(p) && !Object.keys(p).length) || (Array.isArray(p) && !p.length)) return;
+      out[k] = p; any = true;
+    });
+    return any ? out : {};
+  }
+  function toBase64Url(bytes){ return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function fromBase64Url(t){ t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return base64ToBytes(t); }
   function bytesToBase64(bytes){
     var bin = '';
     var chunk = 0x8000;
@@ -5940,6 +5976,13 @@ input.invalid{ border-color:var(--danger) !important; }
   function encodeLoadoutCode(lo){
     var json = JSON.stringify(lo);
     if (window.CompressionStream){
+      try {
+        var cs2 = new CompressionStream('deflate-raw');
+        var w2 = cs2.writable.getWriter();
+        w2.write(new TextEncoder().encode(JSON.stringify(packForCode(lo, true))));
+        w2.close();
+        return new Response(cs2.readable).arrayBuffer().then(function(buf){ return 'RTM2.' + toBase64Url(new Uint8Array(buf)); });
+      } catch(e){ /* older browser without deflate-raw: the gzip code below */ }
       var cs = new CompressionStream('gzip');
       var writer = cs.writable.getWriter();
       writer.write(new TextEncoder().encode(json));
@@ -5952,8 +5995,8 @@ input.invalid{ border-color:var(--danger) !important; }
   }
   // Reads a gzip stream but gives up past LIMITS.decodedBytes, so a tiny "bomb" code that
   // inflates to gigabytes can't freeze the tab.
-  function inflateCapped(bytes){
-    var ds = new DecompressionStream('gzip');
+  function inflateCapped(bytes, format){
+    var ds = new DecompressionStream(format || 'gzip');
     var writer = ds.writable.getWriter();
     writer.write(bytes).catch(function(){});
     writer.close().catch(function(){});
@@ -5979,6 +6022,14 @@ input.invalid{ border-color:var(--danger) !important; }
   function decodeLoadoutCode(code){
     code = (code||'').trim();
     if (code.length > LIMITS.codeChars) return Promise.reject(new Error(L('Código grande demais.', 'Code is too large.')));
+    if (code.indexOf('RTM2.') === 0){
+      var bytes2, bad = L('Código corrompido ou incompleto.', 'Corrupted or incomplete code.'), big = L('Código grande demais.', 'Code is too large.');
+      if (!window.DecompressionStream) return Promise.reject(new Error(L('Este navegador é antigo demais para abrir este código.', 'This browser is too old to open this code.')));
+      try { bytes2 = fromBase64Url(code.slice(5)); } catch(e){ return Promise.reject(new Error(bad)); }
+      return inflateCapped(bytes2, 'deflate-raw').then(function(buf){
+        return JSON.parse(new TextDecoder().decode(buf));
+      }).catch(function(err){ throw new Error(err && err.message === big ? big : bad); });
+    }
     if (code.indexOf('RTM1:') === 0){
       if (!window.DecompressionStream){
         return Promise.reject(new Error(L('Este navegador não suporta descompressão (RTM1). Tente um navegador mais recente, ou peça um código RTM0.', "This browser can't decompress (RTM1). Try a newer browser, or ask for an RTM0 code.")));

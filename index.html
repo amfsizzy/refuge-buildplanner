@@ -1036,12 +1036,11 @@ input.invalid{ border-color:var(--danger) !important; }
 .vs-vs{ font:800 14px var(--font-display); color:var(--accent-strong); letter-spacing:.08em; }
 .vs-sec{ margin:14px 0 6px; font-size:13px; color:var(--fg-dim); }
 .vs-note{ font-size:11.5px; color:var(--fg-faint); line-height:1.5; margin-bottom:8px; max-width:80ch; }
-.vs-swaps{ display:flex; flex-direction:column; gap:6px; }
-.vs-swap{ display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border-soft); border-left:3px solid var(--border); border-radius:8px; }
-.vs-swap.up{ border-left-color:var(--stat-item); } .vs-swap.down{ border-left-color:var(--danger); }
-.vs-swap .vs-item{ flex:1; min-width:0; }
-.vs-delta{ font-size:11.5px; margin-top:2px; } .vs-delta.up{ color:var(--stat-item); } .vs-delta.down{ color:var(--danger); } .vs-delta.same{ color:var(--fg-faint); }
-.vs-take{ flex:0 0 auto; }
+.vs-cellrow{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; }
+.vs-swapbox{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+.vs-delta{ font-size:11.5px; font-family:var(--font-mono); } .vs-delta.up{ color:var(--stat-item); } .vs-delta.down{ color:var(--danger); } .vs-delta.same{ color:var(--fg-faint); }
+.vs-delta.best{ font-weight:700; }
+.vs-take{ flex:0 0 auto; padding:4px 9px; }
 .vs-scroll{ overflow-x:auto; }
 .vs-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:520px; }
 .vs-table th{ text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-faint); padding:6px 8px; border-bottom:1px solid var(--border); }
@@ -4821,19 +4820,27 @@ input.invalid{ border-color:var(--danger) !important; }
     var gh = el('tr', {}, [ el('th', { text:L('Slot', 'Slot') }), el('th', { text:'A' }), el('th', { text:'B' }) ]);
     gear.appendChild(el('thead', {}, [gh]));
     var gb = el('tbody'), diffs = 0;
+    // Swap suggestions sit in the B column of each row that differs; the 3 best get a star.
+    var swaps = versusSwaps(A, vs.a.stage, B, vs.b.stage), swapByKey = {};
+    swaps.list.forEach(function(r){ swapByKey[r.def.key] = r; });
+    var bestKeys = swaps.list.filter(function(r){ return r.gain > 0.01; }).slice(0, 3).map(function(r){ return r.def.key; });
     [[L('Equipamento', 'Equipment'), EQUIP_SLOTS], ['Shadow', SHADOW_SLOTS]].forEach(function(g){
       gb.appendChild(el('tr', { class:'group' }, [ el('td', { colspan:'3', text: g[0] }) ]));
       g[1].forEach(function(d){
         var va = da.slots[d.key], vb = db.slots[d.key];
         var same = versusSlotKey(va) === versusSlotKey(vb);
         if (!same) diffs++;
-        gb.appendChild(el('tr', { class: same ? '' : 'diff' }, [ el('td', { class:'vs-slot', text: d.label }), versusSlotCell(va), versusSlotCell(vb) ]));
+        var cellB = versusSlotCell(vb);
+        if (swapByKey[d.key]) cellB = withSwap(cellB, swapByKey[d.key], bestKeys.indexOf(d.key) !== -1);
+        gb.appendChild(el('tr', { class: same ? '' : 'diff' }, [ el('td', { class:'vs-slot', text: d.label }), versusSlotCell(va), cellB ]));
       });
     });
     gear.appendChild(gb);
     panel.appendChild(el('h3', { class:'vs-sec', text:L('Equipamento', 'Gear') + ' · ' + diffs + L(' slot(s) diferente(s)', ' slot(s) differ') }));
     panel.appendChild(el('div', { class:'vs-scroll' }, [gear]));
-    versusSwapSection(panel, A, B);
+    if (swaps.list.length) panel.appendChild(el('div', { class:'vs-note', text:
+      L('▲/▼ ao lado de cada peça de B = o que muda em A se trouxer só ela (com refino, cartas e opções), pelo perfil "', '▲/▼ next to each piece of B = what changes in A if you bring just that piece (with refine, cards and rolls), by the "')
+      + SUGGEST_PROFILES[swaps.profile].label + L('" de A, sem ASPD. ★ = as 3 trocas que mais somam. Só atributos somáveis; peça de conjunto sozinha não ativa o bônus do conjunto.', '" profile of A, no ASPD. ★ = the 3 swaps that add the most. Summable stats only; a set piece alone does not turn on the set bonus.') }));
 
     // Numbers, B against A
     var st = el('table', { class:'vs-table vs-stats' });
@@ -4948,44 +4955,31 @@ input.invalid{ border-color:var(--danger) !important; }
     out.sort(function(a, b){ return b.gain - a.gain; });
     return { profile: profile, list: out };
   }
-  function versusSwapSection(panel, A, B){
-    var res = versusSwaps(A, vs.a.stage, B, vs.b.stage);
-    panel.appendChild(el('h3', { class:'vs-sec', text:L('Trocas sugeridas para A (peças de B)', 'Suggested swaps for A (pieces from B)') }));
-    if (!res.list.length){
-      panel.appendChild(el('div', { class:'vs-note', text:L('B não tem nenhuma peça diferente para trazer.', 'B has no different piece to bring over.') }));
-      return;
-    }
-    panel.appendChild(el('div', { class:'vs-note', text:L('Cada peça de B testada sozinha em A, com refino, cartas e opções. Ordem pelo perfil "', 'Each piece of B tried alone in A, with refine, cards and rolls. Ordered by the "')
-      + SUGGEST_PROFILES[res.profile].label + L('" de A (sem ASPD). Só atributos somáveis; efeitos especiais não entram. Peça de conjunto sozinha não ativa o bônus do conjunto.', '" profile of A (no ASPD). Summable stats only; special effects are not counted. A set piece alone does not turn on the set bonus.') }));
-    var box = el('div', { class:'vs-swaps' });
-    res.list.forEach(function(r){
-      var it = itemById(r.val.itemId);
-      var lines = BONUS_ORDER.filter(function(k){ return r.delta[k]; }).map(function(k){
-        return DOLL_LABEL[k] + ' ' + (r.delta[k] > 0 ? '+' : '') + r.delta[k] + (k === 'aspdPct' ? '%' : '');
-      });
-      var tag = r.gain > 0.01 ? 'up' : r.gain < -0.01 ? 'down' : 'same';
-      var btn = el('button', { type:'button', class:'ghost-btn vs-take', text:L('Trazer para A', 'Bring to A') });
-      btn.addEventListener('click', function(){
-        var lo = loadoutById(vs.a.id); if (!lo) return;
-        var slots = Object.assign({}, lo.stages[vs.a.stage].slots);
-        slots[r.def.key] = JSON.parse(JSON.stringify(r.val));
-        lo.stages[vs.a.stage].slots = fixTwoHanded(slots);
-        saveLoadouts();
-        render();
-        renderVersus();
-      });
-      box.appendChild(el('div', { class:'vs-swap ' + tag }, [
-        it ? spriteEl(ICON(it.id)) : el('span'),
-        el('div', { class:'vs-item' }, [
-          el('div', { class:'vs-sub', text: r.def.label }),
-          el('div', { class:'vs-name', text: (r.val.refine ? '+' + r.val.refine + ' ' : '') + r.val.itemName }),
-          el('div', { class:'vs-delta ' + tag, text: (tag === 'up' ? L('Melhora: ', 'Better: ') : tag === 'down' ? L('Piora: ', 'Worse: ') : L('Igual: ', 'Even: '))
-            + (lines.join(' · ') || L('sem diferença somável', 'no summable difference')) })
-        ]),
-        btn
-      ]));
+  // B's cell with the swap next to the item: the biggest changes (all of them on hover) and "← A".
+  function withSwap(td, r, best){
+    var tag = r.gain > 0.01 ? 'up' : r.gain < -0.01 ? 'down' : 'same';
+    var keys = BONUS_ORDER.filter(function(k){ return r.delta[k]; });
+    var fmt = function(k){ return DOLL_LABEL[k] + ' ' + (r.delta[k] > 0 ? '+' : '') + r.delta[k] + (k === 'aspdPct' ? '%' : ''); };
+    var top = keys.slice().sort(function(a, b){ return Math.abs(r.delta[b]) - Math.abs(r.delta[a]); }).slice(0, 4);
+    var text = (best ? '★ ' : '') + (tag === 'up' ? '▲ ' : tag === 'down' ? '▼ ' : '= ')
+      + (top.map(fmt).join(' · ') || L('sem diferença somável', 'no summable difference')) + (keys.length > top.length ? ' …' : '');
+    var btn = el('button', { type:'button', class:'ghost-btn vs-take', text:'← A', title:L('Trazer esta peça para A', 'Bring this piece to A'),
+      'aria-label':L('Trazer ', 'Bring ') + r.val.itemName + L(' para A', ' to A') });
+    btn.addEventListener('click', function(){
+      var lo = loadoutById(vs.a.id); if (!lo) return;
+      var slots = Object.assign({}, lo.stages[vs.a.stage].slots);
+      slots[r.def.key] = JSON.parse(JSON.stringify(r.val));
+      lo.stages[vs.a.stage].slots = fixTwoHanded(slots);
+      saveLoadouts();
+      render();
+      renderVersus();
     });
-    panel.appendChild(box);
+    var row = el('div', { class:'vs-cellrow' });
+    while (td.firstChild) row.appendChild(td.firstChild);
+    row.appendChild(el('div', { class:'vs-swapbox' }, [
+      el('span', { class:'vs-delta ' + tag + (best ? ' best' : ''), text: text, title: keys.map(fmt).join(' · ') }), btn ]));
+    td.appendChild(row);
+    return td;
   }
   document.addEventListener('keydown', function(e){ if (vs && e.key === 'Escape'){ e.preventDefault(); closeVersus(); } });
 

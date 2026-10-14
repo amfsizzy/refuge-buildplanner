@@ -2918,11 +2918,6 @@ input.invalid{ border-color:var(--danger) !important; }
     var fx = fxOther;
     var body = el('div', { class:'sc-body' });
     var setList = Object.keys(activeSets);
-    body.appendChild(el('div', {}, [
-      el('div', { class:'sc-title', text: group === 'shadow' ? 'Shadow' : L('Equipamento', 'Equipment') }),
-      el('div', { class:'sc-sub', text: count + L(' de ', ' of ') + defs.length + L(' slots · ', ' slots · ') + setList.length + L(' conjunto(s) ativo(s)', ' active set(s)') })
-    ]));
-    body.appendChild(el('div', { class:'sc-hint', text:L('Total de itens, cartas, rolls e conjuntos completos. Clique numa peça para ver o detalhe.', 'Total of items, cards, rolls and complete sets. Click a piece to see the detail.') }));
     var fxl = effectLines(fx);
     if (fxl.length){
       var fs = el('div', { class:'sc-sec' }, [ el('h4', { text:L('Outros efeitos', 'Other effects') }) ]);
@@ -2938,6 +2933,11 @@ input.invalid{ border-color:var(--danger) !important; }
       s.appendChild(sw);
       body.appendChild(s);
     }
+    body.appendChild(el('div', {}, [
+      el('div', { class:'sc-title', text: group === 'shadow' ? 'Shadow' : L('Equipamento', 'Equipment') }),
+      el('div', { class:'sc-sub', text: count + L(' de ', ' of ') + defs.length + L(' slots · ', ' slots · ') + setList.length + L(' conjunto(s) ativo(s)', ' active set(s)') })
+    ]));
+    body.appendChild(el('div', { class:'sc-hint', text:L('Total de itens, cartas, rolls e conjuntos completos. Clique numa peça para ver o detalhe.', 'Total of items, cards, rolls and complete sets. Click a piece to see the detail.') }));
     body.appendChild(el('div', { class:'sc-hint', text: TOUCH
       ? L('Toque num item para ver a arte e os detalhes aqui.', 'Tap an item to see its art and details here.')
       : L('Passe o mouse para ler a descrição. Clique num item para ver a arte e os detalhes aqui. Botão direito tira a peça.', 'Hover to read the description. Click an item to see its art and details here. Right-click takes the piece off.') }));

@@ -238,7 +238,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .badge.mid{ color:var(--mid); border-color:var(--mid); }
 .badge.late{ color:var(--late); border-color:var(--late); }
 .badge.custom{ color:var(--fg-dim); }
-.sidebar-footer{ border-top:1px solid var(--border-soft); margin-top:8px; padding-top:10px; display:flex; gap:6px; }
 .ghost-btn{
   flex:1; background:transparent; border:1px solid var(--border); color:var(--fg-dim);
   border-radius:6px; padding:7px 6px; font-size:11.5px;
@@ -332,28 +331,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .stat{ display:flex; flex-direction:column; gap:2px; }
 .stat .k{ font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-faint); }
 .stat .v{ font-family:var(--font-mono); font-size:16px; color:var(--accent-strong); font-weight:600; }
-.equip-grid{
-  display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
-  align-items:stretch;
-}
-/* When a grid has an odd number of slots (e.g. 5 Shadow slots), the last one
-   would otherwise sit alone next to an empty cell. Give it the full row
-   instead, so every grid ends flush with no dangling half-row. */
-.equip-grid > *:last-child:nth-child(odd){ grid-column: 1 / -1; }
-.slot{
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px;
-  display:flex; flex-direction:column; gap:7px; min-height:128px;
-}
-.slot .slot-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
-.slot-body{
-  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:5px; text-align:center; border-radius:7px; border:1px dashed var(--border-soft);
-  padding:8px; background:var(--surface-2); cursor:pointer;
-}
-.slot-body:hover{ border-color:var(--accent); }
-.slot-body.filled{ border-style:solid; border-color:var(--border); align-items:stretch; text-align:left; cursor:default; }
-.slot-empty-icon{ font-size:22px; color:var(--fg-faint); line-height:1; }
-.slot-empty-text{ font-size:11px; color:var(--fg-faint); }
 .item-row{ display:flex; gap:8px; align-items:center; }
 .item-row img.sprite{ width:32px; height:32px; object-fit:contain; image-rendering:pixelated; flex:0 0 auto; background:var(--surface-3); border-radius:4px; }
 .sprite-fallback{
@@ -364,39 +341,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .item-name{ font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:help; }
 .item-sub{ font-size:10.5px; color:var(--fg-faint); }
 .extras{ display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
-.extra-chip{
-  display:inline-flex; align-items:center; gap:3px; max-width:100%; font-size:10.5px; line-height:1.3;
-  padding:2px 3px 2px 7px; border-radius:999px; border:1px dashed var(--border-soft); color:var(--fg-faint);
-}
-.extra-chip span{ overflow-wrap:anywhere; }
-.extra-chip.on{ border-style:solid; border-color:var(--accent); color:var(--accent-strong); }
-.extra-x{ background:transparent; border:0; color:inherit; font-size:12px; line-height:1; padding:0 3px; cursor:pointer; }
-.extra-x:hover{ color:var(--fg); }
-.extra-form{ flex:1 1 100%; margin:0; }
-.extra-form input{
-  width:100%; background:transparent; border:1px dashed var(--border-soft); border-radius:5px;
-  color:var(--fg); font:inherit; font-size:10.5px; padding:3px 6px;
-}
-.extra-form input:focus{ outline:none; border-style:solid; border-color:var(--accent); }
-.slot-actions{ display:flex; gap:4px; margin-top:auto; }
-.mini-btn{
-  flex:1; background:transparent; border:1px solid var(--border-soft); color:var(--fg-faint);
-  border-radius:5px; padding:4px; font-size:10px;
-}
-.mini-btn:hover{ color:var(--accent-strong); border-color:var(--accent); }
-.card-row{ display:flex; gap:5px; margin-top:4px; }
-.card-slot{
-  width:26px; height:26px; border-radius:4px; border:1px dashed var(--border-soft);
-  background:var(--surface-2); display:flex; align-items:center; justify-content:center;
-  cursor:pointer; position:relative;
-}
-.card-slot img{ width:100%; height:100%; object-fit:contain; border-radius:4px; }
-.card-slot:hover{ border-color:var(--accent); }
-.card-slot .x{
-  position:absolute; top:-5px; right:-5px; width:14px; height:14px; border-radius:50%;
-  background:var(--danger); color:#fff; font-size:9px; display:flex; align-items:center;
-  justify-content:center; line-height:1; border:none; padding:0;
-}
 .stat-calc{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
 .stat-calc h2{ font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:8px; }
 .stat-row{
@@ -457,9 +401,6 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .skill-skip{ font-size:11px; color:var(--fg-faint); margin-top:3px; }
 .skill-on{ font-size:11.5px; color:var(--early); margin-top:4px; font-weight:700; }
 .skill-off, .skill-warn{ font-size:11.5px; color:var(--mid); margin-top:4px; }
-.skill-others{ margin-top:6px; }
-.skill-others summary{ cursor:pointer; font-size:12px; color:var(--fg-dim); padding:8px 0; }
-.skill-others summary:hover{ color:var(--accent-strong); }
 .aspd-box{ border-top:1px solid var(--border-soft); padding-top:12px; }
 .aspd-box h3{ font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--fg-faint); margin-bottom:8px; }
 .aspd-line{ font-size:12.5px; color:var(--fg-dim); line-height:1.7; }
@@ -521,7 +462,6 @@ button.result-row{ width:100%; background:none; color:inherit; font:inherit; tex
   font-size:12px; padding:9px 4px; margin:4px 0; cursor:pointer;
 }
 .result-more:hover{ color:var(--accent-strong); border-color:var(--accent); }
-.card-unknown{ font-size:12px; color:var(--fg-faint); }
 .field-hint{ font-size:11px; color:var(--danger); }
 input.invalid{ border-color:var(--danger) !important; }
 .icon-btn.danger.confirming{ color:#fff; background:var(--danger); border-color:var(--danger); }
@@ -537,15 +477,6 @@ input.invalid{ border-color:var(--danger) !important; }
 }
 .item-link:hover, .item-link:focus-visible{ color:var(--accent); text-decoration:underline; }
 .item-sub{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.refine-input{
-  display:inline-flex; align-items:center; gap:1px; font-family:var(--font-mono); font-size:11px;
-  color:var(--accent); border:1px solid var(--border); border-radius:5px; padding:0 0 0 5px; background:var(--surface-3);
-}
-.refine-input input{
-  width:34px; border:none; background:transparent; color:var(--fg); font-family:var(--font-mono);
-  font-size:11px; padding:2px 3px;
-}
-.filter-row-wrap{ display:flex; gap:14px; flex-wrap:wrap; }
 .filter-pills{ display:flex; gap:4px 16px; flex-wrap:wrap; align-items:center; }
 .filter-pills:empty{ display:none; }
 /* Compact on/off switches for the item picker's filters. */
@@ -586,7 +517,6 @@ input.invalid{ border-color:var(--danger) !important; }
 .tt-badge.info{ background:rgba(169,92,255,.15); color:var(--accent); }
 .src-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
 .src-row:last-child{ border-bottom:none; }
-.mvp-tag{ font-size:9.5px; font-weight:700; color:var(--mid); border:1px solid var(--mid); border-radius:999px; padding:0 6px; margin-left:4px; }
 /* drop chance and MVP, easy to spot wherever a source is listed */
 .rate-chips{ display:inline-flex; gap:4px; align-items:center; vertical-align:middle; }
 .rate-chip{ font:700 11px var(--font-mono); color:var(--accent-strong); padding:0 6px; border-radius:5px; line-height:1.5;
@@ -621,9 +551,6 @@ input.invalid{ border-color:var(--danger) !important; }
 .farm-title{ font-family:var(--font-display); font-size:15px; color:var(--fg); }
 .farm-progress{ font-size:12px; color:var(--fg-faint); margin-top:2px; }
 .farm-progress strong{ color:var(--accent); font-family:var(--font-mono); }
-.farm-group{ margin-bottom:16px; }
-.farm-group h4{ margin:0 0 6px; font-size:12px; color:var(--accent); font-family:var(--font-body); display:flex; justify-content:space-between; gap:8px; }
-.farm-group h4 span{ color:var(--fg-faint); font-weight:400; }
 .farm-item{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:var(--radius-sm); background:var(--surface); border:1px solid var(--border-soft); margin-bottom:5px; }
 .farm-item input[type=checkbox]{ width:16px; height:16px; accent-color:var(--accent-strong); flex:0 0 auto; }
 .farm-item .fi-main{ flex:1; min-width:0; }
@@ -681,25 +608,17 @@ input.invalid{ border-color:var(--danger) !important; }
 @media (max-width:760px){
   .layout{ grid-template-columns:1fr; }
   .side-right{ grid-column:auto; }
-  .equip-grid{ grid-template-columns:1fr; }
-  .equip-grid > *:last-child:nth-child(odd){ grid-column:auto; }
 }
 /* Touch screens: bring small controls up to a comfortable finger size without
    changing the layout (around 32–36px tall instead of 18–26px). */
 @media (pointer:coarse), (max-width:760px){
-  .mini-btn{ min-height:34px; font-size:11.5px; }
   .close-x{ min-width:40px; min-height:40px; font-size:22px; }
   .filter-pill{ min-height:34px; font-size:13px; }
   .filter-pill .fp-track{ width:32px; height:18px; }
   .filter-pill .fp-track::after{ width:12px; height:12px; }
   .filter-pill[aria-checked="true"] .fp-track::after{ transform:translateX(14px); }
-  .card-slot{ width:34px; height:34px; }
-  .card-slot .x{ width:20px; height:20px; font-size:12px; top:-7px; right:-7px; }
-  .card-row{ gap:9px; }
-  .refine-input input{ width:42px; min-height:30px; font-size:13px; }
   .result-row{ min-height:46px; }
   .clear-all-btn, .icon-btn, .ghost-btn, .stage-btn, .tab-btn{ min-height:36px; }
-  .extra-form input{ min-height:32px; }
 }
 /* ===== Equipment and Shadow "paper doll" layout ===== */
 #panel-equip, #panel-shadow{ container-type:inline-size; }
@@ -770,10 +689,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
 .noart{ display:block; width:12px; height:16px; border:1.5px solid var(--stat-card); border-radius:2px; opacity:.8; }
 .sc-card-row .noart{ width:18px; height:24px; margin:4px 3px; }
-.fxs{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
-.fxs .fx-chip{ font-size:10px; padding:0 5px; white-space:nowrap; }
 .dslot .abbr{ cursor:help; text-decoration:underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset:2px; }
-.fx-more{ font-size:10px; color:var(--fg-faint); font-family:var(--font-mono); align-self:center; }
 .sc-lines.fx{ color:var(--fx); }
 .sc-set{ border-left:2px solid var(--stat-item); padding-left:8px; }
 .rolls{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
@@ -826,9 +742,6 @@ input.invalid{ border-color:var(--danger) !important; }
 @keyframes sc-in{ from{ opacity:0; transform:translateY(6px) rotate(-2deg) scale(.97); } to{ opacity:1; transform:rotate(-2deg); } }
 @media (prefers-reduced-motion: reduce){ .sc-stage::before, .sc-art{ animation:none; } }
 .sc-empty-art{ position:relative; color:var(--fg-faint); font-size:12px; text-align:center; padding:0 24px; }
-.sc-totals-grid{ position:relative; display:grid; grid-template-columns:repeat(3, 1fr); gap:6px 14px; font-family:var(--font-mono); font-size:12px; padding:0 18px; }
-.sc-totals-grid span{ color:var(--fg-faint); }
-.sc-totals-grid b{ color:var(--stat-item); font-weight:600; }
 .sc-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
 .sc-title{ font-family:var(--font-display); font-size:19px; line-height:1.15; }
 .sc-title .ref{ color:var(--accent); font-family:var(--font-mono); font-size:15px; }
@@ -908,7 +821,6 @@ input.invalid{ border-color:var(--danger) !important; }
 .ht-block.off{ opacity:.5; }
 .ht-badge{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); }
 .ht-block .t{ white-space:pre-line; color:var(--fg-dim); }
-.ht-foot{ margin-top:6px; color:var(--fg-faint); font-size:10.5px; }
 
 /* ---- responsive: the panel narrows inside the 3-column page ---- */
 @container (max-width:820px){
@@ -955,17 +867,6 @@ input.invalid{ border-color:var(--danger) !important; }
 .sc-lines .c-item{ color:var(--stat-item); }
 .sc-lines .c-roll{ color:var(--stat-roll); }
 
-/* Switch between the new layout and the classic grid */
-.panel-tools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.layout-switch{ display:inline-flex; padding:2px; gap:2px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); }
-.layout-switch button{
-  border:0; background:transparent; color:var(--fg-dim); font-size:12px; font-weight:600;
-  padding:5px 10px; border-radius:calc(var(--radius-sm) - 2px); cursor:pointer;
-}
-.layout-switch button:hover{ color:var(--fg); }
-.layout-switch button[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
-.layout-switch button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
-@media (pointer:coarse){ .layout-switch button{ min-height:36px; } }
 
 /* ---- skill tree (v2): one section per class, a 7-column grid like the in-game window ---- */
 .st-top{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; }
@@ -1130,17 +1031,17 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
           <div class="stat-strip" id="statStrip"></div>
-          <div class="panel-tools"><div class="layout-switch" role="group" aria-label="Layout" data-en-aria-label="Layout"><button type="button" data-layout="doll" data-en="New">Novo</button><button type="button" data-layout="grid" data-en="Classic">Clássico</button></div><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
-        <div class="equip-grid" id="equipGrid"></div>
+        <div class="doll" id="equipGrid"></div>
       </section>
 
       <section class="tab-panel" id="panel-shadow" hidden>
         <div class="panel-head">
           <span></span>
-          <div class="panel-tools"><div class="layout-switch" role="group" aria-label="Layout" data-en-aria-label="Layout"><button type="button" data-layout="doll" data-en="New">Novo</button><button type="button" data-layout="grid" data-en="Classic">Clássico</button></div><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><button class="clear-all-btn" data-group="shadow" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
-        <div class="equip-grid" id="shadowGrid"></div>
+        <div class="doll" id="shadowGrid"></div>
       </section>
 
       <section class="tab-panel" id="panel-skills" hidden>
@@ -2647,20 +2548,8 @@ input.invalid{ border-color:var(--danger) !important; }
   window.addEventListener('scroll', hideTip, { passive:true });
 
 
-  // The classic grid stays one click away while players get used to the new layout.
-  var LAYOUT_KEY = 'rtm-hud-layout-v1';
-  var slotLayout = (function(){ try { return localStorage.getItem(LAYOUT_KEY) === 'grid' ? 'grid' : 'doll'; } catch(e){ return 'doll'; } })();
-  function renderSlotGroup(lo, group){
-    hideTip();
-    if (slotLayout === 'doll'){ renderPaperDoll(lo, group); return; }
-    if (group === 'equip') renderSlotGrid('equipGrid', EQUIP_SLOTS, lo, 'equip');
-    else renderSlotGrid('shadowGrid', SHADOW_SLOTS, lo, 'shadow');
-  }
-  function syncLayoutSwitch(){
-    document.querySelectorAll('.layout-switch button').forEach(function(b){
-      b.setAttribute('aria-pressed', String(b.dataset.layout === slotLayout));
-    });
-  }
+  function renderSlotGroup(lo, group){ hideTip(); renderPaperDoll(lo, group); }
+
 
   // ---------- skill tree (v2) ----------
   // Laid out like the in-game window: one tab per job, all on one page.
@@ -3208,148 +3097,6 @@ input.invalid{ border-color:var(--danger) !important; }
   }
 
   // Rolled options of this copy of the item: one chip per line, plus an inline "add" field.
-  function renderExtras(val){
-    var wrap = el('div', { class:'extras' });
-    wrap.addEventListener('click', function(ev){ ev.stopPropagation(); });
-    var extras = Array.isArray(val.extras) ? val.extras.filter(function(x){ return typeof x === 'string'; }) : [];
-    extras.forEach(function(line, i){
-      var counted = extraIsCounted(line);
-      var chip = el('span', { class:'extra-chip' + (counted ? ' on' : ''),
-        title: counted ? L('Somado no simulador', 'Added to the simulator') : L('Não calculado: aparece só como anotação', 'Not calculated: shown as a note only') }, [
-        el('span', { text: line })
-      ]);
-      var x = el('button', { type:'button', class:'extra-x', text:'×', 'aria-label':L('Remover ', 'Remove ') + line });
-      x.addEventListener('click', function(){
-        val.extras = extras.filter(function(_, j){ return j !== i; });
-        if (!val.extras.length) delete val.extras;
-        saveLoadouts(); render();
-      });
-      chip.appendChild(x);
-      wrap.appendChild(chip);
-    });
-    var form = el('form', { class:'extra-form' });
-    var input = el('input', { type:'text', list:'extraSuggestions', maxlength:'60', placeholder:L('+ opção (ex: ATK +3)', '+ option (e.g. ATK +3)'),
-      'aria-label':L('Adicionar opção extra ao item', 'Add an extra option to the item') });
-    form.appendChild(input);
-    form.addEventListener('submit', function(ev){
-      ev.preventDefault();
-      var line = input.value.replace(/\s+/g, ' ').trim();
-      if (!line || /\+\s*$/.test(line)) return;
-      val.extras = extras.concat([line]);
-      // Put the cursor back in the same field after the redraw, so several options can be typed in a row.
-      var fields = Array.prototype.slice.call(document.querySelectorAll('.extra-form input'));
-      var at = fields.indexOf(input);
-      saveLoadouts(); render();
-      var again = document.querySelectorAll('.extra-form input')[at];
-      if (again) again.focus({ preventScroll: true });
-    });
-    wrap.appendChild(form);
-    return wrap;
-  }
-
-  function renderSlotGrid(containerId, slotDefs, lo, groupName){
-    var grid = document.getElementById(containerId);
-    grid.className = 'equip-grid'; // the new layout swaps it for 'doll'
-    clear(grid);
-    var sd = activeStageData(lo);
-    slotDefs.forEach(function(def){
-      var val = sd.slots[def.key];
-      var slot = el('div', { class:'slot' }, [ el('div', { class:'slot-label', text: def.label }) ]);
-      var body = el('div', { class:'slot-body' + (val ? ' filled' : '') });
-
-      if (!val){
-        body.appendChild(el('div', { class:'slot-empty-icon', text:'+' }));
-        body.appendChild(el('div', { class:'slot-empty-text', text:L('Vazio', 'Empty') }));
-        makePressable(body, L('Escolher item: ', 'Choose item: ') + def.label, function(){ openModal(groupName, def, null); });
-      } else {
-        // Old saves may hold hand-typed items (manual entry was removed); they show a "?" icon.
-        var row = spriteEl(val.manual ? '' : ICON(val.itemId));
-        var info = el('div', { class:'item-info' });
-        var matchedItem = (!val.manual && state.db) ? itemById(val.itemId) : null;
-        var nameEl = el(matchedItem ? 'button' : 'div', { class:'item-name' + (matchedItem ? ' item-link' : ''), text: val.itemName });
-        if (matchedItem){
-          nameEl.type = 'button';
-          nameEl.title = L('Ver detalhes, tooltip e onde dropa', 'See details, tooltip and drop sources');
-          nameEl.addEventListener('click', function(ev){
-            ev.stopPropagation();
-            openDetail(matchedItem.id, { refine: val.refine || 0 });
-          });
-        }
-        info.appendChild(nameEl);
-        if (matchedItem){
-          var sub = el('div', { class:'item-sub' });
-          sub.appendChild(document.createTextNode('Lv ' + (matchedItem.lv||'?') + (matchedItem.slots ? ' · ' + matchedItem.slots + '-slot' : '')));
-          if (matchedItem.refinable){
-            var refWrap = el('label', { class:'refine-input', title:L('Nível de refino', 'Refine level') });
-            refWrap.appendChild(document.createTextNode('+'));
-            var refIn = el('input', { type:'number', min:'0', max:String(LIMITS.refine), value: String(val.refine || 0), 'aria-label':L('Refino de ', 'Refine of ') + val.itemName });
-            refIn.addEventListener('click', function(ev){ ev.stopPropagation(); });
-            clampField(refIn, 0, LIMITS.refine);
-            refIn.addEventListener('change', function(){
-              val.refine = Math.max(0, Math.min(LIMITS.refine, parseInt(refIn.value, 10) || 0));
-              saveLoadouts();
-              render();
-            });
-            refWrap.appendChild(refIn);
-            sub.appendChild(refWrap);
-          }
-          info.appendChild(sub);
-        }
-        row.appendChild(info);
-        body.appendChild(row);
-
-        var maxCards = matchedItem ? (matchedItem.slots||0) : 0;
-        if (maxCards > 0){
-          var cardRow = el('div', { class:'card-row' });
-          val.cards = val.cards || [];
-          for (var ci=0; ci<maxCards; ci++){
-            (function(ci){
-              var c = val.cards[ci];
-              var cs = el('div', { class:'card-slot' });
-              if (c){
-                if (!c.manual){
-                  var cimg = document.createElement('img');
-                  cimg.src = CARD_ICON(c.itemId);
-                  cimg.alt = ''; cimg.loading = 'lazy';
-                  cimg.addEventListener('error', function(){ cimg.style.visibility='hidden'; });
-                  cs.appendChild(cimg);
-                } else {
-                  cs.appendChild(el('span', { class:'card-unknown', text:'?' }));
-                }
-                cs.title = c.itemName;
-                var xBtn = el('button', { type:'button', class:'x', text:'×', 'aria-label':L('Remover carta ', 'Remove card ') + c.itemName });
-                xBtn.addEventListener('click', function(ev){ ev.stopPropagation(); val.cards[ci] = null; saveLoadouts(); render(); });
-                xBtn.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
-                cs.appendChild(xBtn);
-                makePressable(cs, c.itemName, function(){
-                  if (c.manual || !itemById(c.itemId)){ openModal(groupName, def, ci); return; }
-                  openDetail(c.itemId, { onSwap: function(){ openModal(groupName, def, ci); }, swapLabel:L('Trocar carta', 'Change card') });
-                });
-              } else {
-                cs.title = L('Adicionar carta', 'Add card');
-                makePressable(cs, L('Adicionar carta em ', 'Add card to ') + def.label, function(){ openModal(groupName, def, ci); });
-              }
-              cardRow.appendChild(cs);
-            })(ci);
-          }
-          body.appendChild(cardRow);
-        }
-
-        body.appendChild(renderExtras(val));
-
-        var actions = el('div', { class:'slot-actions' });
-        var swapBtn = el('button', { class:'mini-btn', text:L('Trocar', 'Change') });
-        swapBtn.addEventListener('click', function(ev){ ev.stopPropagation(); openModal(groupName, def, null); });
-        var clearBtn = el('button', { class:'mini-btn', text:L('Limpar', 'Clear') });
-        clearBtn.addEventListener('click', function(ev){ ev.stopPropagation(); sd.slots[def.key] = null; saveLoadouts(); render(); });
-        actions.appendChild(swapBtn); actions.appendChild(clearBtn);
-        body.appendChild(actions);
-      }
-      slot.appendChild(body);
-      grid.appendChild(slot);
-    });
-  }
-
   // ---------- stat points calculator ----------
   // Sums only plain "STR+3" style flat bonuses out of an item's tooltip text —
   // not percentages, not set/refine-conditional lines — same scoping the
@@ -3896,9 +3643,16 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     return out;
   }
+  // With a class chosen, only the passives of its line count (Night Raven: Orphan, Thief,
+  // Assassin, Blade Dancer and Night Raven); with none, every passive typed in counts.
+  function passiveInLine(lo, p){
+    if (!lo.charClass) return true;
+    var line = classLine(lo.charClass);
+    return p.cls.some(function(c){ return line.indexOf(c) !== -1; });
+  }
   function computeSkillBonuses(lo){
     var out = blankBonus();
-    PASSIVES.forEach(function(p){ addBonus(out, evalPassive(lo, p).bonus); });
+    PASSIVES.forEach(function(p){ if (passiveInLine(lo, p)) addBonus(out, evalPassive(lo, p).bonus); });
     return out;
   }
   function describeParts(p){
@@ -4222,10 +3976,8 @@ input.invalid{ border-color:var(--danger) !important; }
     if (passiveCheck === null) box.appendChild(el('div', { class:'skill-warn', text:L('Conferindo as descrições com o site…', 'Checking descriptions against the site…') }));
     var cls = lo.charClass || '';
     // The character's passives are those of every class in its line (Night Raven also has the
-    // Thief's and Assassin's), not just the last one; other classes' stay folded away.
-    var line = classLine(cls);
-    var mine = PASSIVES.filter(function(p){ return p.cls.some(function(c){ return line.indexOf(c) !== -1; }); });
-    var others = PASSIVES.filter(function(p){ return mine.indexOf(p) === -1; });
+    // Thief's and Assassin's), not just the last one; other classes' passives aren't shown.
+    var mine = cls ? PASSIVES.filter(function(p){ return passiveInLine(lo, p); }) : [];
     function row(p){
       var ev = evalPassive(lo, p);
       var r = el('div', { class:'skill-row' + (ev.lv ? ' has-lv' : '') });
@@ -4268,12 +4020,8 @@ input.invalid{ border-color:var(--danger) !important; }
         ? L('Nenhuma classe da linha de ' + cls + ' tem passiva que mexa nesses números.', 'No class in the ' + cls + ' line has a passive that changes these numbers.')
         : L('Escolha a classe do loadout para ver as passivas dela primeiro.', "Choose the loadout's class to see its passives first.") }));
     }
-    var det = el('details', { class:'skill-others' });
-    var anyOtherLv = others.some(function(p){ return skillLevel(lo, p) > 0; });
-    if (anyOtherLv || !cls) det.open = true;
-    det.appendChild(el('summary', { text:L('Passivas de outras classes (' + others.length + ')', 'Passives from other classes (' + others.length + ')') }));
-    others.forEach(function(p){ det.appendChild(row(p)); });
-    box.appendChild(det);
+    // Without a class there is no line yet, so every passive is listed to choose from.
+    if (!cls) PASSIVES.forEach(function(p){ box.appendChild(row(p)); });
   }
 
   function renderSetsBox(setsBox, activeSets){
@@ -5195,16 +4943,6 @@ input.invalid{ border-color:var(--danger) !important; }
     renderStatusPanel(lo);
     renderCompare(lo);
     renderSummary(lo);
-  });
-  syncLayoutSwitch();
-  document.querySelectorAll('.layout-switch button').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      if (slotLayout === btn.dataset.layout) return;
-      slotLayout = btn.dataset.layout;
-      try { localStorage.setItem(LAYOUT_KEY, slotLayout); } catch(e){}
-      syncLayoutSwitch();
-      render();
-    });
   });
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;

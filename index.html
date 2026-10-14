@@ -512,6 +512,19 @@ input.invalid{ border-color:var(--danger) !important; }
 /* Keyboard focus ring for everything focusable that has no ring of its own. */
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 .slot-body:focus-visible, .card-slot:focus-visible, .loadout-item:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+.panel-tools{ display:flex; gap:8px; }
+.suggest-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.suggest-modal{ max-width:560px; }
+.sg-note{ font-size:11.5px; color:var(--mid); line-height:1.5; margin:0; }
+.sg-row{ display:flex; align-items:center; gap:9px; padding:7px; border-radius:7px; border:1px solid var(--border-soft); cursor:pointer; flex:0 0 auto; }
+.sg-row:hover{ background:var(--surface-2); }
+.sg-main{ display:flex; flex-direction:column; min-width:0; gap:1px; }
+.sg-slot{ font-size:10.5px; color:var(--fg-faint); }
+.sg-name{ font-size:13px; font-weight:600; }
+.sg-stats{ font-size:11px; color:var(--early); }
+.sg-actions{ display:flex; gap:8px; justify-content:flex-end; }
+.sg-actions .primary-btn{ padding:9px 18px; }
+.primary-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .primary-btn{ background:var(--accent); color:var(--accent-ink); border:none; border-radius:var(--radius-sm); padding:9px; font-weight:700; box-shadow:var(--shadow-glow); }
 [hidden]{ display:none !important; }
 /* item name as a link to the detail panel + refine input */
@@ -780,6 +793,8 @@ input.invalid{ border-color:var(--danger) !important; }
 }
 .sc-art.icon-only{ width:96px; height:96px; border:none; background:none; box-shadow:none; transform:none; }
 .sc-sum{ height:auto; padding-block:22px; }
+.sc-char{ position:relative; width:130px; height:150px; image-rendering:pixelated; animation:sc-in-char .3s ease-out; }
+@keyframes sc-in-char{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
 .sc-none{ grid-column:1 / -1; text-align:center; }
 .sc-jobs{ font-size:11px; color:var(--fg-faint); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .ht-head img{ border-radius:5px; background:#fff; }
@@ -1166,7 +1181,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
           <div class="stat-strip" id="statStrip"></div>
-          <div class="panel-tools"><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="equipGrid"></div>
       </section>
@@ -1273,6 +1288,26 @@ input.invalid{ border-color:var(--danger) !important; }
       <button class="close-x" id="detailClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
     </div>
     <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="suggestBackdrop" hidden>
+  <div class="modal suggest-modal" role="dialog" aria-labelledby="suggestTitle">
+    <div class="modal-head">
+      <h3 id="suggestTitle" data-en="Suggest build">Sugerir build</h3>
+      <button class="close-x" id="suggestClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
+    </div>
+    <p class="sg-note" data-en="A suggestion based only on the stats written on each item, for this stage's class and level. Cards, refine, rolled options and special effects are not counted — check before farming.">Sugestão baseada só nos atributos escritos em cada item, para a classe e o level desta fase. Cartas, refino, opções e efeitos especiais não entram na conta — confira antes de farmar.</p>
+    <div class="field">
+      <label for="suggestProfile" data-en="Build profile">Perfil da build</label>
+      <select id="suggestProfile"></select>
+    </div>
+    <div class="result-count" id="suggestInfo" aria-live="polite"></div>
+    <div class="results" id="suggestList"></div>
+    <div class="sg-actions">
+      <button class="ghost-btn" id="suggestCancel" type="button" data-en="Cancel">Cancelar</button>
+      <button class="primary-btn" id="suggestApply" type="button" data-en="Equip checked">Equipar marcados</button>
+    </div>
   </div>
 </div>
 
@@ -2771,6 +2806,12 @@ input.invalid{ border-color:var(--danger) !important; }
     var shown = statLines(total, fxStat);
     if (!shown.length) g.appendChild(el('span', { class:'sc-none', text:L('Nenhum bônus ainda.', 'No bonuses yet.') }));
     shown.forEach(function(t){ g.appendChild(el('span', { text:t })); });
+    // With nothing picked, the class sprite stands in the middle (same male/female as the build image).
+    var sex = 'm';
+    try { sex = localStorage.getItem('rtm-hud-cardsex') === 'f' ? 'f' : 'm'; } catch(e){}
+    var charImg = el('img', { class:'sc-char', alt:'', src: charSprite(lo.charClass, sex) });
+    charImg.addEventListener('error', function(){ charImg.hidden = true; });
+    stage.appendChild(charImg);
     stage.appendChild(el('div', { class:'sc-sum-box' }, [head, g]));
     frag.appendChild(stage);
     var fx = fxOther;
@@ -3655,6 +3696,7 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     renderHeadForm(lo);
     renderStatStrip(lo);
+    syncSuggestBtn(lo);
     renderSlotGroup(lo, 'equip');
     renderSlotGroup(lo, 'shadow');
     renderSkillTree(lo);
@@ -6091,6 +6133,249 @@ input.invalid{ border-color:var(--danger) !important; }
     lo.notes = e.target.value;
     saveLoadouts();
   });
+  // ---------- Suggest build ----------
+  // Picks, for each slot, the item whose own stats score best for a profile (weights below),
+  // then tries every complete set on top of that and keeps it only when the whole loadout
+  // scores higher — mixed pieces win when they are better. Items only: no cards, refine,
+  // rolled options or effects the parser can't sum, so it is a starting point, not an answer.
+  var SUGGEST_PROFILES = {
+    melee:  { label: L('Físico corpo a corpo', 'Physical melee'), w: { atk:1, str:2, dex:0.6, agi:0.8, luk:0.4, hit:0.3, crit:0.8, aspd:3, aspdPct:2, aspdLimit:2, flee:0.2, vit:0.3, def:0.3 } },
+    ranged: { label: L('Físico à distância', 'Physical ranged'), w: { atk:1, dex:2, str:0.4, agi:0.8, luk:0.4, hit:0.3, crit:0.8, aspd:3, aspdPct:2, aspdLimit:2, flee:0.2, vit:0.3, def:0.3 } },
+    magic:  { label: L('Mágico', 'Magic'), w: { matk:1, int:2, dex:0.8, vit:0.4, agi:0.2, def:0.2, mdef:0.4 } },
+    tank:   { label: L('Tanque', 'Tank'), w: { vit:2, def:1.5, mdef:1, flee:0.5, pdodge:1, agi:0.5, str:0.4, atk:0.2 } }
+  };
+  var SUGGEST_ROUNDS = 3, SUGGEST_SLOTS = EQUIP_SLOTS.concat(SHADOW_SLOTS);
+  function suggestMissing(lo){
+    var sd = activeStageData(lo), miss = [];
+    if (!lo.charClass) miss.push(L('classe', 'class'));
+    if ((sd.level || 1) <= 1) miss.push(L('level', 'level'));
+    if (!STAT_KEYS.some(function(s){ return (sd.baseStats[s.key] || 1) > 1; })) miss.push(L('atributos', 'stats'));
+    return miss;
+  }
+  function guessProfile(lo){
+    var b = activeStageData(lo).baseStats;
+    var w = weaponItem(lo, 'weapon');
+    if ((b.int || 1) >= Math.max(b.str || 1, b.dex || 1)) return 'magic';
+    if ((w && RANGED_ATK_CATS.indexOf((w.cat || '').toLowerCase()) !== -1) || (b.dex || 1) > (b.str || 1)) return 'ranged';
+    if ((b.vit || 1) > Math.max(b.str || 1, b.agi || 1)) return 'tank';
+    return 'melee';
+  }
+  function weighBonus(b, w){ var s = 0; for (var k in w) s += (b[k] || 0) * w[k]; return s; }
+  function itemOwnScore(it, w, level){
+    var base = { atk: it.atk || 0, matk: it.matk || 0, def: it.def || 0, mdef: it.mdef || 0 };
+    return weighBonus(itemOwnBonuses(it, 0, level), w) + weighBonus(base, w);
+  }
+  function weaponFitsProfile(it, profile){
+    var ranged = RANGED_ATK_CATS.indexOf((it.cat || '').toLowerCase()) !== -1;
+    if (profile === 'ranged') return ranged;
+    if (profile === 'melee' || profile === 'tank') return !ranged;
+    return true;
+  }
+  // Best items per slot by their own score.
+  function suggestCandidates(lo, profile, level){
+    var w = SUGGEST_PROFILES[profile].w, cls = lo.charClass, out = {};
+    SUGGEST_SLOTS.forEach(function(d){ out[d.key] = []; });
+    state.db.items.forEach(function(it){
+      if (it.isCard || !canEquip(it, cls) || (it.lv || 0) > level) return;
+      var score = null;
+      SUGGEST_SLOTS.forEach(function(d){
+        if (!slotMatchesItem(d, it, {})) return;
+        if (d.key === 'weapon' && !weaponFitsProfile(it, profile)) return;
+        if (score === null) score = itemOwnScore(it, w, level);
+        if (score > 0) out[d.key].push({ it: it, score: score });
+      });
+    });
+    Object.keys(out).forEach(function(k){ out[k].sort(function(a, b){ return b.score - a.score; }); });
+    return out;
+  }
+  function suggestLoadout(lo, slots){
+    var copy = JSON.parse(JSON.stringify(lo));
+    copy.stages[lo.activeStage].slots = slots;
+    return copy;
+  }
+  function scoreSlots(lo, slots, w){
+    var tmp = suggestLoadout(lo, slots);
+    return weighBonus(computeAllBonuses(tmp), w) + weighBonus(computeTotals(tmp), w);
+  }
+  // Head slots an item takes up: every head slot its locations match, plus the combined
+  // "Upper and Middle" / "Mid/Low" locations.
+  var HEAD_KEYS = ['headUpper', 'headMid', 'headLower'];
+  function headCover(it){
+    var locs = (it.locs || []).join('|');
+    var cover = HEAD_KEYS.filter(function(k){ return slotMatchesItem(slotDefByKey(k), it, {}); });
+    if (/Upper and Mid/i.test(locs) && cover.indexOf('headMid') === -1) cover.push('headMid');
+    if (/Mid\/Low/i.test(locs) && cover.indexOf('headLower') === -1) cover.push('headLower');
+    return cover;
+  }
+  // A two-handed weapon empties the off-hand; a headgear that covers several slots empties the others.
+  function fixTwoHanded(slots){
+    var wi = slots.weapon && itemById(slots.weapon.itemId);
+    if (wi && isTwoHanded(wi)) slots.offhand = null;
+    HEAD_KEYS.forEach(function(k){
+      var it = slots[k] && itemById(slots[k].itemId);
+      if (!it) return;
+      headCover(it).forEach(function(o){ if (o !== k) slots[o] = null; });
+    });
+    return slots;
+  }
+  // Best headgear per slot, either allowing items that cover several slots or not.
+  function pickHeads(cand, allowMulti){
+    var out = {}, taken = {};
+    HEAD_KEYS.forEach(function(k){
+      if (taken[k]){ out[k] = null; return; }
+      var pick = cand[k].filter(function(c){
+        var cov = headCover(c.it);
+        return (allowMulti || cov.length === 1) && cov.every(function(o){ return !taken[o]; });
+      })[0];
+      out[k] = pick ? { itemId: pick.it.id } : null;
+      if (pick) headCover(pick.it).forEach(function(o){ taken[o] = true; });
+    });
+    return out;
+  }
+  function placeSet(best, members){
+    var slots = Object.assign({}, best), taken = {};
+    members.forEach(function(it){
+      var d = SUGGEST_SLOTS.filter(function(x){ return !taken[x.key] && slotMatchesItem(x, it, {}); })[0];
+      if (!d) return;
+      taken[d.key] = true;
+      slots[d.key] = { itemId: it.id };
+    });
+    return fixTwoHanded(slots);
+  }
+  function runSuggest(lo, profile){
+    var level = activeStageData(lo).level || 1, w = SUGGEST_PROFILES[profile].w, cls = lo.charClass;
+    var cand = suggestCandidates(lo, profile, level);
+    var best = {};
+    SUGGEST_SLOTS.forEach(function(d){
+      var list = cand[d.key], pick = d.key === 'accRight' ? (list[1] || list[0]) : list[0];
+      best[d.key] = pick ? { itemId: pick.it.id } : null;
+    });
+    // A two-handed weapon only stays if it beats the best one-hander plus the best off-hand.
+    var oneHand = cand.weapon.filter(function(c){ return !isTwoHanded(c.it); })[0];
+    if (oneHand && best.weapon && isTwoHanded(itemById(best.weapon.itemId))){
+      var alt = Object.assign({}, best, { weapon: { itemId: oneHand.it.id } });
+      if (scoreSlots(lo, alt, w) > scoreSlots(lo, fixTwoHanded(Object.assign({}, best)), w)) best = alt;
+    }
+    var single = Object.assign({}, best, pickHeads(cand, false)), multi = Object.assign({}, best, pickHeads(cand, true));
+    best = scoreSlots(lo, multi, w) > scoreSlots(lo, single, w) ? multi : single;
+    best = fixTwoHanded(best);
+    var bestScore = scoreSlots(lo, best, w);
+    var setNames = Object.keys(state.db.setMembership).filter(function(name){
+      return state.db.setMembership[name].every(function(id){
+        var it = itemById(id);
+        return it && !it.isCard && canEquip(it, cls) && (it.lv || 0) <= level;
+      });
+    });
+    for (var round = 0; round < SUGGEST_ROUNDS; round++){
+      var roundBest = null;
+      setNames.forEach(function(name){
+        var members = state.db.setMembership[name].map(itemById)
+          .sort(function(a, b){ return itemOwnScore(b, w, level) - itemOwnScore(a, w, level); });
+        var slots = placeSet(best, members);
+        var done = computeActiveSets(suggestLoadout(lo, slots)).complete.some(function(s){ return s.name === name; });
+        if (!done) return;
+        var sc = scoreSlots(lo, slots, w);
+        if (sc > bestScore + 0.01 && (!roundBest || sc > roundBest.score)) roundBest = { slots: slots, score: sc };
+      });
+      if (!roundBest) break;
+      best = roundBest.slots; bestScore = roundBest.score;
+    }
+    var sets = computeActiveSets(suggestLoadout(lo, best)).complete.map(function(s){ return s.name; });
+    return { slots: best, score: bestScore, current: scoreSlots(lo, activeStageData(lo).slots, w), sets: sets };
+  }
+
+  var suggestState = null;
+  function syncSuggestBtn(lo){
+    var btn = document.getElementById('suggestBtn');
+    var miss = suggestMissing(lo);
+    btn.disabled = miss.length > 0 || !state.db;
+    btn.title = miss.length ? L('Preencha antes: ', 'Fill in first: ') + miss.join(', ')
+      : L('Sugere itens para esta fase pelos atributos de cada item', 'Suggests items for this stage from each item\'s stats');
+  }
+  function openSuggest(){
+    var lo = activeLoadout();
+    if (!lo || !state.db || suggestMissing(lo).length) return;
+    suggestState = { profile: guessProfile(lo), pick: {} };
+    var sel = document.getElementById('suggestProfile');
+    clear(sel);
+    Object.keys(SUGGEST_PROFILES).forEach(function(k){ sel.appendChild(el('option', { value: k, text: SUGGEST_PROFILES[k].label })); });
+    sel.value = suggestState.profile;
+    document.getElementById('suggestBackdrop').hidden = false;
+    renderSuggest();
+    sel.focus();
+  }
+  function closeSuggest(){ document.getElementById('suggestBackdrop').hidden = true; suggestState = null; }
+  function suggestRow(d, it, curIt, level){
+    var b = itemOwnBonuses(it, 0, level);
+    b = Object.assign({}, b, { atk: b.atk + (it.atk || 0), matk: b.matk + (it.matk || 0), def: b.def + (it.def || 0), mdef: b.mdef + (it.mdef || 0) });
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = suggestState.pick[d.key] !== false;
+    cb.addEventListener('change', function(){ suggestState.pick[d.key] = cb.checked; });
+    return el('label', { class: 'sg-row' }, [
+      cb,
+      spriteEl(ICON(it.id)),
+      el('span', { class: 'sg-main' }, [
+        el('span', { class: 'sg-slot', text: d.label + (curIt ? L(' · no lugar de ', ' · replaces ') + curIt.name : '') }),
+        el('span', { class: 'sg-name', text: it.name }),
+        el('span', { class: 'sg-stats', text: bonusLines(b).join(' · ') || L('sem atributos somáveis', 'no summable stats') })
+      ])
+    ]);
+  }
+  function renderSuggest(){
+    var lo = activeLoadout();
+    if (!lo || !suggestState) return;
+    var res = runSuggest(lo, suggestState.profile);
+    suggestState.result = res;
+    var cur = activeStageData(lo).slots, list = document.getElementById('suggestList');
+    var level = activeStageData(lo).level || 1, changed = 0;
+    clear(list);
+    SUGGEST_SLOTS.forEach(function(d){
+      var s = res.slots[d.key], it = s && itemById(s.itemId);
+      var curId = cur[d.key] && !cur[d.key].manual ? cur[d.key].itemId : null;
+      if (!it || it.id === curId) return;
+      changed++;
+      list.appendChild(suggestRow(d, it, curId && itemById(curId), level));
+    });
+    if (!changed) list.appendChild(el('div', { class: 'result-empty', text: L('Nada a trocar: o que está equipado já é o melhor para este perfil.', 'Nothing to swap: what is equipped is already the best for this profile.') }));
+    var pct = res.current > 0 ? Math.round((res.score / res.current - 1) * 100) : null;
+    document.getElementById('suggestInfo').textContent =
+      L('Pontuação do perfil: atual ', 'Profile score: current ') + Math.round(res.current) + ' → ' + Math.round(res.score)
+      + (pct !== null && pct > 0 ? ' (+' + pct + '%)' : '')
+      + (res.sets.length ? L(' · Conjuntos completos: ', ' · Complete sets: ') + res.sets.join(', ')
+        : L(' · Peças avulsas (nenhum conjunto completo rende mais)', ' · Mixed pieces (no complete set scores higher)'));
+    document.getElementById('suggestApply').disabled = !changed;
+  }
+  function applySuggest(){
+    var lo = activeLoadout();
+    if (!lo || !suggestState || !suggestState.result) return;
+    var sd = activeStageData(lo), res = suggestState.result;
+    var next = Object.assign({}, sd.slots);
+    SUGGEST_SLOTS.forEach(function(d){
+      var s = res.slots[d.key], cur = sd.slots[d.key];
+      if (!s || suggestState.pick[d.key] === false) return;
+      if (cur && !cur.manual && cur.itemId === s.itemId) return;
+      var it = itemById(s.itemId);
+      next[d.key] = { itemId: s.itemId, itemName: it ? it.name : '', manual: false };
+    });
+    sd.slots = fixTwoHanded(next);
+    closeSuggest();
+    saveLoadouts();
+    render();
+  }
+  document.getElementById('suggestBtn').addEventListener('click', openSuggest);
+  document.getElementById('suggestProfile').addEventListener('change', function(e){
+    if (!suggestState) return;
+    suggestState.profile = e.target.value; suggestState.pick = {};
+    renderSuggest();
+  });
+  document.getElementById('suggestApply').addEventListener('click', applySuggest);
+  document.getElementById('suggestCancel').addEventListener('click', closeSuggest);
+  document.getElementById('suggestClose').addEventListener('click', closeSuggest);
+  document.getElementById('suggestBackdrop').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeSuggest(); });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !document.getElementById('suggestBackdrop').hidden){ e.preventDefault(); closeSuggest(); }
+  });
+
   // Export downloads every loadout as one .json backup file (Import reads it back).
   function exportBackup(){
     if (!state.loadouts.length){ alertInline(L('Não há loadouts para exportar.', 'There are no loadouts to export.')); return; }

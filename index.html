@@ -1875,7 +1875,7 @@ input.invalid{ border-color:var(--danger) !important; }
         if (!unit && COUNTED_FLAT.test(label)) continue;          // already in the simulator
         if (unit === '%' && /^ASPD$/i.test(label)) continue;      // already summed as ASPD %
         if (/^HP$/i.test(label)) label = 'Max HP';
-        if (/^Melee Attack$/i.test(label)) label = 'Melee Damage'; // same bonus, two names in the tooltips (player, 2026-10-14)
+        if (/^(Melee Attack|Short-Range Damage)$/i.test(label)) label = 'Melee Damage'; // same bonus, different names in the tooltips (player, 2026-10-14)
         if (/^SP$/i.test(label)) label = 'Max SP';
         var n = parseFloat(m[3]) * (m[2] === '-' ? -1 : 1);
         var key = label.toLowerCase() + '|' + unit;
@@ -2044,7 +2044,7 @@ input.invalid{ border-color:var(--danger) !important; }
         jobsText: jobs[r[idx.jobs]] || '',
         shop: r[idx.shop] === 1,
         sources: sources,
-        how: how ? { place: how[0] || '', mats: Array.isArray(how[3]) ? how[3] : [], note: how[4] || '' } : null,
+        how: how ? { place: how[0] || '', mats: Array.isArray(how[3]) ? how[3] : [], note: how[4] || '', kind: typeof how[6] === 'string' ? how[6] : '' } : null,
         desc: desc,
         blocks: blocks
       };
@@ -2408,6 +2408,8 @@ input.invalid{ border-color:var(--danger) !important; }
       var c = el('div', { class:'doll-col ' + cls });
       keys.forEach(function(k){
         if (k === 'offhand' && offhandBlocked(sd.slots)){ c.appendChild(lockedTile(slotDefByKey(k))); return; }
+        var coveredBy = headCoveredBy(sd.slots, k);
+        if (coveredBy){ c.appendChild(lockedTile(slotDefByKey(k), coveredBy)); return; }
         c.appendChild(dollTile(lo, group, slotDefByKey(k), sd.slots[k], setNames));
       });
       return c;
@@ -2438,13 +2440,30 @@ input.invalid{ border-color:var(--danger) !important; }
     return chip;
   }
   // The off-hand while a two-handed weapon is equipped: shown, but nothing goes in it.
-  function lockedTile(def){
-    var tile = el('div', { class:'dslot empty locked', title:L('A arma equipada usa as duas mãos', 'The equipped weapon takes both hands') });
+  // A slot another piece takes up: the off-hand under a two-handed weapon, or a head slot
+  // under a headgear that covers several (`by` = that headgear's name).
+  function lockedTile(def, by){
+    var tile = el('div', { class:'dslot empty locked', title: by ? L('Ocupado por ', 'Taken by ') + by : L('A arma equipada usa as duas mãos', 'The equipped weapon takes both hands') });
     tile.appendChild(el('div', { class:'slot-tag', text: def.label }));
     tile.appendChild(el('div', { class:'dicon' }));
-    tile.appendChild(el('div', { class:'dmain' }, [ el('div', { class:'dname', text:L('Ocupado pela arma', 'Taken by the weapon') }),
-      el('div', { class:'dsub', text:L('Arma de duas mãos', 'Two-handed weapon') }) ]));
+    tile.appendChild(el('div', { class:'dmain' }, [ el('div', { class:'dname', text: by ? L('Ocupado por ', 'Taken by ') + by : L('Ocupado pela arma', 'Taken by the weapon') }),
+      el('div', { class:'dsub', text: by ? L('Chapéu de mais de um slot', 'Headgear that takes more than one slot') : L('Arma de duas mãos', 'Two-handed weapon') }) ]));
     return tile;
+  }
+  // Name of the headgear in another head slot that also covers `key`, if any.
+  // Multi-slot headgear wins (upper first); a headgear whose own slot is already taken counts for nothing.
+  function headCoveredBy(slots, key){
+    if (HEAD_KEYS.indexOf(key) === -1) return null;
+    var taken = {}, own = {};
+    HEAD_KEYS.forEach(function(k){
+      var v = slots[k], it = v && !v.manual && itemById(v.itemId);
+      if (!it || taken[k]) return;
+      var cover = headCover(it);
+      if (cover.length < 2) return;
+      own[k] = true;
+      cover.forEach(function(o){ if (o !== k && !taken[o] && !own[o]) taken[o] = it.name; });
+    });
+    return taken[key] || null;
   }
   function dollTile(lo, group, def, val, setNames){
     var p = slotParts(val);
@@ -3496,7 +3515,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var noOffhand = offhandBlocked(slots);
     EQUIP_SLOTS.forEach(function(s){
       var v = slots[s.key];
-      if (!v || v.manual || (s.key === 'offhand' && noOffhand)) return;
+      if (!v || v.manual || (s.key === 'offhand' && noOffhand) || headCoveredBy(slots, s.key)) return;
       var it = itemById(v.itemId);
       if (!it) return;
       t.atk += it.atk||0; t.matk += it.matk||0; t.def += it.def||0; t.mdef += it.mdef||0; t.weight += it.weight||0;
@@ -3546,7 +3565,7 @@ input.invalid{ border-color:var(--danger) !important; }
     var noOffhand = offhandBlocked(slots);
     EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(def){
       var val = slots[def.key];
-      if (!val || (def.key === 'offhand' && noOffhand)) return;
+      if (!val || (def.key === 'offhand' && noOffhand) || headCoveredBy(slots, def.key)) return;
       if (!val.manual){
         var it = itemById(val.itemId);
         if (it) fn(it, val.refine || 0, val, false);
@@ -3575,7 +3594,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // the player. Only flat bonuses the parser knows are summed; the rest is shown as text.
   var EXTRA_SUGGESTIONS = ['STR +', 'AGI +', 'VIT +', 'INT +', 'DEX +', 'LUK +', 'All Stats +', 'ATK +', 'MATK +',
     'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD +', 'ASPD +%', 'ASPD Limit +', 'Max HP +', 'Max SP +',
-    'Penetration +', 'Defense Penetration +', 'Base ASPD +', 'Short-Range Damage +', 'Long-Range Damage +'];
+    'Penetration +', 'Defense Penetration +', 'Base ASPD +', 'Melee Damage +', 'Long-Range Damage +'];
   (function fillExtraSuggestions(){
     var dl = document.getElementById('extraSuggestions');
     if (dl) EXTRA_SUGGESTIONS.forEach(function(s){ var o = document.createElement('option'); o.value = s; dl.appendChild(o); });
@@ -3845,6 +3864,15 @@ input.invalid{ border-color:var(--danger) !important; }
     if (m.cardIndex === null){
       slots[m.slotDef.key] = val;
       if (m.slotDef.key === 'weapon' && isTwoHanded(item)) slots.offhand = null;
+      if (HEAD_KEYS.indexOf(m.slotDef.key) !== -1){
+        // Free the head slots this one covers, and drop a headgear elsewhere that covered this slot.
+        var cover = headCover(item);
+        HEAD_KEYS.forEach(function(k){
+          if (k === m.slotDef.key || !slots[k]) return;
+          var other = !slots[k].manual && itemById(slots[k].itemId);
+          if (cover.indexOf(k) !== -1 || (other && headCover(other).indexOf(m.slotDef.key) !== -1)) slots[k] = null;
+        });
+      }
     } else {
       var slotVal = slots[m.slotDef.key];
       if (!slotVal) return;
@@ -5497,7 +5525,8 @@ input.invalid{ border-color:var(--danger) !important; }
       box.appendChild(rsec);
     }
     if (it.how){
-      var q = el('div', { class:'acq-sec' }, [ el('h5', { text:'Quest / craft' }) ]);
+      var sold = it.how.kind === 'sold';
+      var q = el('div', { class:'acq-sec' }, [ el('h5', { text: sold ? L('Loja (NPC)', 'Shop (NPC)') : 'Quest / craft' }) ]);
       if (it.how.place) q.appendChild(el('div', { class:'acq-line', text:L('Onde: ', 'Where: ') + it.how.place }));
       if (it.how.note) q.appendChild(el('div', { class:'acq-line muted', text: it.how.note }));
       if (it.how.mats.length){
@@ -5528,7 +5557,7 @@ input.invalid{ border-color:var(--danger) !important; }
       EXCHANGES[it.id].forEach(function(ex){ xs.appendChild(exchangeLine(ex)); });
       box.appendChild(xs);
     }
-    if (it.shop) box.appendChild(el('div', { class:'acq-sec' }, [ el('h5', { text:L('Loja', 'Shop') }), el('div', { class:'acq-line', text:L('Vendido em loja (NPC).', 'Sold in an NPC shop.') }) ]));
+    if (it.shop && !(it.how && it.how.kind === 'sold')) box.appendChild(el('div', { class:'acq-sec' }, [ el('h5', { text:L('Loja', 'Shop') }), el('div', { class:'acq-line', text:L('Vendido em loja (NPC).', 'Sold in an NPC shop.') }) ]));
     if (!it.sources.length && !it.how && !it.shop){
       box.appendChild(el('div', { class:'route-note', text:L('A base não lista drop, quest nem loja para este item.', 'The database lists no drop, quest or shop for this item.') }));
     }
@@ -5712,7 +5741,7 @@ input.invalid{ border-color:var(--danger) !important; }
     } else if (it.sources.length){
       box.appendChild(sourceList(it, 1, true));
     } else if (it.how){
-      box.textContent = 'Quest/craft' + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
+      box.textContent = (it.how.kind === 'sold' ? L('Loja (NPC)', 'Shop (NPC)') : 'Quest/craft') + (it.how.place ? L(' em ', ' at ') + it.how.place : '');
     } else if (it.shop){
       box.textContent = L('Loja (NPC)', 'Shop (NPC)');
     } else {

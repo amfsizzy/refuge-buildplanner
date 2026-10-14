@@ -14,7 +14,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 ⚠️ Nunca poste login, senha, e-mail da conta ou qualquer dado pessoal.
 
-**Progresso:** 40 de 58 itens confirmados.
+**Progresso:** 40 de 59 itens confirmados.
 
 ## Refino
 
@@ -126,7 +126,7 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
 
 *Prioridade média* · Vêm do Codex do site, que já errou uma vez (INT/SP). Como testar: sem equipamento, coloque na ferramenta o mesmo level e os mesmos atributos do personagem e compare cada número da janela de Status com a aba Status da ferramenta.
 
-**Em aberto (3)**
+**Em aberto (4)**
 
 - [ ] `f3` **O Critical do planner bate com o do jogo?**
   1. Sem equipamento, abra a janela de atributos (Alt+Q) e anote a LUK base e o Critical do seu personagem.
@@ -143,6 +143,11 @@ Não temos acesso aos arquivos do jogo: o planner só conhece o que a **base de 
   2. Anote o dano que você recebe e o DEF e o MDEF da janela de atributos (Alt+Q).
   3. Troque a armadura ou o escudo para mudar o DEF/MDEF e anote o dano de novo; faça pelo menos 3 trocas.
   4. Mande anotado, para cada tentativa: nome e refino da armadura ou escudo usado → DEF / MDEF → dano recebido. Junto, o monstro ou a skill, sua classe e seu level.
+- [ ] `f11` **Como o "Total Flee +X%" soma no FLEE?**
+  1. Sem a Asprika (e sem outro item com "Flee +%"), abra a janela de atributos (Alt+Q) e anote o FLEE do seu personagem.
+  2. Equipe só a Asprika e anote o FLEE de novo.
+  3. Se puder, repita com outra AGI ou outro level, para ver se o aumento acompanha o FLEE total.
+  4. Mande anotado: nome e refino da Asprika, FLEE sem → FLEE com, sua AGI e LUK base, sua classe e seu level.
 
 <details>
 <summary>Confirmados (7)</summary>

@@ -14,7 +14,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 ⚠️ Never post your account login, password, email or any personal information.
 
-**Progress:** 40 of 58 items confirmed.
+**Progress:** 40 of 59 items confirmed.
 
 ## Refine
 
@@ -126,7 +126,7 @@ We don't have access to the game files: the planner only knows what the server's
 
 *Medium priority* · They come from the site's Codex, which was already wrong once (INT/SP). How to test: with no gear, enter the same level and stats as the character in the tool and compare each number in the Status window with the tool's Status tab.
 
-**Open (3)**
+**Open (4)**
 
 - [ ] `f3` **Does the planner's Critical match the game's?**
   1. With no gear on, open the attributes window (Alt+Q) and note your character's base LUK and Critical.
@@ -143,6 +143,11 @@ We don't have access to the game files: the planner only knows what the server's
   2. Note the damage you take and DEF and MDEF from the attributes window (Alt+Q).
   3. Swap armor or shield to change DEF/MDEF and note the damage again; do at least 3 swaps.
   4. Send it written, for each try: name and refine of the armor or shield used → DEF / MDEF → damage taken. Along with the monster or skill, your class and your level.
+- [ ] `f11` **How does "Total Flee +X%" add to FLEE?**
+  1. Without Asprika (and no other "Flee +%" item), open the attributes window (Alt+Q) and note your character's FLEE.
+  2. Equip only Asprika and note FLEE again.
+  3. If you can, repeat at another AGI or level, to see whether the increase follows your total FLEE.
+  4. Send it written as: Asprika name and refine, FLEE without → FLEE with, your base AGI and LUK, your class and your level.
 
 <details>
 <summary>Confirmed (7)</summary>

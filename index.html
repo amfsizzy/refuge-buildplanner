@@ -7,7 +7,7 @@
      Google Fonts. Images from anywhere else (e.g. a sprite URL inside a shared loadout code) are
      blocked, so a crafted code can't be used as a tracking pixel. Inline script/style are the
      page itself (single-file app). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https://rtm-database.pages.dev data:; connect-src https://rtm-database.pages.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://rtm-database.pages.dev data:; connect-src https://rtm-database.pages.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="icon" href="data:,">
 <title>Refuge Build Planner</title>
@@ -314,6 +314,8 @@ input,select,textarea,button{ font-size:14px; color:var(--fg); }
 .menu button{ text-align:left; background:transparent; border:0; color:var(--fg); font-size:13px; padding:8px 10px; border-radius:7px; cursor:pointer; }
 .menu button:hover, .menu button:focus-visible{ background:var(--surface-3); color:var(--accent-strong); outline:none; }
 .sidebar-actions .ghost-btn{ flex:1; }
+.share-icon{ display:grid; place-items:center; padding:6px 10px; }
+.share-icon svg{ width:18px; height:18px; display:block; }
 .icon-btn{
   background:var(--surface-2); border:1px solid var(--border); color:var(--fg-dim);
   border-radius:6px; padding:8px 11px; font-size:12px;
@@ -1024,6 +1026,7 @@ input.invalid{ border-color:var(--danger) !important; }
 
 /* ---- build image ---- */
 .card-panel{ max-width:980px; }
+.card-sex{ display:inline-flex; margin-bottom:10px; }
 .card-preview canvas{ display:block; width:100%; height:auto; border-radius:10px; }
 .card-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
 .card-actions .primary-btn{ padding:9px 18px; }
@@ -1119,8 +1122,13 @@ input.invalid{ border-color:var(--danger) !important; }
         <select id="fClass"></select>
       </div>
       <div class="icon-btn-row">
+        <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
+        <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
         <div class="menu-wrap">
-          <button class="icon-btn" id="shareBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="shareMenu" data-en="Share ▾">Compartilhar ▾</button>
+          <button class="icon-btn share-icon" id="shareBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="shareMenu"
+            aria-label="Compartilhar" title="Compartilhar" data-en-aria-label="Share" data-en-title="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+          </button>
           <div class="menu" id="shareMenu" role="menu" hidden>
             <button type="button" role="menuitem" data-act="link" data-en="Copy link for Discord">Copiar link para o Discord</button>
             <button type="button" role="menuitem" data-act="image" data-en="Build image">Imagem da build</button>
@@ -1128,8 +1136,6 @@ input.invalid{ border-color:var(--danger) !important; }
             <button type="button" role="menuitem" data-act="export" data-en="Export backup (.json)">Exportar backup (.json)</button>
           </div>
         </div>
-        <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
-        <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
       </div>
     </div>
 
@@ -4861,83 +4867,156 @@ input.invalid{ border-color:var(--danger) !important; }
     while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
     return t + '…';
   }
-  function drawBuildCard(lo){
+  // The skills worth showing on the image: the ones with points that are support (buffs) or
+  // active (attacks), from the most advanced class first and then by level. Passives and the
+  // Orphan basics are left out. Up to 8.
+  // Character sprites per class, male and female (assets/chars). The last classes of each line
+  // have none, so the closest class before them in the line is used.
+  var CHAR_SPRITES = ['Assassin', 'Blade Dancer', 'Dark Knight', 'Deadeye', 'Dracomancer', 'Duelist', 'Executioner', 'Illusionist',
+    'Jester', 'Judge', 'Legend', 'Mimic', 'Mystic', 'Orphan', 'Peacekeeper', 'Phantom Thief', 'Prowler', 'Raider', 'Revenant',
+    'Rogue', 'Ronin', 'Saboteur', 'Scoundrel', 'Shadowseer', 'Shinobi', 'Thief', 'Trickster', 'Unchained Thief', 'Vagabond'];
+  function charSprite(cls, sex){
+    var line = classLine(cls || 'Orphan');
+    for (var i = line.length - 1; i >= 0; i--){
+      if (CHAR_SPRITES.indexOf(line[i]) !== -1) return 'assets/chars/' + line[i].toLowerCase().replace(/ /g, '-') + '-' + (sex === 'f' ? 'f' : 'm') + '.png';
+    }
+    return 'assets/chars/orphan-' + (sex === 'f' ? 'f' : 'm') + '.png';
+  }
+  function mainSkills(lo){
+    if (!skillDb || !lo.charClass || NO_TREE.indexOf(lo.charClass) !== -1) return [];
+    var model = treeModel(lo), out = [];
+    model.classes.forEach(function(c){
+      if (c.cls === 'Orphan') return;
+      c.skills.forEach(function(s){
+        var lv = treeLv(model.tree, s);
+        if (!lv || (s.type !== 'Supportive' && s.type !== 'Active')) return;
+        out.push({ s: s, lv: lv, rank: c.idx });
+      });
+    });
+    out.sort(function(a, b){ return b.rank - a.rank || b.lv - a.lv || a.s.name.localeCompare(b.s.name); });
+    return out.slice(0, 8);
+  }
+  // A plain filled silhouette for the middle of the equipment window (no class art exists in the
+  // database). Thick rounded limbs and a tapered body; the female one has long hair and a skirt.
+  function drawFigure(ctx, cx, top, h, sex, color){
+    var u = h / 10; // body unit
+    ctx.save();
+    var glow = ctx.createRadialGradient(cx, top + h * 0.45, 10, cx, top + h * 0.45, h * 0.62);
+    glow.addColorStop(0, 'rgba(169,92,255,0.30)'); glow.addColorStop(1, 'rgba(169,92,255,0)');
+    ctx.fillStyle = glow; ctx.fillRect(cx - h * 0.62, top - 10, h * 1.24, h * 1.1);
+    var body = ctx.createLinearGradient(0, top, 0, top + h);
+    body.addColorStop(0, 'rgba(199,155,255,0.75)'); body.addColorStop(1, 'rgba(120,60,200,0.45)');
+    ctx.fillStyle = body; ctx.strokeStyle = body; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    var f = sex === 'f';
+    var sh = f ? 1.25 : 1.6, waist = f ? 0.8 : 1.05, hip = f ? 1.15 : 1.1;
+    if (f){ // hair behind the head, down to the shoulders
+      ctx.beginPath(); ctx.ellipse(cx, top + u * 1.45, u * 1.05, u * 1.35, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(cx, top + u * 0.95, u * 0.78, 0, Math.PI * 2); ctx.fill();          // head
+    ctx.lineWidth = u * 0.45; ctx.beginPath(); ctx.moveTo(cx, top + u * 1.6); ctx.lineTo(cx, top + u * 2.2); ctx.stroke(); // neck
+    // torso: shoulders → waist → hips
+    ctx.beginPath();
+    ctx.moveTo(cx - sh * u, top + u * 2.25);
+    ctx.quadraticCurveTo(cx, top + u * 2.0, cx + sh * u, top + u * 2.25);
+    ctx.quadraticCurveTo(cx + waist * u * 1.05, top + u * 3.6, cx + waist * u, top + u * 4.2);
+    ctx.quadraticCurveTo(cx + hip * u * 1.1, top + u * 4.9, cx + hip * u, top + u * 5.4);
+    ctx.lineTo(cx - hip * u, top + u * 5.4);
+    ctx.quadraticCurveTo(cx - hip * u * 1.1, top + u * 4.9, cx - waist * u, top + u * 4.2);
+    ctx.quadraticCurveTo(cx - waist * u * 1.05, top + u * 3.6, cx - sh * u, top + u * 2.25);
+    ctx.fill();
+    // arms
+    ctx.lineWidth = u * (f ? 0.52 : 0.62);
+    [-1, 1].forEach(function(s){
+      ctx.beginPath(); ctx.moveTo(cx + s * (sh - 0.15) * u, top + u * 2.45);
+      ctx.quadraticCurveTo(cx + s * (sh + 0.55) * u, top + u * 3.6, cx + s * (sh + 0.45) * u, top + u * 5.3); ctx.stroke();
+    });
+    if (f){ // skirt
+      ctx.beginPath(); ctx.moveTo(cx - hip * u, top + u * 5.2); ctx.lineTo(cx + hip * u, top + u * 5.2);
+      ctx.lineTo(cx + (hip + 0.55) * u, top + u * 6.7); ctx.lineTo(cx - (hip + 0.55) * u, top + u * 6.7); ctx.closePath(); ctx.fill();
+    }
+    // legs
+    ctx.lineWidth = u * (f ? 0.62 : 0.78);
+    [-1, 1].forEach(function(s){
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.55 * u, top + u * 5.3); ctx.lineTo(cx + s * 0.62 * u, top + u * 9.5); ctx.stroke();
+    });
+    ctx.restore();
+  }
+  function drawBuildCard(lo, sex){
     var sd = activeStageData(lo), s = computeStatusSummary(lo);
     var fDisplay = cssFont('--font-display', 'Georgia, serif'), fBody = cssFont('--font-body', 'sans-serif'), fMono = cssFont('--font-mono', 'monospace');
-    var gear = EQUIP_SLOTS.map(function(d){ return { def:d, v:sd.slots[d.key] }; });
-    var shadow = SHADOW_SLOTS.map(function(d){ return { def:d, v:sd.slots[d.key] }; });
-    var model = skillDb && lo.charClass && NO_TREE.indexOf(lo.charClass) === -1 ? treeModel(lo) : null;
-    var learned = [];
-    if (model) model.classes.forEach(function(c){ c.skills.forEach(function(sk){ var lv = treeLv(model.tree, sk); if (lv) learned.push(sk.name + ' ' + lv); }); });
+    function slotsOf(keys){ return keys.map(function(k){ return { def: slotDefByKey(k), v: sd.slots[k] }; }); }
+    var eqL = slotsOf(DOLL_LAYOUT.equip.left), eqR = slotsOf(DOLL_LAYOUT.equip.right);
+    var shL = slotsOf(DOLL_LAYOUT.shadow.left), shR = slotsOf(DOLL_LAYOUT.shadow.right);
+    var skills = mainSkills(lo);
     var urls = {};
-    gear.concat(shadow).forEach(function(g){ if (g.v && !g.v.manual) urls[g.v.itemId] = ICON(g.v.itemId); });
-    var ids = Object.keys(urls);
-    return Promise.all(ids.map(function(id){ return loadIcon(urls[id]); })).then(function(imgs){
-      var icons = {}; ids.forEach(function(id, i){ icons[id] = imgs[i]; });
-      // Left: equipment. Right: shadow, then stats and status under it. Skills across the bottom.
-      var ROW = 58, top = 176;
-      var yStats = top + shadow.length * ROW + 30, yStatus = yStats + 84;
-      var bodyEnd = Math.max(top + gear.length * ROW, yStatus + 110);
-      var skillLines = Math.ceil(learned.length / 4);
-      var y1 = bodyEnd + 36;
-      var H = y1 + (learned.length ? 28 + skillLines * 24 : 0) + 80;
+    eqL.concat(eqR, shL, shR).forEach(function(g){ if (g.v && !g.v.manual) urls['i' + g.v.itemId] = ICON(g.v.itemId); });
+    skills.forEach(function(k){ if (k.s.icon) urls['s' + k.s.key] = SKILL_ICON(k.s.icon); });
+    var charUrl = charSprite(lo.charClass, sex);
+    if (charUrl) urls.char = charUrl;
+    var keys = Object.keys(urls);
+    return Promise.all(keys.map(function(k){ return loadIcon(urls[k]); })).then(function(imgs){
+      var icons = {}; keys.forEach(function(k, i){ icons[k] = imgs[i]; });
+      var ROW = 62, COLW = 400, MID = CARD_W / 2;
+      var top = 172;
+      var eqH = 5 * ROW, shTop = top + eqH + 46, shH = 3 * ROW;
+      var stTop = shTop + shH + 40;
+      var skTop = stTop + 140;
+      var skRows = Math.ceil(skills.length / 4);
+      var H = skTop + (skills.length ? 36 + skRows * 52 : 0) + 76;
       var cv = document.createElement('canvas');
       var scale = 2;
       cv.width = CARD_W * scale; cv.height = H * scale;
       var ctx = cv.getContext('2d');
       ctx.scale(scale, scale);
       ctx.imageSmoothingEnabled = false;
-      // background
       var g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#1a0f2b'); g.addColorStop(0.35, CARD.bg); g.addColorStop(1, CARD.bg);
+      g.addColorStop(0, '#1a0f2b'); g.addColorStop(0.3, CARD.bg); g.addColorStop(1, CARD.bg);
       ctx.fillStyle = g; ctx.fillRect(0, 0, CARD_W, H);
       ctx.strokeStyle = 'rgba(169,92,255,0.45)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, H - 2);
-      // header
       ctx.fillStyle = CARD.accent2; ctx.font = '600 15px ' + fBody;
       ctx.fillText('REFUGE BUILD PLANNER', 40, 44);
       ctx.fillStyle = CARD.fg; ctx.font = '42px ' + fDisplay;
       ctx.fillText(fitText(ctx, lo.name || L('Sem nome', 'Unnamed'), CARD_W - 80), 40, 94);
       ctx.fillStyle = CARD.dim; ctx.font = '18px ' + fBody;
       ctx.fillText([lo.charClass || L('sem classe', 'no class'), stageLabel(lo.activeStage), 'Lv ' + (sd.level || 1)].join('  ·  '), 40, 126);
-      // gear columns
-      function column(title, list, x, w){
-        ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
-        ctx.fillText(title.toUpperCase(), x, top - 8);
-        list.forEach(function(g2, i){
-          var y = top + i * ROW;
-          ctx.fillStyle = CARD.panel; ctx.fillRect(x, y, w, ROW - 8);
-          ctx.fillStyle = 'rgba(169,92,255,0.6)'; ctx.fillRect(x, y, 3, ROW - 8);
-          ctx.fillStyle = CARD.faint; ctx.font = '11px ' + fBody;
-          ctx.fillText(g2.def.label.toUpperCase(), x + 62, y + 15);
-          var v = g2.v;
-          if (!v){ ctx.fillStyle = CARD.faint; ctx.font = '15px ' + fBody; ctx.fillText('—', x + 62, y + 36); return; }
-          var ic = !v.manual && icons[v.itemId];
-          if (ic) ctx.drawImage(ic, x + 12, y + 1, 48, 48);
-          ctx.fillStyle = CARD.fg; ctx.font = '700 16px ' + fBody;
-          var name = (v.refine ? '+' + v.refine + ' ' : '') + v.itemName;
-          ctx.fillText(fitText(ctx, name, w - 74), x + 62, y + 34);
-          var extra = [];
-          (v.cards || []).forEach(function(c){ if (c) extra.push(c.itemName); });
-          if (extra.length || (v.extras && v.extras.length)){
-            ctx.font = '12px ' + fBody;
-            var cardTxt = extra.join(', ');
-            ctx.fillStyle = CARD.card;
-            var shown = cardTxt ? fitText(ctx, cardTxt, w - 74) : '';
-            if (shown) ctx.fillText(shown, x + 62, y + 47);
-            if (v.extras && v.extras.length){
-              ctx.fillStyle = CARD.roll;
-              var off = shown ? ctx.measureText(shown + '  ').width : 0;
-              ctx.fillText(fitText(ctx, v.extras.join(', '), w - 74 - off), x + 62 + off, y + 47);
-            }
-          }
-        });
+      function heading(text, x, y){ ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody; ctx.fillText(text.toUpperCase(), x, y); }
+      // One slot box; boxes on the right put the icon on the outer side, like the game window.
+      function slot(g2, x, y, right){
+        var w = COLW, hh = ROW - 10;
+        ctx.fillStyle = CARD.panel; ctx.fillRect(x, y, w, hh);
+        ctx.fillStyle = 'rgba(169,92,255,0.6)'; ctx.fillRect(right ? x + w - 3 : x, y, 3, hh);
+        var v = g2.v, ix = right ? x + w - 58 : x + 8, tw = w - 76;
+        var tX = right ? x + w - 66 : x + 64;
+        ctx.textAlign = right ? 'right' : 'left';
+        ctx.fillStyle = CARD.faint; ctx.font = '11px ' + fBody;
+        ctx.fillText(g2.def.label.toUpperCase(), tX, y + 15);
+        if (!v){ ctx.fillStyle = CARD.faint; ctx.font = '15px ' + fBody; ctx.fillText('—', tX, y + 36); ctx.textAlign = 'left'; return; }
+        var ic = !v.manual && icons['i' + v.itemId];
+        if (ic) ctx.drawImage(ic, ix, y + 2, 48, 48);
+        ctx.fillStyle = CARD.fg; ctx.font = '700 16px ' + fBody;
+        ctx.fillText(fitText(ctx, (v.refine ? '+' + v.refine + ' ' : '') + v.itemName, tw), tX, y + 34);
+        var bits = [];
+        (v.cards || []).forEach(function(c){ if (c) bits.push(c.itemName); });
+        if (bits.length){ ctx.fillStyle = CARD.card; ctx.font = '12px ' + fBody; ctx.fillText(fitText(ctx, bits.join(', '), tw), tX, y + 48); }
+        else if (v.extras && v.extras.length){ ctx.fillStyle = CARD.roll; ctx.font = '12px ' + fBody; ctx.fillText(fitText(ctx, v.extras.join(', '), tw), tX, y + 48); }
+        ctx.textAlign = 'left';
       }
-      column(L('Equipamento', 'Equipment'), gear, 40, 540);
-      column('Shadow', shadow, 620, 540);
-      // stats + status, under the shadow column
-      ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
-      ctx.fillText(L('ATRIBUTOS', 'STATS'), 620, yStats);
-      ctx.fillText('STATUS', 620, yStatus);
+      heading(L('Equipamento', 'Equipment'), 40, top - 10);
+      eqL.forEach(function(g2, i){ slot(g2, 40, top + i * ROW, false); });
+      eqR.forEach(function(g2, i){ slot(g2, CARD_W - 40 - COLW, top + i * ROW, true); });
+      if (icons.char){
+        // The class's own character, 2x and crisp, on a soft glow; the plain figure when there is none.
+        var glow = ctx.createRadialGradient(MID, top + eqH * 0.48, 10, MID, top + eqH * 0.48, eqH * 0.62);
+        glow.addColorStop(0, 'rgba(169,92,255,0.30)'); glow.addColorStop(1, 'rgba(169,92,255,0)');
+        ctx.fillStyle = glow; ctx.fillRect(MID - eqH * 0.62, top - 10, eqH * 1.24, eqH * 1.1);
+        var cw = icons.char.width * 2, chh = icons.char.height * 2;
+        ctx.drawImage(icons.char, Math.round(MID - cw / 2), Math.round(top + (eqH - 10 - chh) / 2), cw, chh);
+      } else drawFigure(ctx, MID, top + 6, eqH - 20, sex, 'rgba(199,155,255,0.85)');
+      heading('Shadow', 40, shTop - 10);
+      shL.forEach(function(g2, i){ slot(g2, 40, shTop + i * ROW, false); });
+      shR.forEach(function(g2, i){ slot(g2, CARD_W - 40 - COLW, shTop + i * ROW, true); });
+      ctx.fillStyle = 'rgba(169,92,255,0.25)'; ctx.font = '28px ' + fDisplay; ctx.textAlign = 'center';
+      ctx.fillText('Shadow', MID, shTop + shH / 2 + 4); ctx.textAlign = 'left';
       function chips(list, x, y, w){
         var cx = x, cy = y;
         list.forEach(function(c){
@@ -4951,24 +5030,26 @@ input.invalid{ border-color:var(--danger) !important; }
           cx += tw + 8;
         });
       }
-      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 620, yStats + 14, 540);
+      heading(L('Atributos', 'Stats'), 40, stTop);
+      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 40, stTop + 14, 520);
+      heading('Status', 620, stTop);
       chips([['ATK', Math.round(s.atk)], ['MATK', Math.round(s.matkMax)], ['HIT', Math.round(s.hit)], ['FLEE', Math.round(s.flee)],
         ['CRIT', Math.round(s.crit)], ['DEF', Math.round(s.itemDef) + '+' + Math.round(s.softDef)], ['MDEF', Math.round(s.itemMdef) + '+' + Math.round(s.softMdef)],
-        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, yStatus + 14, 540);
-      // skills, across the bottom
-      if (learned.length){
-        ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
-        var pools = model.pools.map(function(p){ return p.name + ' ' + p.used + (p.cap !== null ? '/' + p.cap : ''); }).join('   ·   ');
-        ctx.fillText('SKILLS', 40, y1);
-        ctx.fillStyle = CARD.faint; ctx.font = '13px ' + fBody;
-        ctx.fillText(fitText(ctx, pools, CARD_W - 140), 110, y1);
-        ctx.font = '14px ' + fBody; ctx.fillStyle = CARD.dim;
-        learned.forEach(function(t, i){
+        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, stTop + 14, 540);
+      if (skills.length){
+        heading(L('Skills principais', 'Main skills'), 40, skTop);
+        skills.forEach(function(k, i){
           var col = i % 4, row = Math.floor(i / 4);
-          ctx.fillText(fitText(ctx, t, 265), 40 + col * 280, y1 + 28 + row * 24);
+          var x = 40 + col * 282, y = skTop + 14 + row * 52;
+          ctx.fillStyle = CARD.panel; ctx.fillRect(x, y, 270, 42);
+          var ic = icons['s' + k.s.key];
+          if (ic) ctx.drawImage(ic, x + 9, y + 9, 24, 24);
+          ctx.fillStyle = CARD.fg; ctx.font = '700 14px ' + fBody;
+          ctx.fillText(fitText(ctx, k.s.name, 190), x + 42, y + 20);
+          ctx.fillStyle = CARD.accent2; ctx.font = '600 12px ' + fMono;
+          ctx.fillText('Lv ' + k.lv + ' · ' + k.s.cls, x + 42, y + 36);
         });
       }
-      // footer
       ctx.fillStyle = CARD.line; ctx.fillRect(40, H - 54, CARD_W - 80, 1);
       ctx.fillStyle = CARD.accent2; ctx.font = '600 16px ' + fBody;
       ctx.fillText(L('Monte a sua: ', 'Plan yours: ') + PLANNER_URL, 40, H - 24);
@@ -4992,10 +5073,30 @@ input.invalid{ border-color:var(--danger) !important; }
     var status = el('div', { class:'card-status', role:'status', 'aria-live':'polite', text:L('Montando a imagem…', 'Drawing the image…') });
     var holder = el('div', { class:'card-preview' });
     var actions = el('div', { class:'card-actions' });
+    // Male or female figure in the middle, remembered for next time.
+    var sex = 'm';
+    try { sex = localStorage.getItem('rtm-hud-cardsex') === 'f' ? 'f' : 'm'; } catch(e){}
+    var pick = el('div', { class:'stage-toggle card-sex', role:'group', 'aria-label':L('Boneco', 'Figure') });
+    [['m', L('Masculino', 'Male')], ['f', L('Feminino', 'Female')]].forEach(function(o){
+      var b = el('button', { type:'button', class:'stage-btn' + (sex === o[0] ? ' active' : ''), 'aria-pressed': String(sex === o[0]), text: o[1] });
+      b.addEventListener('click', function(){
+        if (sex === o[0]) return;
+        sex = o[0];
+        try { localStorage.setItem('rtm-hud-cardsex', sex); } catch(e){}
+        Array.prototype.forEach.call(pick.children, function(c){ var on = c === b; c.classList.toggle('active', on); c.setAttribute('aria-pressed', String(on)); });
+        draw();
+      });
+      pick.appendChild(b);
+    });
+    panel.appendChild(pick);
     panel.appendChild(holder); panel.appendChild(actions); panel.appendChild(status);
     bd.appendChild(panel); document.body.appendChild(bd);
     x.focus();
-    drawBuildCard(lo).then(function(cv){
+    draw();
+    function draw(){
+    clear(holder); clear(actions);
+    status.textContent = L('Montando a imagem…', 'Drawing the image…');
+    drawBuildCard(lo, sex).then(function(cv){
       holder.appendChild(cv);
       status.textContent = L('Pronto. Baixe ou copie e cole no Discord.', 'Ready. Download it or copy and paste it in Discord.');
       var file = (lo.name || 'build').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'build';
@@ -5024,6 +5125,7 @@ input.invalid{ border-color:var(--danger) !important; }
     }).catch(function(err){
       status.textContent = L('Não foi possível montar a imagem: ', "Couldn't draw the image: ") + (err && err.message ? err.message : err);
     });
+    }
   }
 
   // ---------- Checklist tab: what still has to be measured in game ----------

@@ -522,6 +522,7 @@ input.invalid{ border-color:var(--danger) !important; }
 .sex-btn[aria-pressed="true"]{ background:var(--surface-3); color:var(--accent-strong); }
 .suggest-btn:disabled{ opacity:.45; cursor:not-allowed; }
 .suggest-modal{ max-width:560px; }
+.beta-tag{ font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--mid); border:1px solid currentColor; border-radius:999px; padding:0 5px; margin-left:4px; vertical-align:middle; }
 .sg-note{ font-size:11.5px; color:var(--mid); line-height:1.5; margin:0; }
 .sg-row{ display:flex; align-items:center; gap:9px; padding:7px; border-radius:7px; border:1px solid var(--border-soft); cursor:pointer; flex:0 0 auto; }
 .sg-row:hover{ background:var(--surface-2); }
@@ -1195,7 +1196,7 @@ input.invalid{ border-color:var(--danger) !important; }
       <section class="tab-panel" id="panel-equip">
         <div class="panel-head">
           <div class="head-left"><div class="stat-strip" id="statStrip"></div><div class="sex-toggle" role="group" aria-label="Boneco" data-en-aria-label="Character"><button type="button" class="sex-btn" data-sex="m" title="Masculino" aria-label="Masculino" data-en-title="Male" data-en-aria-label="Male">♂</button><button type="button" class="sex-btn" data-sex="f" title="Feminino" aria-label="Feminino" data-en-title="Female" data-en-aria-label="Female">♀</button></div></div>
-          <div class="panel-tools"><div class="hist-mini"><button class="ghost-btn undo-btn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button><button class="ghost-btn redo-btn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button></div><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled data-en="Suggest build">Sugerir build</button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
+          <div class="panel-tools"><div class="hist-mini"><button class="ghost-btn undo-btn" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" data-en-title="Undo (Ctrl+Z)" data-en-aria-label="Undo" disabled>↶</button><button class="ghost-btn redo-btn" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" data-en-title="Redo (Ctrl+Y)" data-en-aria-label="Redo" disabled>↷</button></div><button class="ghost-btn suggest-btn" id="suggestBtn" type="button" disabled><span data-en="Suggest build">Sugerir build</span> <span class="beta-tag">beta</span></button><button class="clear-all-btn" data-group="equip" type="button" data-en="Clear all">Limpar tudo</button></div>
         </div>
         <div class="doll" id="equipGrid"></div>
       </section>
@@ -1308,7 +1309,7 @@ input.invalid{ border-color:var(--danger) !important; }
 <div class="modal-backdrop" id="suggestBackdrop" hidden>
   <div class="modal suggest-modal" role="dialog" aria-labelledby="suggestTitle">
     <div class="modal-head">
-      <h3 id="suggestTitle" data-en="Suggest build">Sugerir build</h3>
+      <h3 id="suggestTitle"><span data-en="Suggest build">Sugerir build</span> <span class="beta-tag">beta</span></h3>
       <button class="close-x" id="suggestClose" type="button" aria-label="Fechar" data-en-aria-label="Close">&times;</button>
     </div>
     <p class="sg-note" data-en="A suggestion based only on the stats written on each item, for this stage's class and level. Cards, refine, rolled options and special effects are not counted — check before farming.">Sugestão baseada só nos atributos escritos em cada item, para a classe e o level desta fase. Cartas, refino, opções e efeitos especiais não entram na conta — confira antes de farmar.</p>
@@ -2488,8 +2489,8 @@ input.invalid{ border-color:var(--danger) !important; }
       if (group === 'shadow') syncSetFillBtn(lo);
     });
     if (p.it) attachTip(tile, p.it, function(){ return p.refine; });
-    // Right-click takes the piece off (Ctrl+Z brings it back).
-    if (val) tile.addEventListener('contextmenu', function(e){
+    // Right-click takes the piece off (Ctrl+Z brings it back). Not on touch: a long press fires it too.
+    if (val && !TOUCH) tile.addEventListener('contextmenu', function(e){
       e.preventDefault();
       hideTip();
       activeStageData(lo).slots[def.key] = null;
@@ -4930,6 +4931,8 @@ input.invalid{ border-color:var(--danger) !important; }
     EQUIP_SLOTS.concat(SHADOW_SLOTS).forEach(function(d){
       var vb = slotsB[d.key];
       if (!vb || vb.manual || versusSlotKey(vb) === versusSlotKey(slotsA[d.key])) return;
+      var bi = itemById(vb.itemId);
+      if (!bi || !canEquip(bi, A.charClass)) return; // A's class can't wear it
       var next = Object.assign({}, slotsA);
       next[d.key] = JSON.parse(JSON.stringify(vb));
       fixTwoHanded(next);

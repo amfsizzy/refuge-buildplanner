@@ -5036,6 +5036,12 @@ input.invalid{ border-color:var(--danger) !important; }
         out.push({ s: s, lv: lv, rank: c.idx });
       });
     });
+    // No active/support skill has points (common when they all go to passives): show the class
+    // line's own active and support skills, latest class first, without a level.
+    if (!out.length) model.classes.forEach(function(c){
+      if (c.cls === 'Orphan') return;
+      c.skills.forEach(function(s){ if (s.type === 'Supportive' || s.type === 'Active') out.push({ s: s, lv: 0, rank: c.idx }); });
+    });
     out.sort(function(a, b){ return b.rank - a.rank || b.lv - a.lv || a.s.name.localeCompare(b.s.name); });
     return out.slice(0, 8);
   }
@@ -5103,7 +5109,7 @@ input.invalid{ border-color:var(--danger) !important; }
       var top = 172;
       var eqH = 5 * ROW, shTop = top + eqH + 46, shH = 3 * ROW;
       var stTop = shTop + shH + 40;
-      var skTop = stTop + 140;
+      var skTop = stTop + 118;
       var skRows = Math.ceil(skills.length / 4);
       var H = skTop + (skills.length ? 36 + skRows * 52 : 0) + 76;
       var cv = document.createElement('canvas');
@@ -5131,17 +5137,17 @@ input.invalid{ border-color:var(--danger) !important; }
         var v = g2.v, ix = right ? x + w - 58 : x + 8, tw = w - 76;
         var tX = right ? x + w - 66 : x + 64;
         ctx.textAlign = right ? 'right' : 'left';
-        ctx.fillStyle = CARD.faint; ctx.font = '11px ' + fBody;
-        ctx.fillText(g2.def.label.toUpperCase(), tX, y + 15);
-        if (!v){ ctx.fillStyle = CARD.faint; ctx.font = '15px ' + fBody; ctx.fillText('—', tX, y + 36); ctx.textAlign = 'left'; return; }
+        // Only an empty slot says which slot it is; a filled one shows the item name larger.
+        if (!v){ ctx.fillStyle = CARD.faint; ctx.font = '14px ' + fBody; ctx.fillText(g2.def.label + ' —', tX, y + 31); ctx.textAlign = 'left'; return; }
         var ic = !v.manual && icons['i' + v.itemId];
         if (ic) ctx.drawImage(ic, ix, y + 2, 48, 48);
-        ctx.fillStyle = CARD.fg; ctx.font = '700 16px ' + fBody;
-        ctx.fillText(fitText(ctx, (v.refine ? '+' + v.refine + ' ' : '') + v.itemName, tw), tX, y + 34);
-        var bits = [];
+        var bits = [], sub = null;
         (v.cards || []).forEach(function(c){ if (c) bits.push(c.itemName); });
-        if (bits.length){ ctx.fillStyle = CARD.card; ctx.font = '12px ' + fBody; ctx.fillText(fitText(ctx, bits.join(', '), tw), tX, y + 48); }
-        else if (v.extras && v.extras.length){ ctx.fillStyle = CARD.roll; ctx.font = '12px ' + fBody; ctx.fillText(fitText(ctx, v.extras.join(', '), tw), tX, y + 48); }
+        if (bits.length) sub = [CARD.card, bits.join(', ')];
+        else if (v.extras && v.extras.length) sub = [CARD.roll, v.extras.join(', ')];
+        ctx.fillStyle = CARD.fg; ctx.font = '700 19px ' + fBody;
+        ctx.fillText(fitText(ctx, (v.refine ? '+' + v.refine + ' ' : '') + v.itemName, tw), tX, y + (sub ? 24 : 33));
+        if (sub){ ctx.fillStyle = sub[0]; ctx.font = '14px ' + fBody; ctx.fillText(fitText(ctx, sub[1], tw), tX, y + 43); }
         ctx.textAlign = 'left';
       }
       heading(L('Equipamento', 'Equipment'), 40, top - 10);
@@ -5158,8 +5164,8 @@ input.invalid{ border-color:var(--danger) !important; }
       heading('Shadow', 40, shTop - 10);
       shL.forEach(function(g2, i){ slot(g2, 40, shTop + i * ROW, false); });
       shR.forEach(function(g2, i){ slot(g2, CARD_W - 40 - COLW, shTop + i * ROW, true); });
-      ctx.fillStyle = 'rgba(169,92,255,0.25)'; ctx.font = '28px ' + fDisplay; ctx.textAlign = 'center';
-      ctx.fillText('Shadow', MID, shTop + shH / 2 + 4); ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(199,155,255,0.55)'; ctx.font = '30px ' + fDisplay; ctx.textAlign = 'center';
+      ctx.fillText(fitText(ctx, lo.charClass || 'Orphan', CARD_W - 2 * COLW - 100), MID, shTop + shH / 2 + 4); ctx.textAlign = 'left';
       function chips(list, x, y, w){
         var cx = x, cy = y;
         list.forEach(function(c){
@@ -5190,7 +5196,7 @@ input.invalid{ border-color:var(--danger) !important; }
           ctx.fillStyle = CARD.fg; ctx.font = '700 14px ' + fBody;
           ctx.fillText(fitText(ctx, k.s.name, 190), x + 42, y + 20);
           ctx.fillStyle = CARD.accent2; ctx.font = '600 12px ' + fMono;
-          ctx.fillText('Lv ' + k.lv + ' · ' + k.s.cls, x + 42, y + 36);
+          ctx.fillText((k.lv ? 'Lv ' + k.lv + ' · ' : '') + k.s.cls, x + 42, y + 36);
         });
       }
       ctx.fillStyle = CARD.line; ctx.fillRect(40, H - 54, CARD_W - 80, 1);

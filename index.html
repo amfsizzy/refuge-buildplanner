@@ -6292,6 +6292,8 @@ input.invalid{ border-color:var(--danger) !important; }
   var SUGGEST_PROFILES = {
     melee:  { label: L('Físico corpo a corpo', 'Physical melee'), w: { atk:1, str:2, dex:0.6, agi:0.8, luk:0.4, hit:0.3, crit:0.8, flee:0.2, vit:0.3, def:0.3 } },
     ranged: { label: L('Físico à distância', 'Physical ranged'), w: { atk:1, dex:2, str:0.4, agi:0.8, luk:0.4, hit:0.3, crit:0.8, flee:0.2, vit:0.3, def:0.3 } },
+    // Crit builds don't need DEX: a critical always hits (user, 2026-10-14, about Legend).
+    crit:   { label: L('Físico crítico (LUK)', 'Physical crit (LUK)'), w: { atk:1, str:2, luk:1.5, crit:1.5, agi:0.8, flee:0.2, vit:0.3, def:0.3 } },
     magic:  { label: L('Mágico', 'Magic'), w: { matk:1, int:2, dex:0.8, vit:0.4, agi:0.2, def:0.2, mdef:0.4 } },
     tank:   { label: L('Tanque', 'Tank'), w: { vit:2, def:1.5, mdef:1, flee:0.5, pdodge:1, agi:0.5, str:0.4, atk:0.2 } }
   };
@@ -6300,7 +6302,7 @@ input.invalid{ border-color:var(--danger) !important; }
   var ASPD_WEIGHTS = { aspd:1, aspdPct:1, aspdLimit:1 };
   function suggestWeights(profile, basic){
     var w = Object.assign({}, SUGGEST_PROFILES[profile].w);
-    if (basic && (profile === 'melee' || profile === 'ranged')) Object.assign(w, ASPD_WEIGHTS);
+    if (basic && isPhysicalProfile(profile)) Object.assign(w, ASPD_WEIGHTS);
     return w;
   }
   var SUGGEST_ROUNDS = 3, SUGGEST_SLOTS = EQUIP_SLOTS.concat(SHADOW_SLOTS);
@@ -6311,13 +6313,18 @@ input.invalid{ border-color:var(--danger) !important; }
     if (!STAT_KEYS.some(function(s){ return (sd.baseStats[s.key] || 1) > 1; })) miss.push(L('atributos', 'stats'));
     return miss;
   }
+  function isPhysicalProfile(p){ return p === 'melee' || p === 'ranged' || p === 'crit'; }
+  // Classes whose usual build the player confirmed.
+  var CLASS_PROFILE = { 'Legend': 'crit' };
   function guessProfile(lo){
     var b = activeStageData(lo).baseStats;
+    if (CLASS_PROFILE[lo.charClass]) return CLASS_PROFILE[lo.charClass];
     var w = weaponItem(lo, 'weapon');
     if ((b.int || 1) >= Math.max(b.str || 1, b.dex || 1)) return 'magic';
     // An equipped weapon decides melee vs ranged; without one, the bigger of DEX and STR does.
     var ranged = w ? RANGED_ATK_CATS.indexOf((w.cat || '').toLowerCase()) !== -1 : (b.dex || 1) > (b.str || 1);
     if (ranged) return 'ranged';
+    if ((b.luk || 1) > (b.dex || 1)) return 'crit';
     if ((b.vit || 1) > Math.max(b.str || 1, b.agi || 1)) return 'tank';
     return 'melee';
   }
@@ -6329,7 +6336,7 @@ input.invalid{ border-color:var(--danger) !important; }
   function weaponFitsProfile(it, profile){
     var ranged = RANGED_ATK_CATS.indexOf((it.cat || '').toLowerCase()) !== -1;
     if (profile === 'ranged') return ranged;
-    if (profile === 'melee' || profile === 'tank') return !ranged;
+    if (profile === 'melee' || profile === 'crit' || profile === 'tank') return !ranged;
     return true;
   }
   // Best items per slot by their own score.
@@ -6486,7 +6493,7 @@ input.invalid{ border-color:var(--danger) !important; }
   function renderSuggest(){
     var lo = activeLoadout();
     if (!lo || !suggestState) return;
-    var physical = suggestState.profile === 'melee' || suggestState.profile === 'ranged';
+    var physical = isPhysicalProfile(suggestState.profile);
     document.getElementById('suggestBasicWrap').hidden = !physical;
     var res = runSuggest(lo, suggestState.profile, physical && suggestState.basic);
     suggestState.result = res;

@@ -4612,10 +4612,13 @@ input.invalid{ border-color:var(--danger) !important; }
     var ids = Object.keys(urls);
     return Promise.all(ids.map(function(id){ return loadIcon(urls[id]); })).then(function(imgs){
       var icons = {}; ids.forEach(function(id, i){ icons[id] = imgs[i]; });
-      var ROW = 58, top = 150;
-      var listH = Math.max(gear.length, shadow.length) * ROW;
+      // Left: equipment. Right: shadow, then stats and status under it. Skills across the bottom.
+      var ROW = 58, top = 176;
+      var yStats = top + shadow.length * ROW + 30, yStatus = yStats + 84;
+      var bodyEnd = Math.max(top + gear.length * ROW, yStatus + 110);
       var skillLines = Math.ceil(learned.length / 4);
-      var H = top + listH + 40 + 150 + (learned.length ? 60 + skillLines * 24 : 0) + 70;
+      var y1 = bodyEnd + 36;
+      var H = y1 + (learned.length ? 28 + skillLines * 24 : 0) + 80;
       var cv = document.createElement('canvas');
       var scale = 2;
       cv.width = CARD_W * scale; cv.height = H * scale;
@@ -4669,11 +4672,10 @@ input.invalid{ border-color:var(--danger) !important; }
       }
       column(L('Equipamento', 'Equipment'), gear, 40, 540);
       column('Shadow', shadow, 620, 540);
-      // stats + status
-      var y0 = top + listH + 30;
+      // stats + status, under the shadow column
       ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
-      ctx.fillText(L('ATRIBUTOS', 'STATS'), 40, y0);
-      ctx.fillText('STATUS', 620, y0);
+      ctx.fillText(L('ATRIBUTOS', 'STATS'), 620, yStats);
+      ctx.fillText('STATUS', 620, yStatus);
       function chips(list, x, y, w){
         var cx = x, cy = y;
         list.forEach(function(c){
@@ -4687,12 +4689,11 @@ input.invalid{ border-color:var(--danger) !important; }
           cx += tw + 8;
         });
       }
-      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 40, y0 + 14, 540);
+      chips(STAT_KEYS.map(function(k){ return [k.label, s.totals[k.key], CARD.item]; }), 620, yStats + 14, 540);
       chips([['ATK', Math.round(s.atk)], ['MATK', Math.round(s.matkMax)], ['HIT', Math.round(s.hit)], ['FLEE', Math.round(s.flee)],
         ['CRIT', Math.round(s.crit)], ['DEF', Math.round(s.itemDef) + '+' + Math.round(s.softDef)], ['MDEF', Math.round(s.itemMdef) + '+' + Math.round(s.softMdef)],
-        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, y0 + 14, 540);
-      // skills
-      var y1 = y0 + 150;
+        [L('Teto ASPD', 'ASPD cap'), s.aspdCap]], 620, yStatus + 14, 540);
+      // skills, across the bottom
       if (learned.length){
         ctx.fillStyle = CARD.accent; ctx.font = '700 13px ' + fBody;
         var pools = model.pools.map(function(p){ return p.name + ' ' + p.used + (p.cap !== null ? '/' + p.cap : ''); }).join('   ·   ');

@@ -972,6 +972,34 @@ input.invalid{ border-color:var(--danger) !important; }
 .farm-mat{ cursor:pointer; }
 .farm-qty{ font-family:var(--font-mono); color:var(--accent-strong); }
 @media (pointer:coarse){ .farm-star, .farm-skip{ width:34px; height:34px; } }
+
+/* ---- Versus: two loadouts side by side ---- */
+.vs-backdrop{ position:fixed; inset:0; z-index:900; background:rgba(8,4,16,.72); backdrop-filter:blur(3px); overflow:auto; padding:24px 16px; }
+.vs-panel{ max-width:1100px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 18px 20px; box-shadow:0 30px 80px -30px rgba(0,0,0,.8); }
+.vs-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.vs-head h2{ margin:0; font-family:var(--font-display); font-weight:400; font-size:20px; }
+.vs-pick{ display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:10px; align-items:center; margin-bottom:14px; }
+.vs-side{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px; border-radius:12px; border:1px solid var(--border-soft); background:var(--surface-2); min-width:0; }
+.vs-side select{ flex:1 1 160px; min-width:0; font-size:13px; padding:6px 8px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); color:var(--fg); }
+.vs-letter{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:800 13px var(--font-mono); color:var(--accent-strong); border:1px solid var(--accent); }
+.vs-vs{ font:800 14px var(--font-display); color:var(--accent-strong); letter-spacing:.08em; }
+.vs-sec{ margin:14px 0 6px; font-size:13px; color:var(--fg-dim); }
+.vs-scroll{ overflow-x:auto; }
+.vs-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:520px; }
+.vs-table th{ text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-faint); padding:6px 8px; border-bottom:1px solid var(--border); }
+.vs-table td{ padding:6px 8px; border-bottom:1px solid var(--border-soft); vertical-align:middle; }
+.vs-table tr.group td{ font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); padding-top:12px; border-bottom:none; }
+.vs-gear tr.diff td{ background:color-mix(in srgb, var(--mid) 8%, transparent); }
+.vs-gear tr.diff .vs-slot{ box-shadow:inset 3px 0 0 var(--mid); }
+.vs-slot{ color:var(--fg-dim); white-space:nowrap; width:1%; }
+.vs-cell .item-row{ display:inline-flex; vertical-align:middle; margin-right:8px; }
+.vs-item{ display:inline-block; vertical-align:middle; max-width:calc(100% - 40px); }
+.vs-name{ font-weight:700; }
+.vs-sub{ font-size:11px; color:var(--fg-faint); }
+.vs-empty{ color:var(--fg-faint); }
+.vs-stats td:nth-child(n+2){ font-family:var(--font-mono); text-align:right; white-space:nowrap; }
+.vs-d.up{ color:var(--stat-item); font-weight:700; } .vs-d.down{ color:var(--danger); font-weight:700; } .vs-d.same{ color:var(--fg-faint); }
+@media (max-width:640px){ .vs-pick{ grid-template-columns:1fr; } .vs-vs{ text-align:center; } }
 </style>
 </head>
 <body>
@@ -1023,6 +1051,7 @@ input.invalid{ border-color:var(--danger) !important; }
       </div>
       <div class="icon-btn-row">
         <button class="icon-btn" id="shareBtn" type="button" title="Compartilhar" data-en="Share" data-en-title="Share">Compartilhar</button>
+        <button class="icon-btn" id="vsBtn" type="button" title="Comparar com outro loadout" data-en="Compare loadouts" data-en-title="Compare with another loadout">Comparar loadouts</button>
         <button class="icon-btn" id="dupBtn" type="button" title="Duplicar" data-en="Duplicate" data-en-title="Duplicate">Duplicar</button>
         <button class="icon-btn danger" id="delBtn" type="button" title="Excluir" data-en="Delete" data-en-title="Delete">Excluir</button>
       </div>
@@ -1710,7 +1739,9 @@ input.invalid{ border-color:var(--danger) !important; }
   function itemById(id){ return state.db ? state.db.byId[id] || null : null; }
   // Base level of the stage being shown (the compare tab overrides the stage), for
   // "Base Level 130 or higher:" blocks.
+  var levelOverride = null; // set while another loadout is computed (Versus)
   function shownLevel(){
+    if (levelOverride !== null) return levelOverride;
     var lo = activeLoadout();
     return lo ? (activeStageData(lo).level || 1) : 1;
   }
@@ -4325,32 +4356,35 @@ input.invalid{ border-color:var(--danger) !important; }
 
   // ---------- compare stages ----------
   var STAGES = ['early', 'mid', 'late'];
+  // Rows of both comparisons (stages of one loadout, and two loadouts side by side):
+  // [label, value(summary), lowerIsBetter] or ['group', title].
+  var COMPARE_ROWS = [
+    ['group', L('Personagem', 'Character')],
+    ['Level', function(s){ return s.level; }],
+    [L('Itens equipados', 'Equipped items'), function(s){ return s.equippedCount; }],
+    [L('Conjuntos completos', 'Complete sets'), function(s){ return s.completeSets; }],
+    ['group', L('Atributos (base + equip.)', 'Stats (base + gear)')],
+    ['STR', function(s){ return s.totals.str; }], ['AGI', function(s){ return s.totals.agi; }],
+    ['VIT', function(s){ return s.totals.vit; }], ['INT', function(s){ return s.totals.int; }],
+    ['DEX', function(s){ return s.totals.dex; }], ['LUK', function(s){ return s.totals.luk; }],
+    ['group', L('Simulador', 'Simulator')],
+    [L('ATK (stats + bônus)', 'ATK (stats + bonus)'), function(s){ return s.atk; }], [L('MATK máx (stats + bônus)', 'Max MATK (stats + bonus)'), function(s){ return s.matkMax; }],
+    ['HIT', function(s){ return s.hit; }], ['FLEE', function(s){ return s.flee; }],
+    ['Critical', function(s){ return s.crit; }], ['Perfect Dodge', function(s){ return s.pdodge; }],
+    [L('DEF suave', 'Soft DEF'), function(s){ return s.softDef; }], [L('MDEF suave', 'Soft MDEF'), function(s){ return s.softMdef; }],
+    [L('Teto de ASPD', 'ASPD cap'), function(s){ return s.aspdCap; }],
+    ['group', L('Valores dos itens', 'Item values')],
+    [L('ATK dos itens', 'Item ATK'), function(s){ return s.itemAtk; }], [L('MATK dos itens', 'Item MATK'), function(s){ return s.itemMatk; }],
+    [L('DEF dos itens', 'Item DEF'), function(s){ return s.itemDef; }], [L('MDEF dos itens', 'Item MDEF'), function(s){ return s.itemMdef; }],
+    [L('Peso', 'Weight'), function(s){ return s.weight; }, true]
+  ];
   function renderCompare(lo){
     var wrap = document.getElementById('compareTable');
     if (!wrap) return;
     clear(wrap);
     if (!state.db){ wrap.appendChild(el('div', { class:'empty-note', text:L('Esperando a base de itens carregar…', 'Waiting for the item database to load…') })); return; }
     var sums = STAGES.map(function(st){ return withStage(st, function(){ return computeStatusSummary(lo); }); });
-    var rows = [
-      ['group', L('Personagem', 'Character')],
-      ['Level', function(s){ return s.level; }],
-      [L('Itens equipados', 'Equipped items'), function(s){ return s.equippedCount; }],
-      [L('Conjuntos completos', 'Complete sets'), function(s){ return s.completeSets; }],
-      ['group', L('Atributos (base + equip.)', 'Stats (base + gear)')],
-      ['STR', function(s){ return s.totals.str; }], ['AGI', function(s){ return s.totals.agi; }],
-      ['VIT', function(s){ return s.totals.vit; }], ['INT', function(s){ return s.totals.int; }],
-      ['DEX', function(s){ return s.totals.dex; }], ['LUK', function(s){ return s.totals.luk; }],
-      ['group', L('Simulador', 'Simulator')],
-      [L('ATK (stats + bônus)', 'ATK (stats + bonus)'), function(s){ return s.atk; }], [L('MATK máx (stats + bônus)', 'Max MATK (stats + bonus)'), function(s){ return s.matkMax; }],
-      ['HIT', function(s){ return s.hit; }], ['FLEE', function(s){ return s.flee; }],
-      ['Critical', function(s){ return s.crit; }], ['Perfect Dodge', function(s){ return s.pdodge; }],
-      [L('DEF suave', 'Soft DEF'), function(s){ return s.softDef; }], [L('MDEF suave', 'Soft MDEF'), function(s){ return s.softMdef; }],
-      [L('Teto de ASPD', 'ASPD cap'), function(s){ return s.aspdCap; }],
-      ['group', L('Valores dos itens', 'Item values')],
-      [L('ATK dos itens', 'Item ATK'), function(s){ return s.itemAtk; }], [L('MATK dos itens', 'Item MATK'), function(s){ return s.itemMatk; }],
-      [L('DEF dos itens', 'Item DEF'), function(s){ return s.itemDef; }], [L('MDEF dos itens', 'Item MDEF'), function(s){ return s.itemMdef; }],
-      [L('Peso', 'Weight'), function(s){ return s.weight; }, true]
-    ];
+    var rows = COMPARE_ROWS;
     var table = el('table', { class:'compare-table' });
     var thead = el('thead'), hr = el('tr');
     hr.appendChild(el('th', { text:'' }));
@@ -4382,6 +4416,154 @@ input.invalid{ border-color:var(--danger) !important; }
     table.appendChild(tbody);
     wrap.appendChild(table);
   }
+
+  // ---------- Versus: two loadouts side by side ----------
+  // Pick any two loadouts (and a stage of each): their gear shows slot by slot, with the slots
+  // that differ marked, and below it the same numbers as the stage Compare tab, B against A.
+  var vs = null; // { a:{ id, stage }, b:{ id, stage } } while the comparison is open
+  function loadoutById(id){ return state.loadouts.filter(function(l){ return l.id === id; })[0] || null; }
+  // Everything the comparison needs from one loadout at one stage, computed with that loadout's
+  // own level (for "Base Level N or higher" bonuses).
+  function versusData(lo, stage){
+    var prevLv = levelOverride;
+    levelOverride = (lo.stages[stage] && lo.stages[stage].level) || 1;
+    try {
+      return withStage(stage, function(){ return { s: computeStatusSummary(lo), fx: computeAllEffects(lo), slots: activeStageData(lo).slots }; });
+    } finally { levelOverride = prevLv; }
+  }
+  function openVersus(){
+    var lo = activeLoadout(); if (!lo || !state.db) return;
+    var other = state.loadouts.filter(function(l){ return l.id !== lo.id; })[0];
+    vs = { a: { id: lo.id, stage: lo.activeStage },
+      b: other ? { id: other.id, stage: other.activeStage } : { id: lo.id, stage: lo.activeStage === 'early' ? 'mid' : 'early' } };
+    renderVersus();
+    var x = document.querySelector('#vsBackdrop .close-x'); if (x) x.focus();
+  }
+  function closeVersus(){
+    vs = null;
+    var bd = document.getElementById('vsBackdrop'); if (bd) bd.remove();
+    var b = document.getElementById('vsBtn'); if (b) b.focus();
+  }
+  function renderVersus(){
+    if (!vs) return;
+    var A = loadoutById(vs.a.id), B = loadoutById(vs.b.id);
+    if (!A || !B){ closeVersus(); return; }
+    var bd = document.getElementById('vsBackdrop');
+    if (!bd){
+      bd = el('div', { class:'vs-backdrop', id:'vsBackdrop' });
+      bd.addEventListener('click', function(e){ if (e.target === bd) closeVersus(); });
+      document.body.appendChild(bd);
+    }
+    clear(bd);
+    var panel = el('div', { class:'vs-panel', role:'dialog', 'aria-modal':'true', 'aria-label':L('Comparar loadouts', 'Compare loadouts') });
+    var head = el('div', { class:'vs-head' }, [ el('h2', { text:L('Comparar loadouts', 'Compare loadouts') }) ]);
+    var x = el('button', { type:'button', class:'close-x', 'aria-label':L('Fechar', 'Close'), text:'×' });
+    x.addEventListener('click', closeVersus);
+    head.appendChild(x);
+    panel.appendChild(head);
+
+    var da = versusData(A, vs.a.stage), db = versusData(B, vs.b.stage);
+    var pick = el('div', { class:'vs-pick' });
+    pick.appendChild(versusPicker('a', 'A'));
+    pick.appendChild(el('div', { class:'vs-vs', text:'VS' }));
+    pick.appendChild(versusPicker('b', 'B'));
+    panel.appendChild(pick);
+
+    // Gear, slot by slot
+    var gear = el('table', { class:'vs-table vs-gear' });
+    var gh = el('tr', {}, [ el('th', { text:L('Slot', 'Slot') }), el('th', { text:'A' }), el('th', { text:'B' }) ]);
+    gear.appendChild(el('thead', {}, [gh]));
+    var gb = el('tbody'), diffs = 0;
+    [[L('Equipamento', 'Equipment'), EQUIP_SLOTS], ['Shadow', SHADOW_SLOTS]].forEach(function(g){
+      gb.appendChild(el('tr', { class:'group' }, [ el('td', { colspan:'3', text: g[0] }) ]));
+      g[1].forEach(function(d){
+        var va = da.slots[d.key], vb = db.slots[d.key];
+        var same = versusSlotKey(va) === versusSlotKey(vb);
+        if (!same) diffs++;
+        gb.appendChild(el('tr', { class: same ? '' : 'diff' }, [ el('td', { class:'vs-slot', text: d.label }), versusSlotCell(va), versusSlotCell(vb) ]));
+      });
+    });
+    gear.appendChild(gb);
+    panel.appendChild(el('h3', { class:'vs-sec', text:L('Equipamento', 'Gear') + ' · ' + diffs + L(' slot(s) diferente(s)', ' slot(s) differ') }));
+    panel.appendChild(el('div', { class:'vs-scroll' }, [gear]));
+
+    // Numbers, B against A
+    var st = el('table', { class:'vs-table vs-stats' });
+    st.appendChild(el('thead', {}, [ el('tr', {}, [ el('th', { text:'' }), el('th', { text:'A' }), el('th', { text:'B' }), el('th', { text:'B − A' }) ]) ]));
+    var sb = el('tbody');
+    COMPARE_ROWS.forEach(function(r){
+      if (r[0] === 'group'){ sb.appendChild(el('tr', { class:'group' }, [ el('td', { colspan:'4', text: r[1] }) ])); return; }
+      sb.appendChild(versusRow(r[0], Math.round(r[1](da.s)), Math.round(r[1](db.s)), !!r[2], ''));
+    });
+    var fxKeys = {};
+    [da.fx, db.fx].forEach(function(m){ Object.keys(m).forEach(function(k){ fxKeys[k] = m[k]; }); });
+    var keys = Object.keys(fxKeys).filter(function(k){ return Math.round(((da.fx[k] || {}).n || 0) * 100) || Math.round(((db.fx[k] || {}).n || 0) * 100); })
+      .sort(function(p, q){ return fxKeys[p].label.localeCompare(fxKeys[q].label); });
+    if (keys.length){
+      sb.appendChild(el('tr', { class:'group' }, [ el('td', { colspan:'4', text:L('Outros efeitos (não calculados no simulador)', 'Other effects (not calculated in the simulator)') }) ]));
+      keys.forEach(function(k){
+        var e = fxKeys[k];
+        var lower = /cast|delay|cooldown|cost|taken/i.test(e.label);
+        sb.appendChild(versusRow(e.label, Math.round(((da.fx[k] || {}).n || 0) * 100) / 100, Math.round(((db.fx[k] || {}).n || 0) * 100) / 100, lower, e.unit));
+      });
+    }
+    st.appendChild(sb);
+    panel.appendChild(el('h3', { class:'vs-sec', text:L('Status', 'Status') }));
+    panel.appendChild(el('div', { class:'vs-scroll' }, [st]));
+    bd.appendChild(panel);
+  }
+  function versusPicker(side, letter){
+    var cur = vs[side];
+    var box = el('div', { class:'vs-side' });
+    box.appendChild(el('span', { class:'vs-letter', text: letter }));
+    var sel = el('select', { 'aria-label':L('Loadout ', 'Loadout ') + letter });
+    state.loadouts.forEach(function(l){
+      var o = el('option', { value: l.id, text: (l.name || L('Sem nome', 'Unnamed')) + (l.charClass ? ' · ' + l.charClass : '') });
+      if (l.id === cur.id) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function(){ cur.id = sel.value; renderVersus(); });
+    box.appendChild(sel);
+    var stages = el('div', { class:'stage-toggle' });
+    STAGE_KEYS.forEach(function(k){
+      var b = el('button', { type:'button', class:'stage-btn' + (cur.stage === k ? ' active' : ''), 'aria-pressed': String(cur.stage === k), text: stageLabel(k) });
+      b.addEventListener('click', function(){ cur.stage = k; renderVersus(); });
+      stages.appendChild(b);
+    });
+    box.appendChild(stages);
+    return box;
+  }
+  // Same item, refine, cards and rolls → same slot.
+  function versusSlotKey(v){
+    if (!v) return '';
+    return JSON.stringify([v.manual ? v.itemName : v.itemId, v.refine || 0, (v.cards || []).map(function(c){ return c ? (c.manual ? c.itemName : c.itemId) : 0; }), v.extras || []]);
+  }
+  function versusSlotCell(v){
+    var td = el('td', { class:'vs-cell' });
+    if (!v){ td.appendChild(el('span', { class:'vs-empty', text:'—' })); return td; }
+    var it = v.manual ? null : itemById(v.itemId);
+    if (it) td.appendChild(spriteEl(ICON(it.id)));
+    var t = el('div', { class:'vs-item' });
+    t.appendChild(el('div', { class:'vs-name', text: (v.refine ? '+' + v.refine + ' ' : '') + v.itemName }));
+    var bits = [];
+    var cards = (v.cards || []).filter(Boolean);
+    if (cards.length) bits.push(cards.map(function(c){ return c.itemName; }).join(', '));
+    if (v.extras && v.extras.length) bits.push(v.extras.join(', '));
+    if (bits.length) t.appendChild(el('div', { class:'vs-sub', text: bits.join(' · ') }));
+    td.appendChild(t);
+    return td;
+  }
+  function versusRow(label, a, b, lowerIsBetter, unit){
+    var d = Math.round((b - a) * 100) / 100;
+    var cls = !d ? 'same' : ((lowerIsBetter ? d < 0 : d > 0) ? 'up' : 'down');
+    return el('tr', {}, [
+      el('td', { text: label }),
+      el('td', { text: a + unit }),
+      el('td', { text: b + unit }),
+      el('td', { class:'vs-d ' + cls, text: d ? (d > 0 ? '+' : '') + d + unit : '=' })
+    ]);
+  }
+  document.addEventListener('keydown', function(e){ if (vs && e.key === 'Escape'){ e.preventDefault(); closeVersus(); } });
 
   // ---------- routes to a place: server (from db-places) + original game (hand-written) ----------
   function posText(p){ return NUMPAD_POS[p] || ''; }
@@ -5101,6 +5283,7 @@ input.invalid{ border-color:var(--danger) !important; }
     renderCompare(lo);
     renderSummary(lo);
   });
+  document.getElementById('vsBtn').addEventListener('click', openVersus);
   document.querySelectorAll('.clear-all-btn').forEach(function(btn){
     var resetTimer = null;
     function reset(){

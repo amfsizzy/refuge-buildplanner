@@ -959,6 +959,16 @@ input.invalid{ border-color:var(--danger) !important; }
 .st-reset{ margin-left:auto; padding:3px 10px; font-size:11px; }
 .st-scroll{ overflow-x:auto; padding-bottom:2px; }
 .st-grid{ display:grid; grid-template-columns:repeat(7, minmax(78px, 1fr)); gap:6px; min-width:600px; }
+/* Scroll cue: edge shadows appear only while content is clipped on that side (local/scroll attachment trick). */
+@media (max-width:760px){
+  .st-scroll{
+    background:
+      linear-gradient(to right, var(--surface) 30%, transparent) left center / 28px 100% no-repeat local,
+      linear-gradient(to left, var(--surface) 30%, transparent) right center / 28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.35), transparent) left center / 10px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.35), transparent) right center / 10px 100% no-repeat scroll;
+  }
+}
 .st-cell{
   display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px 4px; border-radius:9px;
   border:1px solid var(--border-soft); background:var(--surface-2); cursor:pointer; user-select:none; min-width:0;
@@ -1053,6 +1063,27 @@ input.invalid{ border-color:var(--danger) !important; }
 .farm-mat{ cursor:pointer; }
 .farm-qty{ font-family:var(--font-mono); color:var(--accent-strong); }
 @media (pointer:coarse){ .farm-star, .farm-skip{ width:34px; height:34px; } }
+/* Mobile: farm rows must wrap instead of overflowing, and touch targets reach ~36px. */
+@media (max-width:560px){
+  .farm-item{ gap:6px; }
+  .farm-item .src-list{ display:flex; margin-left:0; }
+  .farm-item .src-one{ white-space:normal; overflow-wrap:anywhere; }
+  .farm-item .item-name{ white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+}
+@media (pointer:coarse), (max-width:560px){
+  /* .pip keeps its 22px look; overflow is released so the ::after hit area can extend past it */
+  .pip{ position:relative; overflow:visible; }
+  .pip img{ border-radius:5px; }
+  .pip::after{ content:""; position:absolute; inset:-7px; }
+  .stat-row input[type=number]{ min-height:36px; font-size:16px; }
+  .skill-lv input{ width:52px; min-height:36px; font-size:16px; }
+  .sex-btn{ min-width:44px; min-height:38px; }
+  .stage-level-input{ min-height:38px; width:60px; font-size:16px; }
+  .tabs-row .stage-level-input{ width:60px; }
+  .farm-star, .farm-skip{ width:36px; height:36px; }
+  .farm-toggle{ width:36px; height:36px; }
+  .st-step{ width:32px; height:32px; }
+}
 
 /* ---- Versus: two loadouts side by side ---- */
 .vs-backdrop{ position:fixed; inset:0; z-index:900; background:rgba(8,4,16,.72); backdrop-filter:blur(3px); overflow:auto; padding:24px 16px; }
@@ -1882,7 +1913,14 @@ input.invalid{ border-color:var(--danger) !important; }
   // bonus; the others take a signed value ("Total DEF: +15%"). "HP Bonus" / "SP Bonus" are
   // rewritten to Max HP / Max SP before parsing (see the item loader).
   var RE_BONUS_LABEL = /^(?:(Special|Added)|(Total DEF|Fixed Cast Time|Range|Splash Range|SP Consumption))\s*:\s*(.*)$/i;
+  // "+15% Damage vs Earth" / "-10% Damage vs Dark" / "+10% Damage vs Fire/Water/Earth" write the
+  // number first; read them as "Damage vs Earth +15%" (the whole label stays, lists are not split).
+  // Needs a capitalised label, so "-1 second" and wrapped "+10" fragments stay ignored; a comma
+  // means several bonuses on one line, left as before.
+  var RE_NUMBER_FIRST = /^([+\-])\s?(\d+(?:\.\d+)?)(%?)\s+([A-Z][^:,]*?)[.;]?$/;
   function unlabel(line){
+    var nf = RE_NUMBER_FIRST.exec(line);
+    if (nf) return nf[4] + ' ' + nf[1] + nf[2] + nf[3];
     var m = RE_BONUS_LABEL.exec(line);
     if (!m) return /:/.test(line) ? null : line;
     if (m[1]) return /:/.test(m[3]) ? null : m[3];
@@ -1960,12 +1998,17 @@ input.invalid{ border-color:var(--danger) !important; }
   // ending in ":") when it starts with a lowercase word or "(" and the line above doesn't end
   // a phrase ("," or "."), or when it starts with a signed number and the line above doesn't
   // end in one ("Weight Limit +500" / "+300 per Refine" are two separate bonuses).
+  // A number-first bonus with its own capitalised label ("Dark Weapon" / "+10% Damage vs Dark")
+  // stays a line of its own.
+  // A previous line ending on a connecting word is an unfinished sentence ("... within 3 s with" /
+  // "+50% Damage"), so the number-first line is its end, not a bonus of its own.
+  var RE_CONNECTING_END = /\b(?:with|to|by|of|and|for|gains|grants),?$/i;
   function joinContinuations(raw){
     var out = [];
     raw.forEach(function(line){
       var l = line.trim(), prev = out.length ? out[out.length - 1] : '';
       var continues = !!l && !!prev && !/:$/.test(prev) &&
-        ((/^[a-z(]/.test(l) && !/[,.]$/.test(prev)) || (/^[+\-]\d/.test(l) && !/\d\S*$/.test(prev)));
+        ((/^[a-z(]/.test(l) && !/[,.]$/.test(prev)) || (/^[+\-]\d/.test(l) && !/\d\S*$/.test(prev) && (!RE_NUMBER_FIRST.test(l) || RE_CONNECTING_END.test(prev))));
       if (!continues){ out.push(l); return; }
       // "Max SP +3%, Fixed Cast" / "-1% per refine": only the part after the last comma
       // continues, so "per refine" doesn't spread to the bonus before it.
@@ -3588,7 +3631,7 @@ input.invalid{ border-color:var(--danger) !important; }
     if (total) tools.appendChild(resetButton(L('Resetar tudo', 'Reset all'), function(){ resetPoolsFrom(lo, 0); }));
     head.appendChild(tools);
     box.appendChild(head);
-    box.appendChild(el('div', { class:'st-help', text: TOUCH
+    box.appendChild(el('div', { class:'st-help', text: (TOUCH || (window.matchMedia && window.matchMedia('(max-width:760px)').matches))
       ? L('Toque no ícone para subir 1 nível; use ‹ › para ajustar. Os pré-requisitos sobem juntos.', 'Tap an icon to add a level; use ‹ › to adjust. Prerequisites go up with it.')
       : L('Clique sobe 1 nível, botão direito desce, Shift+clique vai ao máximo. Os pré-requisitos sobem juntos.', 'Click adds a level, right-click removes one, Shift+click goes to max. Prerequisites go up with it.') }));
     box.appendChild(el('div', { class:'st-msg', role:'status', 'aria-live':'polite', text: treeMsg }));

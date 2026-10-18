@@ -3446,14 +3446,46 @@ input.invalid{ border-color:var(--danger) !important; }
       p.used = p.skills.reduce(function(t, s){ return t + treeLv(tree, s); }, 0);
       p.name = p.classes.map(function(c){ return c.cls; }).join(' + ');
     });
+    var unfunded = allocatePools(pools, pools.map(function(p){ return p.used; }));
     var tabs = [];
     pools.forEach(function(p, i){
       if (i === 1 && pools[0].classes[0].cls === 'Orphan') tabs[0].pools.push(p);
       else tabs.push({ pools: [p] });
     });
-    return { line: line, tree: tree, classes: classes, pools: pools, tabs: tabs };
+    return { line: line, tree: tree, classes: classes, pools: pools, tabs: tabs, unfunded: unfunded };
   }
-  function poolFull(p){ return p.cap === null || p.used >= p.cap; }
+  // Points of a higher job can be spent on skills of earlier jobs (confirmed in game). Nothing is
+  // saved for it: from the levels per pool, the part of a pool above its cap ("overflow") is charged
+  // to the lowest higher pool that still has free points. Orphan neither borrows nor lends, and a
+  // pool without a known cap is left alone. Fills own / borrowed / lent / spent / lenders on each
+  // pool and returns the overflow that no pool could pay (an imported tree over the budget).
+  function allocatePools(pools, used){
+    function out(p){ return p.cap === null || p.classes[0].cls === 'Orphan'; }
+    pools.forEach(function(p, i){
+      p.own = p.cap === null ? used[i] : Math.min(used[i], p.cap);
+      p.borrowed = 0; p.lent = 0; p.lenders = [];
+    });
+    var unfunded = 0;
+    pools.forEach(function(p, i){
+      if (out(p)){ if (p.cap !== null) unfunded += Math.max(0, used[i] - p.cap); return; }
+      var over = used[i] - p.cap;
+      for (var j = i + 1; j < pools.length && over > 0; j++){
+        var q = pools[j];
+        if (out(q)) continue;
+        var free = q.cap - q.own - q.lent;
+        if (free <= 0) continue;
+        var take = Math.min(free, over);
+        q.lent += take; p.borrowed += take; over -= take;
+        p.lenders.push({ name: q.name, pts: take });
+      }
+      unfunded += Math.max(0, over);
+    });
+    pools.forEach(function(p){ p.spent = p.own + p.lent; });
+    return unfunded;
+  }
+  // A pool counts as full for opening the next job by its own points plus the ones it lent;
+  // points it borrowed never count (its own points have to reach the cap).
+  function poolFull(p){ return p.cap === null || p.spent >= p.cap; }
   // A prerequisite is looked up in the skill's own class first, then in the classes before it.
   function resolveNeed(model, name, classIdx){
     for (var i = classIdx; i >= 0; i--){
@@ -3493,16 +3525,23 @@ input.invalid{ border-color:var(--danger) !important; }
       var sk = skillDb.byKey[k];
       used[classOf(model, sk).pool] += plan[k] - treeLv(model.tree, sk);
     });
-    for (var i = 0; i < model.pools.length; i++){
-      var p = model.pools[i];
-      if (p.cap !== null && used[i] > p.cap)
-        return L('Não há pontos suficientes em ' + p.name + ' (' + used[i] + ' de ' + p.cap + ').', 'Not enough points in ' + p.name + ' (' + used[i] + ' of ' + p.cap + ').');
-      // A pool takes points only once every pool before it is full.
-      if (used[i] > p.used){
-        for (var j = 0; j < i; j++){
-          var q = model.pools[j];
-          if (q.cap !== null && used[j] < q.cap)
-            return L('Gaste todos os pontos de ' + q.name + ' antes (' + used[j] + ' de ' + q.cap + ').', 'Spend every point of ' + q.name + ' first (' + used[j] + ' of ' + q.cap + ').');
+    // Simulate the whole allocation: overflow goes up to the free points of higher jobs.
+    var before = model.pools.map(function(p){ return { own: p.own, lent: p.lent }; });
+    var sim = model.pools.map(function(p){ return { cap: p.cap, name: p.name, classes: p.classes }; });
+    var unfunded = allocatePools(sim, used);
+    if (unfunded > 0){
+      for (var i = 0; i < sim.length; i++){
+        if (sim[i].cap !== null && used[i] > sim[i].cap)
+          return L('Não há pontos suficientes em ' + sim[i].name + ' (' + used[i] + ' de ' + sim[i].cap + ').', 'Not enough points in ' + sim[i].name + ' (' + used[i] + ' of ' + sim[i].cap + ').');
+      }
+    }
+    // A pool takes points (its own or lent ones) only once every pool before it is fully spent.
+    for (var i2 = 0; i2 < sim.length; i2++){
+      if (sim[i2].own > before[i2].own || sim[i2].lent > before[i2].lent){
+        for (var j = 0; j < i2; j++){
+          var q = sim[j];
+          if (q.cap !== null && q.spent < q.cap)
+            return L('Gaste todos os pontos de ' + q.name + ' antes (' + q.spent + ' de ' + q.cap + ').', 'Spend every point of ' + q.name + ' first (' + q.spent + ' of ' + q.cap + ').');
         }
       }
     }
@@ -3522,7 +3561,12 @@ input.invalid{ border-color:var(--danger) !important; }
     });
     if (blockers.length) return L('Usada por: ', 'Used by: ') + blockers.join(', ') + '.';
     var pi = classOf(model, s).pool, p = model.pools[pi];
-    var later = model.pools.slice(pi + 1).filter(function(x){ return x.used > 0; });
+    if (p.borrowed > 0){
+      // A level above the pool's own cap is paid by a higher job: taking it back is always fine.
+      if (target) model.tree[s.key] = target; else delete model.tree[s.key];
+      return '';
+    }
+    var later = model.pools.slice(pi + 1).filter(function(x){ return x.spent > 0; });
     if (p.cap !== null && later.length){
       var names = later.map(function(x){ return x.name; }).join(', ');
       return L('Tire antes os pontos de ' + names + ': ' + p.name + ' precisa ficar completo.', 'Remove the points of ' + names + ' first: ' + p.name + ' has to stay full.');
@@ -3648,6 +3692,8 @@ input.invalid{ border-color:var(--danger) !important; }
       ? L('Toque no ícone para subir 1 nível; use ‹ › para ajustar. Os pré-requisitos sobem juntos.', 'Tap an icon to add a level; use ‹ › to adjust. Prerequisites go up with it.')
       : L('Clique sobe 1 nível, botão direito desce, Shift+clique vai ao máximo. Os pré-requisitos sobem juntos.', 'Click adds a level, right-click removes one, Shift+click goes to max. Prerequisites go up with it.') }));
     box.appendChild(el('div', { class:'st-msg', role:'status', 'aria-live':'polite', text: treeMsg }));
+    if (model.unfunded > 0) box.appendChild(el('div', { class:'st-msg', role:'alert',
+      text:L('Atenção: ' + model.unfunded + ' pontos acima do limite. Tire níveis até a árvore caber nos pontos do personagem.', 'Warning: ' + model.unfunded + ' points over the limit. Remove levels until the tree fits the character points.') }));
 
     model.tabs.forEach(function(tab, ti){
       var firstPool = model.pools.indexOf(tab.pools[0]);
@@ -3656,8 +3702,9 @@ input.invalid{ border-color:var(--danger) !important; }
       var h = el('div', { class:'st-class-head' });
       h.appendChild(el('h3', { text: L((ti + 1) + 'º Job', 'Job ' + (ti + 1)) }));
       tab.pools.forEach(function(p){
-        var pts = p.name + ' · ' + (p.cap === null ? p.used : p.used + '/' + p.cap);
-        h.appendChild(el('span', { class:'st-pts' + (p.cap !== null && p.used === p.cap ? ' full' : ''), text: pts }));
+        var pts = p.name + ' · ' + (p.cap === null ? p.used : p.spent + '/' + p.cap);
+        if (p.borrowed > 0) pts += L(' (+' + p.borrowed + ' do ', ' (+' + p.borrowed + ' from ') + p.lenders.map(function(x){ return x.name; }).join(' + ') + ')';
+        h.appendChild(el('span', { class:'st-pts' + (p.cap !== null && p.spent === p.cap ? ' full' : ''), text: pts }));
         if (p.cap === null) h.appendChild(el('span', { class:'st-note', text:L('limite de pontos de ' + p.name + ' ainda não confirmado', p.name + ' points cap not confirmed yet') }));
         else if (p.jobCap > p.cap) h.appendChild(el('span', { class:'st-note', text:L('o job dá ' + p.jobCap + ' pontos, mas as skills somam só ' + p.cap, 'the job gives ' + p.jobCap + ' points, but the skills only add up to ' + p.cap) }));
       });

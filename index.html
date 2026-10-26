@@ -1963,6 +1963,84 @@ input.invalid{ border-color:var(--danger) !important; }
   var EFFECT_RE = /([A-Za-z][A-Za-z0-9 .'\/&-]*?)\s*([+-])\s*(\d+(?:\.\d+)?)\s*(%|s\b)?(?!\.?\d)/g;
   var EFFECT_SKIP_LABEL = /^(to|by|and|from|up|extra|of)$/i;
   var COUNTED_FLAT = /^(STR|AGI|VIT|INT|DEX|LUK|All Stats|ATK|MATK|HIT|FLEE|Critical(?: Rate)?|Perfect Dodge|DEF|MDEF|ASPD|ASPD Limit)$/i;
+  // The same effect is written many ways in the tooltips ("DMG vs Fire", "Damage vs Fire Element",
+  // "After-Cast Delay"...). This folds the spellings of one effect into one label so they sum
+  // (REQ-002..005). Only spellings that mean the same thing are folded; skills stay apart.
+  var EFFECT_COMPOUNDS = { 'atk and matk':'ATK/MATK', 'atk & matk':'ATK/MATK', 'hp and sp':'HP/SP', 'hp & sp':'HP/SP',
+    'max hp and sp':'Max HP/SP', 'max hp & sp':'Max HP/SP',
+    'defense and magic defense penetration':'Defense/Magic Defense Penetration', 'defense & magic defense penetration':'Defense/Magic Defense Penetration',
+    'defense/magic defense penetration':'Defense/Magic Defense Penetration', 'def/mdef penetration':'Defense/Magic Defense Penetration' };
+  function normEffectLabel(label){
+    var l = label.replace(/\bDMG\b/gi, 'Damage').replace(/\bResist\b/gi, 'Resistance')
+      .replace(/\bAfter-Cast\b/gi, 'After Cast').replace(/\bExperience\b/gi, 'EXP');
+    // "Healing Received" is a gain, so only damage taken becomes "Taken" (lower is better there).
+    if (/\bDamage\b/i.test(l)) l = l.replace(/\bReceived\b/gi, 'Taken');
+    l = l.replace(/^(.+?) Element Resistance$/i, '$1 Resistance');
+    if (EFFECT_COMPOUNDS[l.toLowerCase()]) l = EFFECT_COMPOUNDS[l.toLowerCase()];
+    var vs = /^(.*\bvs\.? )(.+)$/i.exec(l);
+    if (vs){
+      var t = vs[2];
+      if (/^Undead Race$/i.test(t)) t = 'Undead';                  // bare Undead = the race; "Undead Element" stays apart
+      else if (!/^Undead Element$/i.test(t)) t = t.replace(/ (?:Element|Enemies|Monsters)$/i, '');
+      t = t.replace(/^(Small|Medium|Large) Size$/i, '$1').replace(/^Bosses$/i, 'Boss').replace(/^Angel Race$/i, 'Angel');
+      l = vs[1] + t;
+    }
+    if (/^Variable Cast$/i.test(l)) l = 'Variable Cast Time';
+    else if (/^Fixed Cast$/i.test(l)) l = 'Fixed Cast Time';
+    else if (/^Cast$/i.test(l)) l = 'Cast Time';
+    else if (/^DEF$/i.test(l)) l = 'Defense';
+    else if (/^Total DEF$/i.test(l)) l = 'Total Defense';
+    else if (/^Flat DEF$/i.test(l)) l = 'Flat Defense';
+    return l;
+  }
+  // Display name per folded label: the form most tooltips use (survey of all items, RTM Refuge Staff data, 2026-10-26).
+  var EFFECT_CANON = {
+    "absolution damage":"Absolution DMG", "acid demonstration damage":"Acid Demonstration Damage", "after cast delay":"After Cast Delay",
+    "arcana of destiny damage":"Arcana of Destiny DMG", "arrow shower damage":"Arrow Shower DMG", "arrow storm damage":"Arrow Storm Damage",
+    "arrow vulcan damage":"Arrow Vulcan DMG", "ascending steel damage":"Ascending Steel DMG", "atk/matk":"ATK/MATK",
+    "axe tornado damage":"Axe Tornado DMG", "backstab damage":"Backstab DMG", "blitz beat damage":"Blitz Beat DMG",
+    "boomeraxe damage":"Boomeraxe DMG", "burning field damage":"Burning Field Damage", "burst petals damage":"Burst Petals DMG",
+    "cast time":"Cast Time", "comet damage":"Comet Damage", "conviction damage":"Conviction Damage", "counter slash damage":"Counter Slash DMG",
+    "crescent dive damage":"Crescent Dive DMG", "critical damage":"Critical Damage", "critical damage taken":"Critical Damage Received",
+    "cross impact damage":"Cross Impact Damage", "cross ripper slasher damage":"Cross Ripper Slasher DMG",
+    "cursed coffin damage":"Cursed Coffin Damage", "curtain call damage":"Curtain Call DMG", "damage vs all sizes":"DMG vs All Sizes",
+    "damage vs angel":"DMG vs Angel", "damage vs boss":"DMG vs Boss", "damage vs brute":"Damage vs Brute", "damage vs dark":"DMG vs Dark",
+    "damage vs demi-humans":"Damage vs Demi-Humans", "damage vs earth":"DMG vs Earth", "damage vs fire":"DMG vs Fire",
+    "damage vs ghost":"DMG vs Ghost", "damage vs holy":"DMG vs Holy", "damage vs holy and dark":"Damage vs Holy and Dark",
+    "damage vs large":"Damage vs Large Size", "damage vs medium":"DMG vs Medium Size", "damage vs neutral":"DMG vs Neutral",
+    "damage vs poison":"DMG vs Poison", "damage vs small":"Damage vs Small Size", "damage vs undead":"Damage vs Undead",
+    "damage vs undead element":"Damage vs Undead Element", "damage vs water":"DMG vs Water", "damage vs wind":"DMG vs Wind",
+    "dark messenger damage":"Dark Messenger DMG", "dark resistance":"Dark Resistance", "death sentence damage":"Death Sentence DMG", "defense":"DEF",
+    "defense/magic defense penetration":"Defense and Magic Defense Penetration", "definitive dagger damage":"Definitive Dagger DMG",
+    "delta skyfall damage":"Delta Skyfall DMG", "descending steel damage":"Descending Steel Damage",
+    "desolated burial damage":"Desolated Burial Damage", "devil raid damage":"Devil Raid Damage", "double down damage":"Double Down DMG",
+    "double strafe damage":"Double Strafe DMG", "dragon breath damage":"Dragon Breath DMG", "dragon claw damage":"Dragon Claw DMG",
+    "earth magic damage":"Earth Magic DMG", "earth resistance":"Earth Resistance", "earthquake damage taken":"Earthquake Damage Received",
+    "envenom damage":"Envenom DMG", "exp received":"EXP Received", "final damage":"Final damage", "final damage taken":"Final Damage Taken",
+    "fire magic damage":"Fire Magic DMG", "fire resistance":"Fire Resistance", "first hand damage":"First Hand DMG", "fixed cast time":"Fixed Cast",
+    "flaming petals damage":"Flaming Petals DMG", "flat defense":"Flat Defense", "flying knife damage":"Flying Knife Damage",
+    "freezing spear damage":"Freezing Spear DMG", "frost diver damage":"Frost Diver DMG", "geirskogul damage":"Geirskogul DMG",
+    "gift card damage":"Gift Card DMG", "godhand arrow damage":"Godhand Arrow DMG", "greater explosion damage":"Greater Explosion DMG",
+    "holy magic damage":"Holy Magic Damage", "holy resistance":"Holy Resistance", "hp/sp":"HP/SP", "illusion of mist damage":"Illusion of Mist DMG",
+    "impact tooth damage":"Impact Tooth Damage", "instant draw damage":"Instant Draw DMG", "joker's draw damage":"Joker's Draw DMG",
+    "mass grave damage":"Mass Grave Damage", "max hp/sp":"Max HP/SP", "meteor rush damage":"Meteor Rush DMG",
+    "neutral resistance":"Neutral Resistance", "new moon blades damage":"New Moon Blades Damage", "night menace damage":"Night Menace Damage",
+    "non-neutral resistance":"Non-Neutral element resistance", "northern cross damage":"Northern Cross Damage",
+    "originality damage":"Originality Damage", "phantom spear damage":"Phantom Spear DMG", "physical damage taken":"Physical Damage Received",
+    "plague impress damage":"Plague Impress Damage", "poison magic damage":"Poison Magic DMG", "poison resistance":"Poison Element Resistance",
+    "queen's brand damage":"Queen's Brand DMG", "queen's gambit damage":"Queen's Gambit Damage", "ranged damage":"Ranged Damage",
+    "real magic attack damage":"Real Magic Attack DMG", "reaping slash damage":"Reaping Slash DMG", "retribution damage":"Retribution Damage",
+    "roaring overslash damage":"Roaring Overslash DMG", "rolling cutter damage":"Rolling Cutter DMG", "rolling flames damage":"Rolling Flames Damage",
+    "royal flush damage":"Royal Flush Damage", "scathe damage":"Scathe DMG", "shadow slash damage":"Shadow Slash Damage",
+    "shadowstab damage":"Shadowstab DMG", "silent strike damage":"Silent Strike DMG", "sonic blow damage":"Sonic Blow DMG",
+    "sweeping slash damage":"Sweeping Slash DMG", "tetragrammaton damage":"Tetragrammaton Damage", "throw acid damage":"Throw Acid DMG",
+    "total defense":"Total DEF", "trigger heart damage":"Trigger Heart Damage", "undead resistance":"Undead Element Resist",
+    "use trinket damage":"Use Trinket Damage", "variable cast time":"Variable Cast Time", "venom splasher damage":"Venom Splasher DMG",
+    "violent barrage damage":"Violent Barrage Damage", "void dash damage":"Void Dash Damage", "water ball damage":"Water Ball damage",
+    "water magic damage":"Water Magic DMG", "water resistance":"Water Resistance", "wind blade damage":"Wind Blade DMG",
+    "wind magic damage":"Wind Magic DMG", "wind resistance":"Wind Resistance", "wind slash damage":"Wind Slash DMG",
+    "zephyr gust damage":"Zephyr Gust DMG"
+  };
   function parseEffects(lines, isRefineScaled){
     var out = {};
     lines.forEach(function(l){
@@ -1979,11 +2057,14 @@ input.invalid{ border-color:var(--danger) !important; }
         if (unit === '%' && /^ASPD$/i.test(label)) continue;      // already summed as ASPD %
         if (/^HP$/i.test(label)) label = 'Max HP';
         if (/^(Melee Attack|Short-Range Damage)$/i.test(label)) label = 'Melee Damage'; // same bonus, different names in the tooltips (player, 2026-10-14)
+        if (/^(Ranged Attack|On ranged attacks|Long-Range Damage)$/i.test(label)) label = 'Long Range Damage'; // same bonus, different names in the tooltips (player, confirmed by the user, 2026-10-22)
         if (/^SP$/i.test(label)) label = 'Max SP';
         // SP Cost has three names in the tooltips; exact labels only, so skill-specific ones (Heal SP Cost...) stay apart (players, 2026-10-15)
         var spSign = 1;
         if (/^SP Consumption$/i.test(label)) label = 'SP Cost';
         else if (/^SP Cost Reduction$/i.test(label)){ label = 'SP Cost'; spSign = -1; }
+        var folded = normEffectLabel(label);
+        label = EFFECT_CANON[folded.toLowerCase()] || folded;
         var n = parseFloat(m[3]) * (m[2] === '-' ? -1 : 1) * spSign;
         var key = label.toLowerCase() + '|' + unit;
         out[key] = { label: out[key] ? out[key].label : label, unit: unit, n: (out[key] ? out[key].n : 0) + n };
@@ -2442,6 +2523,9 @@ input.invalid{ border-color:var(--danger) !important; }
       if (!m) return false;
       var target = m[1].toLowerCase();
       if (/non-?boss/.test(target)) return !mob.mvp;
+      // "Undead" alone is the race, "Undead Element" the element: each matches only its own property
+      if (/^undead$/.test(target)) return (mob.race || '').toLowerCase() === 'undead';
+      if (/^undead element$/.test(target)) return (mob.el || '').toLowerCase() === 'undead';
       return words.some(function(w){ return new RegExp('(^|[^a-z-])' + w + '([^a-z]|$)').test(target); });
     }).map(function(e){ var n = Math.round(e.n * 100) / 100; return e.label + ' ' + (n > 0 ? '+' : '') + n + e.unit; });
     if (hits.length){
@@ -4016,7 +4100,7 @@ input.invalid{ border-color:var(--danger) !important; }
   // the player. Only flat bonuses the parser knows are summed; the rest is shown as text.
   var EXTRA_SUGGESTIONS = ['STR +', 'AGI +', 'VIT +', 'INT +', 'DEX +', 'LUK +', 'All Stats +', 'ATK +', 'MATK +',
     'HIT +', 'FLEE +', 'Critical +', 'Perfect Dodge +', 'DEF +', 'MDEF +', 'ASPD +', 'ASPD +%', 'ASPD Limit +', 'Max HP +', 'Max SP +',
-    'Penetration +', 'Defense Penetration +', 'Base ASPD +', 'Melee Damage +', 'Long-Range Damage +'];
+    'Penetration +', 'Defense Penetration +', 'Base ASPD +', 'Melee Damage +', 'Long Range Damage +'];
   (function fillExtraSuggestions(){
     var dl = document.getElementById('extraSuggestions');
     if (dl) EXTRA_SUGGESTIONS.forEach(function(s){ var o = document.createElement('option'); o.value = s; dl.appendChild(o); });
@@ -5367,7 +5451,7 @@ input.invalid{ border-color:var(--danger) !important; }
       sb.appendChild(el('tr', { class:'group' }, [ el('td', { colspan:'4', text:L('Outros efeitos (não calculados no simulador)', 'Other effects (not calculated in the simulator)') }) ]));
       keys.forEach(function(k){
         var e = fxKeys[k];
-        var lower = /cast|delay|cooldown|cost|taken/i.test(e.label);
+        var lower = /cast|delay|cooldown|cost|taken|damage received/i.test(e.label);
         sb.appendChild(versusRow(e.label, Math.round(((da.fx[k] || {}).n || 0) * 100) / 100, Math.round(((db.fx[k] || {}).n || 0) * 100) / 100, lower, e.unit));
       });
     }

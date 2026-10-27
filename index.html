@@ -7,7 +7,7 @@
      Google Fonts. Images from anywhere else (e.g. a sprite URL inside a shared loadout code) are
      blocked, so a crafted code can't be used as a tracking pixel. Inline script/style are the
      page itself (single-file app). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://rtm-database.pages.dev data:; connect-src https://rtm-database.pages.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://rtm-database.pages.dev https://pamlok.goatcounter.com data:; connect-src https://rtm-database.pages.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="icon" href="data:,">
 <title>Refuge Build Planner</title>
@@ -7664,6 +7664,13 @@ input.invalid{ border-color:var(--danger) !important; }
   fetchMobs();
   fetchServerPages();
   checkPassivesAgainstSite();
+  // Anonymous visit counter, only on the public site. Sends just path, title and external referrer; no cookies, no saved data.
+  try {
+    if (location.hostname === 'amfsizzy.github.io') {
+      var ref = document.referrer && document.referrer.indexOf(location.origin) !== 0 ? document.referrer : '';
+      new Image().src = 'https://pamlok.goatcounter.com/count?p=' + encodeURIComponent(location.pathname) + '&t=' + encodeURIComponent(document.title) + (ref ? '&r=' + encodeURIComponent(ref) : '');
+    }
+  } catch (e) { /* a blocked counter must never break the planner */ }
 })();
 </script>
 </body>

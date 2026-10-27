@@ -2243,7 +2243,17 @@ input.invalid{ border-color:var(--danger) !important; }
         name: r[idx.name],
         cat: cats[r[idx.cat]] || '',
         isCard: r[idx.cat] === cardCatIdx,
-        locs: locIdxArr.map(function(i){ return locs[i]; }).filter(Boolean),
+        locs: (function(){
+          var ls = locIdxArr.map(function(i){ return locs[i]; }).filter(Boolean);
+          // Fallback while the database doesn't bring the slot for some Shadow Pieces: infer it from the last word of the name.
+          // Only these 4 endings; anything else stays without a slot. A slot coming from the database always wins.
+          if (!ls.length && cats[r[idx.cat]] === 'Shadow Piece') {
+            var last = String(r[idx.name] || '').trim().split(/\s+/).pop();
+            var fb = { Pendant:'Shadow accessory', Armor:'Shadow armor', Gloves:'Shadow gloves', Shoes:'Shadow shoes' }[last];
+            if (fb) ls = [fb];
+          }
+          return ls;
+        })(),
         lv: r[idx.lv],
         atk: r[idx.atk], matk: r[idx.matk], def: r[idx.def], mdef: r[idx.mdef], weight: r[idx.weight],
         slots: Math.max(0, Math.min(4, r[idx.slots] | 0)),
